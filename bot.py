@@ -16,7 +16,7 @@ import logging
 import re
 import asyncio
 import requests
-from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from datetime import datetime, timedelta
 
@@ -1293,8 +1293,8 @@ async def rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await update.message.delete()
     except:
-        pass  # если нет прав на удаление, просто пропускаем
-    
+        pass # если нет прав на удаление, просто пропускаем
+
     keyboard = [[InlineKeyboardButton("📋 чекнуть правила", url="https://telegra.ph/pravila-chata-hesus-insajd-02-21")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -1308,9 +1308,50 @@ async def rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+# команда легенда чата
+async def legend_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """показывает легенду чата"""
+    try:
+        await update.message.delete()
+    except:
+        pass # если нет прав на удаление, просто пропускаем
+
+    user_mention = f"@{update.effective_user.username}" if update.effective_user.username else update.effective_user.first_name
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"<b>ИЛЬЯС ИЗ НЕФТЕЮГАНСКА</b>\n\n<i>вызвал: {user_mention}</i>",
+        parse_mode='HTML'
+    )
+
 # функция-обертка для job_queue
 async def stream_check_job(context: ContextTypes.DEFAULT_TYPE):
     await send_stream_notification(context.application)
+
+async def setup_commands(application: Application):
+    """Устанавливаем команды бота для меню"""
+    commands = [
+        BotCommand("start", "Запуск бота"),
+        BotCommand("help", "Помощь"),
+        BotCommand("stream", "Статус стрима"),
+        BotCommand("rate", "Курс валют"),
+        BotCommand("курс", "Курс валют (альтернатив)"),
+        BotCommand("rules", "Правила чата"),
+        BotCommand("правила", "Правила чата (альтернатив)"),
+        BotCommand("myid", "Твой ID"),
+        BotCommand("tictactoe", "Крестики-нолики"),
+        BotCommand("join", "Присоединиться к игре"),
+        BotCommand("легенда", "Легенда чата"),
+        BotCommand("mute", "Замутить (админы)"),
+        BotCommand("ban", "Забанить (админы)"),
+        BotCommand("warn", "Предупредить (админы)"),
+        BotCommand("userinfo", "Инфо о пользователе (админы)"),
+        BotCommand("unmute", "Размутить (админы)"),
+        BotCommand("unban", "Разбанить (админы)"),
+        BotCommand("clearwarns", "Снять предупреждения (админы)"),
+        BotCommand("adminhelp", "Помощь админам"),
+    ]
+    await application.bot.set_my_commands(commands)
+    logger.info("команды бота установлены")
 
 def main():
     # создаем приложение и передаем ему токен бота
@@ -1320,11 +1361,14 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("rules", rules_command))
+    application.add_handler(CommandHandler("правила", rules_command))
     application.add_handler(CommandHandler("rate", exchange_rate))
+    application.add_handler(CommandHandler("курс", exchange_rate))
     application.add_handler(CommandHandler("get_chat_id", get_chat_id))
     application.add_handler(CommandHandler("myid", get_my_id))
     application.add_handler(CommandHandler("stream", check_stream))
-    
+    application.add_handler(CommandHandler("легенда", legend_command))
+
     # административные команды
     application.add_handler(CommandHandler("mute", mute_command))
     application.add_handler(CommandHandler("ban", ban_command))
@@ -1357,6 +1401,9 @@ def main():
         interval=1,
         first=10
     )
+
+    # устанавливаем команды
+    asyncio.run(setup_commands(application))
 
     # запускаем бота
     application.run_polling()
