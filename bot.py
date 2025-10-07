@@ -1338,7 +1338,7 @@ async def setup_commands(application: Application):
         BotCommand("myid", "Твой ID"),
         BotCommand("tictactoe", "Крестики-нолики"),
         BotCommand("join", "Присоединиться к игре"),
-        BotCommand("легенда", "Легенда чата"),
+        BotCommand("legend", "Легенда чата"),
         BotCommand("mute", "Замутить (админы)"),
         BotCommand("ban", "Забанить (админы)"),
         BotCommand("warn", "Предупредить (админы)"),
@@ -1363,7 +1363,7 @@ def main():
     application.add_handler(CommandHandler("get_chat_id", get_chat_id))
     application.add_handler(CommandHandler("myid", get_my_id))
     application.add_handler(CommandHandler("stream", check_stream))
-    application.add_handler(CommandHandler("легенда", legend_command))
+    application.add_handler(CommandHandler("legend", legend_command))
 
     # административные команды
     application.add_handler(CommandHandler("mute", mute_command))
@@ -1383,6 +1383,7 @@ def main():
     # обработчик текстовых команд без /
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^курс$'), exchange_rate))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^правила$'), rules_command))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^легенда чата$'), legend_command))
 
     # обработчик всех текстовых сообщений
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
