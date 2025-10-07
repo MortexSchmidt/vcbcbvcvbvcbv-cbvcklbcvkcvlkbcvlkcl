@@ -1380,6 +1380,10 @@ def main():
     application.add_handler(CommandHandler("join", join_tictactoe))
     application.add_handler(CallbackQueryHandler(handle_tictactoe_callback, pattern="^tic_"))
 
+    # обработчик текстовых команд без /
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^курс$'), exchange_rate))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^правила$'), rules_command))
+
     # обработчик всех текстовых сообщений
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     # обработчик стикеров
