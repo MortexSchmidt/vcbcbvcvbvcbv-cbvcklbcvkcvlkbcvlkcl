@@ -16,9 +16,13 @@ import logging
 import re
 import asyncio
 import requests
+import nest_asyncio
 from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from datetime import datetime, timedelta
+
+# Применяем nest_asyncio для поддержки вложенных event loops
+nest_asyncio.apply()
 
 # Включаем логирование
 logging.basicConfig(
