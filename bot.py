@@ -1351,9 +1351,12 @@ async def setup_commands(application: Application):
     await application.bot.set_my_commands(commands)
     logger.info("команды бота установлены")
 
-def main():
+async def main():
     # создаем приложение и передаем ему токен бота
     application = Application.builder().token(token).build()
+
+    # устанавливаем команды
+    await setup_commands(application)
 
     # обработчики команд
     application.add_handler(CommandHandler("start", start))
@@ -1374,7 +1377,7 @@ def main():
     application.add_handler(CommandHandler("unban", unban_command))
     application.add_handler(CommandHandler("clearwarns", clear_warnings_command))
     application.add_handler(CommandHandler("adminhelp", admin_help_command))
-    
+
     # обработчики крестиков-ноликов
     application.add_handler(CommandHandler("tictactoe", start_tictactoe))
     application.add_handler(CommandHandler("join", join_tictactoe))
@@ -1403,11 +1406,8 @@ def main():
         first=10
     )
 
-    # устанавливаем команды
-    asyncio.run(setup_commands(application))
-
     # запускаем бота
-    application.run_polling()
+    await application.run_polling()
 
 if __name__ == '__main__':
     main()
