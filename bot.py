@@ -1352,7 +1352,7 @@ def webhook():
         json_data = request.get_json()
         if json_data:
             update = Update.de_json(json_data, application.bot)
-            # Запускаем обработку в отдельном потоке
+            # Обрабатываем update в отдельном потоке с собственным event loop
             threading.Thread(target=process_update, args=(update,)).start()
         return "OK", 200
     except Exception as e:
@@ -1367,7 +1367,21 @@ def process_update(update):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
-        # Обрабатываем обновление
+        # Обрабатываем обновление напрямую
+        loop.run_until_complete(application.process_update(update))
+        loop.close()
+    except Exception as e:
+        logger.error(f"Ошибка обработки update: {e}")
+
+def process_update(update):
+    """Обработка обновления в отдельном потоке"""
+    global application
+    try:
+        # Создаем новый event loop для этого потока
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Обрабатываем обновление напрямую
         loop.run_until_complete(application.process_update(update))
         loop.close()
     except Exception as e:
@@ -1486,7 +1500,7 @@ def main():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(application.initialize())
-        loop.close()
+        # НЕ ЗАКРЫВАЕМ loop - оставляем для webhook обработки
         logger.info("Приложение инициализировано")
     except Exception as e:
         logger.error(f"Ошибка инициализации: {e}")
