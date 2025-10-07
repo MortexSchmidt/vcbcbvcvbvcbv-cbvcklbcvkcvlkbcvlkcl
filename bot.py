@@ -18,6 +18,8 @@ import re
 import asyncio
 import requests
 import nest_asyncio
+import threading
+from flask import Flask, request
 from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from datetime import datetime, timedelta
@@ -27,6 +29,9 @@ nest_asyncio.apply()
 
 # Получаем порт из переменных окружения Railway
 PORT = int(os.environ.get('PORT', 8080))
+
+# Flask app для webhook
+app = Flask(__name__)
 
 # Включаем логирование
 logging.basicConfig(
@@ -1333,19 +1338,81 @@ async def legend_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='HTML'
     )
 
+# Глобальная переменная для application
+application = None
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    """Обработчик webhook от Telegram"""
+    global application
+    if application is None:
+        return "Bot not ready", 503
+    
+    try:
+        json_data = request.get_json()
+        if json_data:
+            update = Update.de_json(json_data, application.bot)
+            # Запускаем обработку в отдельном потоке
+            threading.Thread(target=process_update, args=(update,)).start()
+        return "OK", 200
+    except Exception as e:
+        logger.error(f"Ошибка webhook: {e}")
+        return "Error", 500
+
+def process_update(update):
+    """Обработка обновления в отдельном потоке"""
+    global application
+    try:
+        # Создаем новый event loop для этого потока
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Обрабатываем обновление
+        loop.run_until_complete(application.process_update(update))
+        loop.close()
+    except Exception as e:
+        logger.error(f"Ошибка обработки update: {e}")
+
+@app.route('/health', methods=['GET'])
+def health():
+    """Health check для Railway"""
+    return "Bot is running", 200
+
 # функция-обертка для job_queue
 async def stream_check_job(context: ContextTypes.DEFAULT_TYPE):
     await send_stream_notification(context.application)
 
+def setup_webhook():
+    """Настройка webhook для бота"""
+    global application
+    try:
+        # URL для webhook
+        RAILWAY_URL = os.environ.get('RAILWAY_STATIC_URL', 'https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
+        webhook_url = f"{RAILWAY_URL}/webhook"
+        
+        # Создаем event loop для установки webhook
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Устанавливаем webhook
+        loop.run_until_complete(application.bot.set_webhook(webhook_url))
+        logger.info(f"Webhook установлен: {webhook_url}")
+        
+        loop.close()
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка установки webhook: {e}")
+        return False
+
 def main():
-    """Синхронная main функция для Railway"""
-    # создаем приложение и передаем ему токен бота
+    """Главная функция"""
+    global application
+    
+    # Создаем приложение
     application = Application.builder().token(token).build()
 
-    # устанавливаем команды
+    # Устанавливаем команды бота
     try:
-        # Синхронная установка команд
-        import asyncio
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
@@ -1375,7 +1442,7 @@ def main():
     except Exception as e:
         logger.error(f"ошибка установки команд: {e}")
 
-    # обработчики команд
+    # Добавляем обработчики
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("rules", rules_command))
@@ -1407,46 +1474,32 @@ def main():
 
     # обработчик всех текстовых сообщений
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    # обработчик стикеров
     application.add_handler(MessageHandler(filters.Sticker.ALL, handle_message))
-    # обработчики медиа (правила 9.1, 9.2, 9.3)
     application.add_handler(MessageHandler(filters.PHOTO, handle_message))
     application.add_handler(MessageHandler(filters.VIDEO, handle_message))
     application.add_handler(MessageHandler(filters.AUDIO, handle_message))
     application.add_handler(MessageHandler(filters.VOICE, handle_message))
     application.add_handler(MessageHandler(filters.ANIMATION, handle_message))
 
-    # создаем задачу для проверки стрима каждую секунду
-    application.job_queue.run_repeating(
-        stream_check_job,
-        interval=1,
-        first=10
-    )
+    # Инициализируем приложение
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(application.initialize())
+        loop.close()
+        logger.info("Приложение инициализировано")
+    except Exception as e:
+        logger.error(f"Ошибка инициализации: {e}")
 
-    # Определяем URL для webhook
-    RAILWAY_URL = os.environ.get('RAILWAY_STATIC_URL', 'https://your-app.railway.app')
-    webhook_url = f"{RAILWAY_URL}/webhook"
-    
-    logger.info(f"Запуск на Railway с webhook: {webhook_url}")
-    
-    # Запускаем webhook сервер
-    application.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        webhook_url=webhook_url,
-        url_path="/webhook"
-    )
+    # Настраиваем webhook
+    if setup_webhook():
+        logger.info("Webhook настроен успешно")
+    else:
+        logger.error("Не удалось настроить webhook")
+
+    # Запускаем Flask сервер
+    logger.info(f"Запуск Flask сервера на порту {PORT}")
+    app.run(host='0.0.0.0', port=PORT, debug=False)
 
 if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        logger.error(f"Критическая ошибка: {e}")
-        # Fallback к polling если webhook не работает
-        try:
-            application = Application.builder().token(token).build()
-            logger.info("Fallback к polling...")
-            application.run_polling(drop_pending_updates=True)
-        except Exception as e2:
-            logger.error(f"Polling тоже не работает: {e2}")
-            exit(1)
+    main()
