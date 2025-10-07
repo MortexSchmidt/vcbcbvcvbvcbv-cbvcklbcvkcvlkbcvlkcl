@@ -1410,4 +1410,4 @@ async def main():
     await application.run_polling()
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
