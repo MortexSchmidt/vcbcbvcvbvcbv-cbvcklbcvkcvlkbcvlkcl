@@ -1341,6 +1341,90 @@ async def legend_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Глобальная переменная для application
 application = None
 
+# Создаем и настраиваем приложение ДО запуска Flask
+def setup_application():
+    global application
+    application = Application.builder().token(token).build()
+
+    # Добавляем обработчики
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("rules", rules_command))
+    application.add_handler(CommandHandler("rate", exchange_rate))
+    application.add_handler(CommandHandler("get_chat_id", get_chat_id))
+    application.add_handler(CommandHandler("myid", get_my_id))
+    application.add_handler(CommandHandler("stream", check_stream))
+    application.add_handler(CommandHandler("legend", legend_command))
+
+    # административные команды
+    application.add_handler(CommandHandler("mute", mute_command))
+    application.add_handler(CommandHandler("ban", ban_command))
+    application.add_handler(CommandHandler("warn", warn_command))
+    application.add_handler(CommandHandler("userinfo", user_info_command))
+    application.add_handler(CommandHandler("unmute", unmute_command))
+    application.add_handler(CommandHandler("unban", unban_command))
+    application.add_handler(CommandHandler("clearwarns", clear_warnings_command))
+    application.add_handler(CommandHandler("adminhelp", admin_help_command))
+
+    # обработчики крестиков-ноликов
+    application.add_handler(CommandHandler("tictactoe", start_tictactoe))
+    application.add_handler(CommandHandler("join", join_tictactoe))
+    application.add_handler(CallbackQueryHandler(handle_tictactoe_callback, pattern="^tic_"))
+
+    # обработчик текстовых команд без /
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^курс$'), exchange_rate))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^правила$'), rules_command))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^легенда чата$'), legend_command))
+
+    # обработчик всех текстовых сообщений
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_handler(MessageHandler(filters.Sticker.ALL, handle_message))
+    application.add_handler(MessageHandler(filters.PHOTO, handle_message))
+    application.add_handler(MessageHandler(filters.VIDEO, handle_message))
+    application.add_handler(MessageHandler(filters.AUDIO, handle_message))
+    application.add_handler(MessageHandler(filters.VOICE, handle_message))
+    application.add_handler(MessageHandler(filters.ANIMATION, handle_message))
+
+    # Асинхронная инициализация
+    try:
+        asyncio.run(application.initialize())
+        logger.info("Приложение инициализировано")
+        
+        # Установка команд
+        commands = [
+            BotCommand("start", "Запуск бота"),
+            BotCommand("help", "Помощь"),
+            BotCommand("stream", "Статус стрима"),
+            BotCommand("rate", "Курс валют"),
+            BotCommand("rules", "Правила чата"),
+            BotCommand("myid", "Твой ID"),
+            BotCommand("tictactoe", "Крестики-нолики"),
+            BotCommand("join", "Присоединиться к игре"),
+            BotCommand("legend", "Легенда чата"),
+            BotCommand("mute", "Замутить (админы)"),
+            BotCommand("ban", "Забанить (админы)"),
+            BotCommand("warn", "Предупредить (админам)"),
+            BotCommand("userinfo", "Инфо о пользователе (админам)"),
+            BotCommand("unmute", "Размутить (админам)"),
+            BotCommand("unban", "Разбанить (админам)"),
+            BotCommand("clearwarns", "Снять предупреждения (админам)"),
+            BotCommand("adminhelp", "Помощь админам"),
+        ]
+        asyncio.run(application.bot.set_my_commands(commands))
+        logger.info("Команды бота установлены")
+
+        # Установка webhook
+        railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
+        webhook_url = f"https://{railway_domain}/webhook"
+        asyncio.run(application.bot.set_webhook(webhook_url))
+        logger.info(f"Webhook установлен: {webhook_url}")
+
+    except Exception as e:
+        logger.error(f"Критическая ошибка при настройке приложения: {e}")
+
+# Запускаем настройку при импорте модуля
+setup_application()
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     """Обработчик webhook от Telegram"""
@@ -1401,158 +1485,3 @@ def health():
     if application is None:
         return "Bot not initialized", 503
     return "Bot is running", 200
-
-# функция-обертка для job_queue
-async def stream_check_job(context: ContextTypes.DEFAULT_TYPE):
-    await send_stream_notification(context.application)
-
-def setup_webhook():
-    """Настройка webhook для бота"""
-    global application
-    try:
-        # URL для webhook - используем правильные переменные Railway
-        railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
-        webhook_url = f"https://{railway_domain}/webhook"
-        
-        # Создаем event loop для установки webhook
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        # Устанавливаем webhook
-        loop.run_until_complete(application.bot.set_webhook(webhook_url))
-        logger.info(f"Webhook установлен: {webhook_url}")
-        
-        loop.close()
-        return True
-    except Exception as e:
-        logger.error(f"Ошибка установки webhook: {e}")
-        return False
-
-async def setup_bot():
-    """Асинхронная настройка бота перед запуском Flask."""
-    global application
-    
-    # Устанавливаем команды бота
-    commands = [
-        BotCommand("start", "Запуск бота"),
-        BotCommand("help", "Помощь"),
-        BotCommand("stream", "Статус стрима"),
-        BotCommand("rate", "Курс валют"),
-        BotCommand("rules", "Правила чата"),
-        BotCommand("myid", "Твой ID"),
-        BotCommand("tictactoe", "Крестики-нолики"),
-        BotCommand("join", "Присоединиться к игре"),
-        BotCommand("legend", "Легенда чата"),
-        BotCommand("mute", "Замутить (админы)"),
-        BotCommand("ban", "Забанить (админы)"),
-        BotCommand("warn", "Предупредить (админам)"),
-        BotCommand("userinfo", "Инфо о пользователе (админам)"),
-        BotCommand("unmute", "Размутить (админам)"),
-        BotCommand("unban", "Разбанить (админам)"),
-        BotCommand("clearwarns", "Снять предупреждения (админам)"),
-        BotCommand("adminhelp", "Помощь админам"),
-    ]
-    await application.bot.set_my_commands(commands)
-    logger.info("Команды бота установлены")
-
-    # Инициализируем приложение
-    await application.initialize()
-    logger.info("Приложение инициализировано")
-
-    # Настраиваем webhook
-    railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
-    webhook_url = f"https://{railway_domain}/webhook"
-    await application.bot.set_webhook(webhook_url)
-    logger.info(f"Webhook установлен: {webhook_url}")
-
-def main():
-    """Главная функция"""
-    global application
-    
-    # Создаем приложение
-    application = Application.builder().token(token).build()
-
-    # Устанавливаем команды бота
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        commands = [
-            BotCommand("start", "Запуск бота"),
-            BotCommand("help", "Помощь"),
-            BotCommand("stream", "Статус стрима"),
-            BotCommand("rate", "Курс валют"),
-            BotCommand("rules", "Правила чата"),
-            BotCommand("myid", "Твой ID"),
-            BotCommand("tictactoe", "Крестики-нолики"),
-            BotCommand("join", "Присоединиться к игре"),
-            BotCommand("legend", "Легенда чата"),
-            BotCommand("mute", "Замутить (админы)"),
-            BotCommand("ban", "Забанить (админы)"),
-            BotCommand("warn", "Предупредить (админам)"),
-            BotCommand("userinfo", "Инфо о пользователе (админам)"),
-            BotCommand("unmute", "Размутить (админам)"),
-            BotCommand("unban", "Разбанить (админам)"),
-            BotCommand("clearwarns", "Снять предупреждения (админам)"),
-            BotCommand("adminhelp", "Помощь админам"),
-        ]
-        
-        loop.run_until_complete(application.bot.set_my_commands(commands))
-        logger.info("команды бота установлены")
-        loop.close()
-    except Exception as e:
-        logger.error(f"ошибка установки команд: {e}")
-
-    # Добавляем обработчики
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("rules", rules_command))
-    application.add_handler(CommandHandler("rate", exchange_rate))
-    application.add_handler(CommandHandler("get_chat_id", get_chat_id))
-    application.add_handler(CommandHandler("myid", get_my_id))
-    application.add_handler(CommandHandler("stream", check_stream))
-    application.add_handler(CommandHandler("legend", legend_command))
-
-    # административные команды
-    application.add_handler(CommandHandler("mute", mute_command))
-    application.add_handler(CommandHandler("ban", ban_command))
-    application.add_handler(CommandHandler("warn", warn_command))
-    application.add_handler(CommandHandler("userinfo", user_info_command))
-    application.add_handler(CommandHandler("unmute", unmute_command))
-    application.add_handler(CommandHandler("unban", unban_command))
-    application.add_handler(CommandHandler("clearwarns", clear_warnings_command))
-    application.add_handler(CommandHandler("adminhelp", admin_help_command))
-
-    # обработчики крестиков-ноликов
-    application.add_handler(CommandHandler("tictactoe", start_tictactoe))
-    application.add_handler(CommandHandler("join", join_tictactoe))
-    application.add_handler(CallbackQueryHandler(handle_tictactoe_callback, pattern="^tic_"))
-
-    # обработчик текстовых команд без /
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^курс$'), exchange_rate))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^правила$'), rules_command))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^легенда чата$'), legend_command))
-
-    # обработчик всех текстовых сообщений
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_handler(MessageHandler(filters.Sticker.ALL, handle_message))
-    application.add_handler(MessageHandler(filters.PHOTO, handle_message))
-    application.add_handler(MessageHandler(filters.VIDEO, handle_message))
-    application.add_handler(MessageHandler(filters.AUDIO, handle_message))
-    application.add_handler(MessageHandler(filters.VOICE, handle_message))
-    application.add_handler(MessageHandler(filters.ANIMATION, handle_message))
-
-    # Запускаем асинхронную настройку
-    try:
-        asyncio.run(setup_bot())
-    except Exception as e:
-        logger.error(f"Ошибка асинхронной настройки: {e}")
-        # Если настройка не удалась, бот не сможет работать
-        return
-
-    # Запускаем Flask сервер
-    logger.info(f"Запуск Flask сервера на порту {PORT}")
-    app.run(host='0.0.0.0', port=PORT, debug=False)
-
-if __name__ == '__main__':
-    main()
