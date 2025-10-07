@@ -1352,8 +1352,21 @@ def webhook():
         json_data = request.get_json()
         if json_data:
             update = Update.de_json(json_data, application.bot)
-            # Обрабатываем update в отдельном потоке с собственным event loop
-            threading.Thread(target=process_update, args=(update,)).start()
+            if update:
+                # Простая синхронная обработка в основном потоке
+                try:
+                    import asyncio
+                    # Получаем или создаем event loop
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                    
+                    # Обрабатываем обновление
+                    loop.run_until_complete(application.process_update(update))
+                except Exception as e:
+                    logger.error(f"Ошибка обработки update: {e}")
         return "OK", 200
     except Exception as e:
         logger.error(f"Ошибка webhook: {e}")
@@ -1390,6 +1403,9 @@ def process_update(update):
 @app.route('/health', methods=['GET'])
 def health():
     """Health check для Railway"""
+    global application
+    if application is None:
+        return "Bot not initialized", 503
     return "Bot is running", 200
 
 # функция-обертка для job_queue
@@ -1400,9 +1416,9 @@ def setup_webhook():
     """Настройка webhook для бота"""
     global application
     try:
-        # URL для webhook
-        RAILWAY_URL = os.environ.get('RAILWAY_STATIC_URL', 'https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
-        webhook_url = f"{RAILWAY_URL}/webhook"
+        # URL для webhook - используем правильные переменные Railway
+        railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
+        webhook_url = f"https://{railway_domain}/webhook"
         
         # Создаем event loop для установки webhook
         loop = asyncio.new_event_loop()
@@ -1495,21 +1511,23 @@ def main():
     application.add_handler(MessageHandler(filters.VOICE, handle_message))
     application.add_handler(MessageHandler(filters.ANIMATION, handle_message))
 
-    # Инициализируем приложение
+    # Инициализируем приложение простым способом
     try:
+        # Создаем event loop только для инициализации
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(application.initialize())
-        # НЕ ЗАКРЫВАЕМ loop - оставляем для webhook обработки
         logger.info("Приложение инициализировано")
+        
+        # Настраиваем webhook сразу в том же loop
+        railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
+        webhook_url = f"https://{railway_domain}/webhook"
+        loop.run_until_complete(application.bot.set_webhook(webhook_url))
+        logger.info(f"Webhook установлен: {webhook_url}")
+        
+        loop.close()
     except Exception as e:
         logger.error(f"Ошибка инициализации: {e}")
-
-    # Настраиваем webhook
-    if setup_webhook():
-        logger.info("Webhook настроен успешно")
-    else:
-        logger.error("Не удалось настроить webhook")
 
     # Запускаем Flask сервер
     logger.info(f"Запуск Flask сервера на порту {PORT}")
