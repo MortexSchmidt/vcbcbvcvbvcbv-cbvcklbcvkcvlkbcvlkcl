@@ -1327,7 +1327,7 @@ async def legend_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def stream_check_job(context: ContextTypes.DEFAULT_TYPE):
     await send_stream_notification(context.application)
 
-async def setup_commands(application: Application):
+def setup_commands(application: Application):
     """Устанавливаем команды бота для меню"""
     commands = [
         BotCommand("start", "Запуск бота"),
@@ -1348,15 +1348,21 @@ async def setup_commands(application: Application):
         BotCommand("clearwarns", "Снять предупреждения (админы)"),
         BotCommand("adminhelp", "Помощь админам"),
     ]
-    await application.bot.set_my_commands(commands)
-    logger.info("команды бота установлены")
+    import asyncio
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(application.bot.set_my_commands(commands))
+        logger.info("команды бота установлены")
+    finally:
+        loop.close()
 
-async def main():
+def main():
     # создаем приложение и передаем ему токен бота
     application = Application.builder().token(token).build()
 
     # устанавливаем команды
-    await setup_commands(application)
+    setup_commands(application)
 
     # обработчики команд
     application.add_handler(CommandHandler("start", start))
@@ -1407,7 +1413,7 @@ async def main():
     )
 
     # запускаем бота
-    await application.run_polling()
+    application.run_polling()
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()
