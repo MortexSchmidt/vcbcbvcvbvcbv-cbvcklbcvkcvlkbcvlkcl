@@ -1229,6 +1229,7 @@ async def get_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass  # если нет прав на удаление, просто пропускаем
     
     chat_id = update.effective_chat.id
+    user_name = update.effective_user.first_name
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
     admin_message = f"""🔧 <b>системная инфа</b> 🔧
 
@@ -1302,6 +1303,7 @@ async def rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("📋 чекнуть правила", url="https://telegra.ph/pravila-chata-hesus-insajd-02-21")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    user_name = update.effective_user.first_name
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
@@ -1361,7 +1363,7 @@ def setup_commands(application: Application):
     finally:
         loop.close()
 
-def main():
+async def main():
     # создаем приложение и передаем ему токен бота
     application = Application.builder().token(token).build()
 
@@ -1417,7 +1419,43 @@ def main():
     )
 
     # запускаем бота
-    application.run_polling(stop_signals=None)
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+    
+    # Блокируем выполнение навсегда
+    try:
+        while True:
+            await asyncio.sleep(1)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        await application.updater.stop()
+        await application.stop()
+        await application.shutdown()
 
 if __name__ == '__main__':
-    main()
+    try:
+        asyncio.run(main())
+    except RuntimeError as e:
+        if "Event loop is closed" in str(e) or "cannot be called from a running event loop" in str(e):
+            # Если уже есть активный event loop, используем его
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Создаем новую задачу в существующем цикле
+                import threading
+                
+                def run_bot():
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    try:
+                        new_loop.run_until_complete(main())
+                    finally:
+                        new_loop.close()
+                
+                thread = threading.Thread(target=run_bot)
+                thread.daemon = True
+                thread.start()
+                thread.join()
+            else:
+                loop.run_until_complete(main())
