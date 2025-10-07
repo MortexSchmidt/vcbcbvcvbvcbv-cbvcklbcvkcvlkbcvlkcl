@@ -1428,6 +1428,43 @@ def setup_webhook():
         logger.error(f"Ошибка установки webhook: {e}")
         return False
 
+async def setup_bot():
+    """Асинхронная настройка бота перед запуском Flask."""
+    global application
+    
+    # Устанавливаем команды бота
+    commands = [
+        BotCommand("start", "Запуск бота"),
+        BotCommand("help", "Помощь"),
+        BotCommand("stream", "Статус стрима"),
+        BotCommand("rate", "Курс валют"),
+        BotCommand("rules", "Правила чата"),
+        BotCommand("myid", "Твой ID"),
+        BotCommand("tictactoe", "Крестики-нолики"),
+        BotCommand("join", "Присоединиться к игре"),
+        BotCommand("legend", "Легенда чата"),
+        BotCommand("mute", "Замутить (админы)"),
+        BotCommand("ban", "Забанить (админы)"),
+        BotCommand("warn", "Предупредить (админам)"),
+        BotCommand("userinfo", "Инфо о пользователе (админам)"),
+        BotCommand("unmute", "Размутить (админам)"),
+        BotCommand("unban", "Разбанить (админам)"),
+        BotCommand("clearwarns", "Снять предупреждения (админам)"),
+        BotCommand("adminhelp", "Помощь админам"),
+    ]
+    await application.bot.set_my_commands(commands)
+    logger.info("Команды бота установлены")
+
+    # Инициализируем приложение
+    await application.initialize()
+    logger.info("Приложение инициализировано")
+
+    # Настраиваем webhook
+    railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
+    webhook_url = f"https://{railway_domain}/webhook"
+    await application.bot.set_webhook(webhook_url)
+    logger.info(f"Webhook установлен: {webhook_url}")
+
 def main():
     """Главная функция"""
     global application
@@ -1452,11 +1489,11 @@ def main():
             BotCommand("legend", "Легенда чата"),
             BotCommand("mute", "Замутить (админы)"),
             BotCommand("ban", "Забанить (админы)"),
-            BotCommand("warn", "Предупредить (админы)"),
-            BotCommand("userinfo", "Инфо о пользователе (админы)"),
-            BotCommand("unmute", "Размутить (админы)"),
-            BotCommand("unban", "Разбанить (админы)"),
-            BotCommand("clearwarns", "Снять предупреждения (админы)"),
+            BotCommand("warn", "Предупредить (админам)"),
+            BotCommand("userinfo", "Инфо о пользователе (админам)"),
+            BotCommand("unmute", "Размутить (админам)"),
+            BotCommand("unban", "Разбанить (админам)"),
+            BotCommand("clearwarns", "Снять предупреждения (админам)"),
             BotCommand("adminhelp", "Помощь админам"),
         ]
         
@@ -1505,24 +1542,13 @@ def main():
     application.add_handler(MessageHandler(filters.VOICE, handle_message))
     application.add_handler(MessageHandler(filters.ANIMATION, handle_message))
 
-    # Инициализируем приложение
+    # Запускаем асинхронную настройку
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-        # Инициализируем приложение
-        loop.run_until_complete(application.initialize())
-        logger.info("Приложение инициализировано")
-        
-        # Настраиваем webhook
-        railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
-        webhook_url = f"https://{railway_domain}/webhook"
-        loop.run_until_complete(application.bot.set_webhook(webhook_url))
-        logger.info(f"Webhook установлен: {webhook_url}")
-        
-        loop.close()
+        asyncio.run(setup_bot())
     except Exception as e:
-        logger.error(f"Ошибка инициализации: {e}")
+        logger.error(f"Ошибка асинхронной настройки: {e}")
+        # Если настройка не удалась, бот не сможет работать
+        return
 
     # Запускаем Flask сервер
     logger.info(f"Запуск Flask сервера на порту {PORT}")
