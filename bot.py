@@ -1353,19 +1353,12 @@ def webhook():
         if json_data:
             update = Update.de_json(json_data, application.bot)
             if update:
-                # Обработка с nest_asyncio поддержкой
+                # Обработка с новым event loop
                 try:
-                    # Получаем текущий event loop или создаем новый
-                    try:
-                        loop = asyncio.get_event_loop()
-                        if loop.is_closed():
-                            raise RuntimeError("Loop is closed")
-                    except RuntimeError:
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-                    
-                    # Обрабатываем обновление
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
                     loop.run_until_complete(application.process_update(update))
+                    loop.close()
                 except Exception as e:
                     logger.error(f"Ошибка обработки update: {e}")
         return "OK", 200
@@ -1512,40 +1505,24 @@ def main():
     application.add_handler(MessageHandler(filters.VOICE, handle_message))
     application.add_handler(MessageHandler(filters.ANIMATION, handle_message))
 
-    # Инициализируем приложение с nest_asyncio поддержкой
+    # Инициализируем приложение
     try:
-        # Применяем nest_asyncio ПЕРЕД созданием event loop
-        nest_asyncio.apply()
-        
-        # Попробуем использовать существующий event loop или создать новый
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_closed():
-                raise RuntimeError("Loop is closed")
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         
         # Инициализируем приложение
         loop.run_until_complete(application.initialize())
         logger.info("Приложение инициализировано")
         
-        # Настраиваем webhook сразу в том же loop
+        # Настраиваем webhook
         railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
         webhook_url = f"https://{railway_domain}/webhook"
         loop.run_until_complete(application.bot.set_webhook(webhook_url))
         logger.info(f"Webhook установлен: {webhook_url}")
         
-        # НЕ закрываем loop - оставляем для дальнейшего использования
-        
+        loop.close()
     except Exception as e:
         logger.error(f"Ошибка инициализации: {e}")
-        # Если инициализация провалилась, попробуем базовую
-        try:
-            import asyncio
-            asyncio.set_event_loop(asyncio.new_event_loop())
-        except:
-            pass
 
     # Запускаем Flask сервер
     logger.info(f"Запуск Flask сервера на порту {PORT}")
