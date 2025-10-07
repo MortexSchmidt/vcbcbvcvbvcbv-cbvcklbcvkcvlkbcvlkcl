@@ -12,6 +12,7 @@
 версия: 2.0 🚀
 """
 
+import os
 import logging
 import re
 import asyncio
@@ -23,6 +24,9 @@ from datetime import datetime, timedelta
 
 # Применяем nest_asyncio для поддержки вложенных event loops
 nest_asyncio.apply()
+
+# Получаем порт из переменных окружения Railway
+PORT = int(os.environ.get('PORT', 8080))
 
 # Включаем логирование
 logging.basicConfig(
@@ -1333,42 +1337,43 @@ async def legend_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def stream_check_job(context: ContextTypes.DEFAULT_TYPE):
     await send_stream_notification(context.application)
 
-def setup_commands(application: Application):
-    """Устанавливаем команды бота для меню"""
-    commands = [
-        BotCommand("start", "Запуск бота"),
-        BotCommand("help", "Помощь"),
-        BotCommand("stream", "Статус стрима"),
-        BotCommand("rate", "Курс валют"),
-        BotCommand("rules", "Правила чата"),
-        BotCommand("myid", "Твой ID"),
-        BotCommand("tictactoe", "Крестики-нолики"),
-        BotCommand("join", "Присоединиться к игре"),
-        BotCommand("legend", "Легенда чата"),
-        BotCommand("mute", "Замутить (админы)"),
-        BotCommand("ban", "Забанить (админы)"),
-        BotCommand("warn", "Предупредить (админы)"),
-        BotCommand("userinfo", "Инфо о пользователе (админы)"),
-        BotCommand("unmute", "Размутить (админы)"),
-        BotCommand("unban", "Разбанить (админы)"),
-        BotCommand("clearwarns", "Снять предупреждения (админы)"),
-        BotCommand("adminhelp", "Помощь админам"),
-    ]
-    import asyncio
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(application.bot.set_my_commands(commands))
-        logger.info("команды бота установлены")
-    finally:
-        loop.close()
-
-async def main():
+def main():
+    """Синхронная main функция для Railway"""
     # создаем приложение и передаем ему токен бота
     application = Application.builder().token(token).build()
 
     # устанавливаем команды
-    setup_commands(application)
+    try:
+        # Синхронная установка команд
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        commands = [
+            BotCommand("start", "Запуск бота"),
+            BotCommand("help", "Помощь"),
+            BotCommand("stream", "Статус стрима"),
+            BotCommand("rate", "Курс валют"),
+            BotCommand("rules", "Правила чата"),
+            BotCommand("myid", "Твой ID"),
+            BotCommand("tictactoe", "Крестики-нолики"),
+            BotCommand("join", "Присоединиться к игре"),
+            BotCommand("legend", "Легенда чата"),
+            BotCommand("mute", "Замутить (админы)"),
+            BotCommand("ban", "Забанить (админы)"),
+            BotCommand("warn", "Предупредить (админы)"),
+            BotCommand("userinfo", "Инфо о пользователе (админы)"),
+            BotCommand("unmute", "Размутить (админы)"),
+            BotCommand("unban", "Разбанить (админы)"),
+            BotCommand("clearwarns", "Снять предупреждения (админы)"),
+            BotCommand("adminhelp", "Помощь админам"),
+        ]
+        
+        loop.run_until_complete(application.bot.set_my_commands(commands))
+        logger.info("команды бота установлены")
+        loop.close()
+    except Exception as e:
+        logger.error(f"ошибка установки команд: {e}")
 
     # обработчики команд
     application.add_handler(CommandHandler("start", start))
@@ -1418,44 +1423,30 @@ async def main():
         first=10
     )
 
-    # запускаем бота
-    await application.initialize()
-    await application.start()
-    await application.updater.start_polling()
+    # Определяем URL для webhook
+    RAILWAY_URL = os.environ.get('RAILWAY_STATIC_URL', 'https://your-app.railway.app')
+    webhook_url = f"{RAILWAY_URL}/webhook"
     
-    # Блокируем выполнение навсегда
-    try:
-        while True:
-            await asyncio.sleep(1)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        await application.updater.stop()
-        await application.stop()
-        await application.shutdown()
+    logger.info(f"Запуск на Railway с webhook: {webhook_url}")
+    
+    # Запускаем webhook сервер
+    application.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_url=webhook_url,
+        url_path="/webhook"
+    )
 
 if __name__ == '__main__':
     try:
-        asyncio.run(main())
-    except RuntimeError as e:
-        if "Event loop is closed" in str(e) or "cannot be called from a running event loop" in str(e):
-            # Если уже есть активный event loop, используем его
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Создаем новую задачу в существующем цикле
-                import threading
-                
-                def run_bot():
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-                    try:
-                        new_loop.run_until_complete(main())
-                    finally:
-                        new_loop.close()
-                
-                thread = threading.Thread(target=run_bot)
-                thread.daemon = True
-                thread.start()
-                thread.join()
-            else:
-                loop.run_until_complete(main())
+        main()
+    except Exception as e:
+        logger.error(f"Критическая ошибка: {e}")
+        # Fallback к polling если webhook не работает
+        try:
+            application = Application.builder().token(token).build()
+            logger.info("Fallback к polling...")
+            application.run_polling(drop_pending_updates=True)
+        except Exception as e2:
+            logger.error(f"Polling тоже не работает: {e2}")
+            exit(1)
