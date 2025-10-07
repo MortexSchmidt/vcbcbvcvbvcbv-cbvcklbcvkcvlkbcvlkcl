@@ -1351,10 +1351,10 @@ def main():
     application.add_handler(MessageHandler(filters.VOICE, handle_message))
     application.add_handler(MessageHandler(filters.ANIMATION, handle_message))
 
-    # создаем задачу для проверки стрима каждые 30 секунд
+    # создаем задачу для проверки стрима каждую секунду
     application.job_queue.run_repeating(
         stream_check_job,
-        interval=30,
+        interval=1,
         first=10
     )
 
