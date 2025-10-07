@@ -1413,7 +1413,7 @@ def main():
     )
 
     # запускаем бота
-    application.run_polling()
+    application.run_polling(stop_signals=None)
 
 if __name__ == '__main__':
     asyncio.run(main())
