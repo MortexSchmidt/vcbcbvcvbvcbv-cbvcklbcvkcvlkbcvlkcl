@@ -1334,9 +1334,7 @@ async def setup_commands(application: Application):
         BotCommand("help", "Помощь"),
         BotCommand("stream", "Статус стрима"),
         BotCommand("rate", "Курс валют"),
-        BotCommand("курс", "Курс валют (альтернатив)"),
         BotCommand("rules", "Правила чата"),
-        BotCommand("правила", "Правила чата (альтернатив)"),
         BotCommand("myid", "Твой ID"),
         BotCommand("tictactoe", "Крестики-нолики"),
         BotCommand("join", "Присоединиться к игре"),
@@ -1361,9 +1359,7 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("rules", rules_command))
-    application.add_handler(CommandHandler("правила", rules_command))
     application.add_handler(CommandHandler("rate", exchange_rate))
-    application.add_handler(CommandHandler("курс", exchange_rate))
     application.add_handler(CommandHandler("get_chat_id", get_chat_id))
     application.add_handler(CommandHandler("myid", get_my_id))
     application.add_handler(CommandHandler("stream", check_stream))
