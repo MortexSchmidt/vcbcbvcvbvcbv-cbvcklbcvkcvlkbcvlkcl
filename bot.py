@@ -37,6 +37,8 @@ user_messages = {}
 muted_users = {}
 # Словарь для хранения предыдущего статуса стрима
 previous_stream_status = {}
+# Множество известных чатов для уведомлений о стримах
+known_chats = set()
 
 # Система предупреждений и нарушений
 user_warnings = {}  # {user_id: {"warnings": count, "violations": [{"type": str, "timestamp": datetime}]}}
@@ -662,6 +664,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     message_text = update.message.text or ""
     chat_id = update.effective_chat.id
+
+    # Добавляем чат в известные для уведомлений о стримах
+    global known_chats
+    known_chats.add(chat_id)
     
     # Проверяем, не находится ли пользователь в муте
     if user_id in muted_users:
@@ -1163,15 +1169,11 @@ async def check_stream(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # функция для отправки уведомления о стриме
 async def send_stream_notification(application: Application):
     is_live, stream_title = check_kick_stream()
-    
+
     if is_live:
         if not previous_stream_status.get("live", False):
             # стрим только начался, отправляем уведомление
-            # замените на реальный ID чата, куда будут отправляться уведомления
-            # для получения ID чата, добавьте бота в чат и используйте команду /get_chat_id
-            chat_id = -1001234567890  # заменить на реальный ID чата
-            try:
-                stream_notification = f"""🔴🔴 <b>стрим начался!</b> 🔴🔴🔴
+            stream_notification = f"""🔴🔴 <b>стрим начался!</b> 🔴🔴🔴
 
 🎉 <b>хесус в эфире!</b> 🎉
 
@@ -1184,16 +1186,33 @@ async def send_stream_notification(application: Application):
 🍿 <i>не пропусти самое интересное!</i>
 
 @everyone ⚡ иди на стрим!"""
-                
-                await application.bot.send_message(
-                    chat_id=chat_id,
-                    text=stream_notification,
-                    parse_mode='HTML'
-                )
-                previous_stream_status["live"] = True
-                previous_stream_status["title"] = stream_title
-            except Exception as e:
-                logger.error(f"ошибка отправки уведомления: {e}")
+
+            # Отправляем во все известные чаты
+            global known_chats
+            for chat_id in known_chats:
+                try:
+                    await application.bot.send_message(
+                        chat_id=chat_id,
+                        text=stream_notification,
+                        parse_mode='HTML'
+                    )
+                except Exception as e:
+                    logger.error(f"ошибка отправки уведомления в чат {chat_id}: {e}")
+
+            # Отправляем в ЛС админам
+            for admin_id in admin_ids:
+                try:
+                    await application.bot.send_message(
+                        chat_id=admin_id,
+                        text=f"🔴 <b>стрим хесуса стартовал!</b> 🔴\n\n🎬 {stream_title}\n🔗 https://kick.com/jesusavgn",
+                        parse_mode='HTML'
+                    )
+                except Exception as e:
+                    logger.error(f"ошибка отправки уведомления админу {admin_id}: {e}")
+
+            previous_stream_status["live"] = True
+            previous_stream_status["title"] = stream_title
+            logger.info(f"уведомления о стриме отправлены в {len(known_chats)} чатов и {len(admin_ids)} админов")
     else:
         previous_stream_status["live"] = False
         previous_stream_status["title"] = ""
@@ -1332,10 +1351,10 @@ def main():
     application.add_handler(MessageHandler(filters.VOICE, handle_message))
     application.add_handler(MessageHandler(filters.ANIMATION, handle_message))
 
-    # создаем задачу для проверки стрима каждые 60 секунд
+    # создаем задачу для проверки стрима каждые 30 секунд
     application.job_queue.run_repeating(
         stream_check_job,
-        interval=60,
+        interval=30,
         first=10
     )
 
