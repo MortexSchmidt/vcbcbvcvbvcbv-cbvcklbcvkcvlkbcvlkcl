@@ -195,6 +195,8 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
                 can_invite_users=False,
                 can_pin_messages=False
             )
+            ,
+            until_date=mute_until
         )
 
         # Отправляем уведомление пользователю в ЛС о муте
@@ -915,7 +917,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(user_msg_list) >= 3:
         last_3_messages = user_msg_list[-3:]
         if len(set(last_3_messages)) == 1:
-            await mute_user(user_id, chat_id, 0.166, "спам", context, update)
+            # Авто-мутаем за спам на 1 час
+            await mute_user(user_id, chat_id, 1, "спам", context, update)
             user_messages[user_id]["messages"] = []
             user_messages[user_id]["timestamps"] = []
             return
@@ -946,7 +949,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(user_sticker_list) >= 3:
             last_3_stickers = user_sticker_list[-3:]
             if len(set(last_3_stickers)) == 1:
-                await mute_user(user_id, chat_id, 0.166, "спам", context, update)
+                # Авто-мутаем за спам стикерами на 1 час
+                await mute_user(user_id, chat_id, 1, "спам", context, update)
                 user_messages[user_id]["stickers"] = []
                 user_messages[user_id]["sticker_timestamps"] = []
                 return
@@ -1261,9 +1265,14 @@ def setup_application():
     # (удаляем обработку старого message-based движка и inline callback'ов)
     application.add_handler(CommandHandler("tictactoe", tictactoe_miniapp_command))
     application.add_handler(CommandHandler("join", tictactoe_miniapp_command))
-    
     # обработчик команды для открытия Mini-App
     application.add_handler(CommandHandler("tictactoe_app", tictactoe_miniapp_command))
+
+    # В группах команда может приходить с упоминанием бота: /tictactoe@BotUsername
+    # Добавляем MessageHandler с regex, чтобы ловить формы с @username
+    bot_username = application.bot.username if application and application.bot else None
+    # Общая regex: ^/(tictactoe|tictactoe_app|join)(?:@\w+)?(?:\s|$)
+    application.add_handler(MessageHandler(filters.Regex(r'^/(tictactoe|tictactoe_app|join)(?:@\w+)?(?:\s|$)'), tictactoe_miniapp_command))
 
     # административные команды
     application.add_handler(CommandHandler("mute", mute_command))
