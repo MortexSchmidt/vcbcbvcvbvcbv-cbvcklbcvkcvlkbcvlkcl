@@ -267,6 +267,8 @@
             <p>Движ запущен! Выбирай лобби и заходи в игру</p>
         </div>
 
+        <div id="status" style="text-align:center;padding:10px;background:#2d3748;color:#e2e8f0;border-radius:6px;margin-bottom:20px;display:none;"></div>
+
         <div class="create-lobby">
             <button class="btn btn-primary" id="createLobbyBtn">
                 <i class="fas fa-plus"></i> Создать новое лобби
@@ -310,8 +312,27 @@
         </div>
     </div>
 
+    <!-- Debug panel -->
+    <div id="debug" style="position:fixed;bottom:0;left:0;background:#000;color:#fff;padding:10px;font-size:12px;z-index:9999;max-height:200px;overflow-y:auto;"></div>
+
     <script>
-        // Глобальные переменные
+        // Debug function
+        function debugLog(msg) {
+            console.log(msg);
+            const debugDiv = document.getElementById('debug');
+            if (debugDiv) {
+                debugDiv.innerHTML += new Date().toLocaleTimeString() + ': ' + msg + '<br>';
+            }
+        }
+
+        // Status function
+        function setStatus(msg) {
+            const statusDiv = document.getElementById('status');
+            if (statusDiv) {
+                statusDiv.textContent = msg;
+                statusDiv.style.display = 'block';
+            }
+        }
         let socket;
         let currentLobby = null;
         let currentPlayer = null;
@@ -354,10 +375,12 @@
 
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOMContentLoaded, checking Telegram WebApp');
+            setStatus('Загрузка...');
+            debugLog('DOMContentLoaded, checking Telegram WebApp');
             // Если запущено внутри Telegram Web App — пробуем получить данные автоматически
             const initApp = () => {
-                console.log('initApp called');
+                setStatus('Подключение к серверу...');
+                debugLog('initApp called');
                 socket = io();
                 setupSocketListeners();
                 setupEventListeners();
@@ -366,17 +389,17 @@
 
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
-                console.log('Telegram WebApp detected, initDataUnsafe=', tg.initDataUnsafe, 'initData=', tg.initData);
+                debugLog('Telegram WebApp detected, initDataUnsafe=' + JSON.stringify(tg.initDataUnsafe) + ', initData=' + tg.initData);
 
                 // Попробуем несколько раз получить initDataUnsafe.user (некоторые клиенты заполняют с задержкой)
                 let attempts = 0;
                 const tryGetUser = () => {
                     attempts++;
-                    console.log(`tryGetUser attempt ${attempts}`);
+                    debugLog('tryGetUser attempt ' + attempts);
                     const user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
-                    console.log('user from initDataUnsafe:', user);
+                    debugLog('user from initDataUnsafe: ' + JSON.stringify(user));
                     if (user && user.id) {
-                        console.log('user found, id:', user.id, 'name:', user.first_name);
+                        debugLog('user found, id: ' + user.id + ', name: ' + user.first_name);
                         webUserId = user.id;
                         playerName = user.first_name || user.username || 'Гость';
                         playerAvatar = '';
@@ -386,14 +409,14 @@
                     } else if (attempts < 4) {
                         setTimeout(tryGetUser, 250);
                     } else {
-                        console.log('no user after 4 attempts, initializing without profile');
+                        debugLog('no user after 4 attempts, initializing without profile');
                         // Инициализируем без диалогов — не показываем popup. Оставляем гостя, но будем передавать user_id если он появится позже
                         initApp();
                     }
                 };
                 tryGetUser();
             } else {
-                console.log('No Telegram WebApp detected, showing dialog');
+                debugLog('No Telegram WebApp detected, showing dialog');
                 // Обычный браузер — показываем диалог
                 showPlayerDialog((name, avatar) => {
                     playerName = name;
@@ -443,22 +466,24 @@
 
         function setupSocketListeners() {
             socket.on('connect', () => {
-                console.log('Подключено к серверу');
+                debugLog('Подключено к серверу');
+                setStatus('Подключено! Загрузка лобби...');
             });
 
             socket.on('disconnect', () => {
-                console.log('Отключено от сервера');
+                debugLog('Отключено от сервера');
+                setStatus('Отключено от сервера');
             });
 
             socket.on('lobby_created', (data) => {
-                console.log('lobby_created', data);
+                debugLog('lobby_created: ' + JSON.stringify(data));
                 currentLobby = data.lobby;
                 currentPlayer = data.lobby.players[0];
                 showGameBoard();
             });
 
             socket.on('update_lobby', (lobby) => {
-                console.log('update_lobby', lobby);
+                debugLog('update_lobby: ' + JSON.stringify(lobby));
                 currentLobby = lobby;
                 // если в списке игроков есть запись с нашим sid — назначим currentPlayer
                 try {
@@ -469,7 +494,7 @@
                         }
                     }
                 } catch (e) {
-                    console.warn('update_lobby player assign failed', e);
+                    debugLog('update_lobby player assign failed: ' + e.message);
                 }
                 updateGameDisplay();
                 try {
@@ -480,16 +505,19 @@
                         showGameBoard();
                     }
                 } catch (e) {
-                    console.warn('update_lobby showGameBoard check failed', e);
+                    debugLog('update_lobby showGameBoard check failed: ' + e.message);
                 }
             });
 
             socket.on('lobbies_list', (lobbies) => {
+                debugLog('lobbies_list received');
+                setStatus('Готово! Выберите лобби.');
                 renderLobbyList(lobbies);
             });
 
             // Когда бек вернул профиль из Telegram (включая ссылку на фото)
             socket.on('telegram_profile', (profile) => {
+                debugLog('telegram_profile: ' + JSON.stringify(profile));
                 try {
                     if (profile && profile.name) playerName = profile.name;
                     if (profile && profile.avatar) playerAvatar = profile.avatar;
@@ -497,10 +525,11 @@
                     if (currentLobby) {
                         socket.emit('get_lobbies');
                     }
-                } catch (e) { console.warn(e); }
+                } catch (e) { debugLog('telegram_profile error: ' + e.message); }
             });
 
             socket.on('error', (data) => {
+                debugLog('error: ' + data.message);
                 alert(data.message);
             });
         }
@@ -521,7 +550,7 @@
         }
 
         function joinLobby(lobbyId) {
-            console.log('emit join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar });
+            debugLog('emit join_lobby: ' + JSON.stringify({ lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId }));
             socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
             // показываем UI сразу — сервер пришлёт update_lobby чтобы синхронизировать
             showGameBoard();
