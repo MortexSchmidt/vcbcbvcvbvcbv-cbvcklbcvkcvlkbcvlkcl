@@ -98,7 +98,12 @@ previous_stream_status = {}
 # Множество известных чатов для уведомлений о стримах
 known_chats = set()
 
+KICK_MINIAPP_URL = os.environ.get('KICK_MINIAPP_URL') or 'https://YOUR_DOMAIN/kick_stream_miniapp.html'  # <-- Укажи свой домен!
 # --- Автоуведомления о стриме jesusavgn (Kick.com) ---
+# Команда /kickapp — ссылка на мини‑апп
+async def kickapp_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"Мини‑апп для статуса стрима Kick: {KICK_MINIAPP_URL}")
+
 stream_status_lock = threading.Lock()
 stream_status = {"live": None}
 
@@ -2050,5 +2055,10 @@ def api_kick_stream_status():
         return {"live": False, "error": str(e)}, 200
 
 if __name__ == '__main__':
+    # Регистрируем команду /kickapp
+    try:
+        application.add_handler(CommandHandler('kickapp', kickapp_command))
+    except Exception as e:
+        logger.error(f"Ошибка регистрации /kickapp: {e}")
     start_stream_status_thread()
     socketio.run(app, host='0.0.0.0', port=PORT, allow_unsafe_werkzeug=True)
