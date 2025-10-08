@@ -1426,7 +1426,6 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
         chat_id=update.effective_chat.id,
         text=f"🎮 <b>крестики-нолики Mini-App</b>\n\n"
              f"йоу, {user_name}! открывай Mini-App и заходи в игру\n\n"
-             f"чат с движем: <a href='https://t.me/hesusinsajd'>@hesusinsajd</a>\n\n"
              f"<i>вызвал: {user_mention}</i>",
         parse_mode='HTML',
         reply_markup=reply_markup
