@@ -888,7 +888,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if any(word in message_text.lower() for word in discrimination_words):
         # дискриминация — сразу мутим, причина на зумерском
         await add_warning(user_id, "дискриминация", context)
-        await mute_user(user_id, chat_id, 12, "дискриминация, токсик вайб", context, update)
+    await mute_user(user_id, chat_id, 0.166, "дискриминация, токсик вайб", context, update)
     
     # Правило 7: Мошенничество
     fraud_words = [
@@ -991,32 +991,32 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # мут за любые медиа — всегда плашка
     if update.message.animation and user_id not in admin_ids:
-        await mute_user(user_id, chat_id, 12, "гифка, чилишь в муте", context, update)
+        await mute_user(user_id, chat_id, 0.166, "гифка, чилишь в муте", context, update)
         return
     if update.message.document and user_id not in admin_ids:
-        await mute_user(user_id, chat_id, 12, "файл, чилишь в муте", context, update)
+        await mute_user(user_id, chat_id, 0.166, "файл, чилишь в муте", context, update)
         return
     if update.message.photo and user_id not in admin_ids:
-        await mute_user(user_id, chat_id, 12, "фотка, чилишь в муте", context, update)
+        await mute_user(user_id, chat_id, 0.166, "фотка, чилишь в муте", context, update)
         return
     if update.message.video and user_id not in admin_ids:
         caption = (update.message.caption or "").lower()
         filename = update.message.video.file_name.lower() if update.message.video.file_name else ""
         loud_indicators = ['крик', 'орет', 'громко', 'звук', 'bass', 'loud', 'scream']
         if any(word in caption + filename for word in loud_indicators):
-            await mute_user(user_id, chat_id, 12, "громкий контент, уши минус", context, update)
+            await mute_user(user_id, chat_id, 0.166, "громкий контент, уши минус", context, update)
         else:
-            await mute_user(user_id, chat_id, 12, "видос, чилишь в муте", context, update)
+            await mute_user(user_id, chat_id, 0.166, "видос, чилишь в муте", context, update)
         return
     if update.message.audio and user_id not in admin_ids:
         filename = update.message.audio.file_name.lower() if update.message.audio.file_name else ""
         if any(word in filename for word in ['крик', 'орет', 'громко', 'звук', 'bass', 'loud', 'scream']):
-            await mute_user(user_id, chat_id, 12, "громкий контент, уши минус", context, update)
+            await mute_user(user_id, chat_id, 0.166, "громкий контент, уши минус", context, update)
         else:
-            await mute_user(user_id, chat_id, 12, "аудио, чилишь в муте", context, update)
+            await mute_user(user_id, chat_id, 0.166, "аудио, чилишь в муте", context, update)
         return
     if update.message.voice and user_id not in admin_ids:
-        await mute_user(user_id, chat_id, 12, "войс, чилишь в муте", context, update)
+        await mute_user(user_id, chat_id, 0.166, "войс, чилишь в муте", context, update)
         return
 
 # Функция для получения курса валют
