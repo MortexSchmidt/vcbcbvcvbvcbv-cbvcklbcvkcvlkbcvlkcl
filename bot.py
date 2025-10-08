@@ -36,7 +36,7 @@ PORT = int(os.environ.get('PORT', 8080))
 app = Flask(__name__, static_folder='.')
 
 # SocketIO для реального времени
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Включаем логирование
 logging.basicConfig(
