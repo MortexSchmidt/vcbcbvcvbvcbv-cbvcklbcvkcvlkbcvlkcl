@@ -1332,10 +1332,10 @@ def setup_application():
     application.add_handler(CommandHandler("stream", check_stream))
     application.add_handler(CommandHandler("legend", legend_command))
     
-    # обработчики крестиков-ноликов
-    application.add_handler(CommandHandler("tictactoe", start_tictactoe))
-    application.add_handler(CommandHandler("join", join_tictactoe))
-    application.add_handler(CallbackQueryHandler(handle_tictactoe_callback, pattern="^tic_"))
+    # Перенаправляем старые команды крестиков-ноликов на Mini‑App
+    # (удаляем обработку старого message-based движка и inline callback'ов)
+    application.add_handler(CommandHandler("tictactoe", tictactoe_miniapp_command))
+    application.add_handler(CommandHandler("join", tictactoe_miniapp_command))
     
     # обработчик команды для открытия Mini-App
     application.add_handler(CommandHandler("tictactoe_app", tictactoe_miniapp_command))
