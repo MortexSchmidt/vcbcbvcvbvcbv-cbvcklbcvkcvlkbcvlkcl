@@ -1169,7 +1169,9 @@ async def check_stream(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text=stream_message, parse_mode='HTML')
 
 # функция для отправки уведомления о стриме
-async def send_stream_notification(application: Application):
+async def send_stream_notification(context: ContextTypes.DEFAULT_TYPE):
+    """Периодическая задача для проверки статуса стрима и отправки уведомлений."""
+    application = context.application
     is_live, stream_title = check_kick_stream()
 
     if is_live:
@@ -1401,6 +1403,11 @@ def setup_application():
         ]
         asyncio.run(application.bot.set_my_commands(commands))
         logger.info("Команды бота установлены")
+
+        # Запускаем периодическую задачу проверки стрима
+        job_queue = application.job_queue
+        job_queue.run_repeating(send_stream_notification, interval=1, first=0)
+        logger.info("Периодическая задача проверки стрима запущена с интервалом 1 секунда")
 
         # Установка webhook
         railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
