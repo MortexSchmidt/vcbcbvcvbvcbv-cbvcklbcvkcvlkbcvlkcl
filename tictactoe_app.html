@@ -324,6 +324,15 @@
       font-weight: 600;
       font-size: 0.9rem;
       color: white;
+      object-fit: cover;
+    }
+
+    .player-avatar-img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--border-primary);
     }
 
     .player-details {
@@ -458,6 +467,15 @@
       font-weight: 700;
       font-size: 1.1rem;
       color: white;
+      object-fit: cover;
+    }
+
+    .player-display-avatar-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--border-primary);
     }
 
     .player-display-info {
@@ -669,6 +687,15 @@
       font-weight: 700;
       font-size: 1.3rem;
       color: white;
+      object-fit: cover;
+    }
+
+    .lobby-player-avatar-img {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--border-primary);
     }
 
     .lobby-player-info h3 {
@@ -1038,21 +1065,12 @@
                 </div>
             </div>
 
-    <div id="debugStatus" style="display:none;padding:10px 0 0 0;text-align:center;color:#ff6b6b;font-size:1.05rem;"></div>
 
         <noscript>
             <div style="padding:32px;text-align:center;color:#ff6b6b;font-size:1.2rem;">Для работы Mini‑App требуется включить JavaScript.</div>
         </noscript>
         <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
         <script>
-        // Fallback: если через 2 секунды ни mainContainer, ни authOverlay не видны — показать ошибку
-        setTimeout(() => {
-          const main = document.getElementById('mainContainer');
-          const auth = document.getElementById('authOverlay');
-          if (main && auth && main.style.display === 'none' && auth.style.display === 'none') {
-            document.body.innerHTML = '<div style="padding:32px;text-align:center;color:#b00;font-size:1.2rem;">⛔ Ошибка загрузки Mini‑App.<br>Возможно, не удалось подключиться к серверу или Telegram.<br>Попробуйте обновить страницу или открыть позже.</div>';
-          }
-        }, 2000);
 
         // Глобальные переменные
         let socket;
@@ -1081,11 +1099,6 @@
                 tg.ready(); // Сообщаем Telegram, что Mini-App готова
                 tg.expand(); // Расширяем на весь экран если возможно
 
-                // DEBUG: выводим initDataUnsafe на экран
-                const debugDiv = document.getElementById('debugStatus');
-                debugDiv.style.display = 'block';
-                debugDiv.innerHTML = '<b>tg.initDataUnsafe:</b><br><pre style="white-space:pre-wrap;text-align:left;font-size:0.95em;background:#2f3136;padding:8px 10px;border:1px solid #202225;border-radius:8px;max-width:95vw;overflow-x:auto;color:#dcddde;">' +
-                  JSON.stringify(tg.initDataUnsafe, null, 2) + '</pre>';
 
                 // Ждем немного и пытаемся получить профиль
                 setTimeout(() => {
@@ -1118,27 +1131,18 @@
             // Подключаемся к серверу
             socket = io();
 
-            const debugDiv = document.getElementById('debugStatus');
-            let socketUrl = window.location.origin;
-            debugDiv.style.display = 'block';
-            debugDiv.innerHTML = 'Socket.IO URL: <b>' + socketUrl + '</b><br>';
-
             socket.on('connect', () => {
-              debugDiv.style.display = 'block';
-              debugDiv.textContent = '✅ Socket.IO: соединение установлено';
-              setTimeout(()=>{debugDiv.style.display='none';}, 2000);
+              console.log('✅ Socket.IO: соединение установлено');
             });
             socket.on('connect_error', (err) => {
-              debugDiv.style.display = 'block';
-              debugDiv.textContent = '⛔ Socket.IO: ошибка соединения — ' + (err && err.message ? err.message : err);
+              console.error('⛔ Socket.IO: ошибка соединения —', err);
             });
             socket.on('disconnect', () => {
-              debugDiv.style.display = 'block';
-              debugDiv.textContent = '⛔ Socket.IO: соединение потеряно';
+              console.log('⛔ Socket.IO: соединение потеряно');
             });
 
             // Если есть user_id, отправляем профиль
-            if (webUserId) {
+            if (webUserId && socket) {
                 socket.emit('identify', { user_id: webUserId, name: playerName, avatar: playerAvatar });
             }
 
@@ -1220,7 +1224,7 @@
                 const playerEl = document.createElement('div');
                 playerEl.className = `player-display ${player.symbol === currentLobby.current_player ? 'active' : ''}`;
                 playerEl.innerHTML = `
-                    <div class="player-display-avatar">${player.name.charAt(0).toUpperCase()}</div>
+                    <img src="${player.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=5865f2&color=ffffff&size=128`}" alt="${player.name}" class="player-display-avatar-img" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(player.name)}&background=5865f2&color=ffffff&size=128';">
                     <div class="player-display-info">
                         <p class="player-display-name">${player.name}</p>
                         <p class="player-display-symbol">Игрок ${player.symbol}</p>
@@ -1249,7 +1253,7 @@
                 const div = document.createElement('div');
                 div.className = 'lobby-player';
                 div.innerHTML = `
-                    <div class="lobby-player-avatar">${p.name.charAt(0).toUpperCase()}</div>
+                    <img src="${p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=5865f2&color=ffffff&size=96`}" alt="${p.name}" class="lobby-player-avatar-img" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=5865f2&color=ffffff&size=96';">
                     <div class="lobby-player-info">
                         <h3>${p.name} ${idx === 0 ? '<span style="color: var(--discord-primary); font-size: 0.85em;">(создатель)</span>' : ''}</h3>
                         <span class="symbol">Игрок ${p.symbol}</span>
@@ -1313,11 +1317,17 @@
         }
 
         function dissolveLobby() {
-            if (currentLobby) {
+            if (currentLobby && socket) {
                 socket.emit('dissolve_lobby', { lobby_id: currentLobby.id });
                 currentLobby = null;
                 currentPlayer = null;
                 showLobbyList();
+            }
+        }
+
+        function startGame() {
+            if (currentLobby && socket) {
+                socket.emit('start_game', { lobby_id: currentLobby.id });
             }
         }
 
@@ -1456,12 +1466,14 @@
         }
 
         function createLobby() {
-            const name = 'Лобби';
-            socket.emit('create_lobby', { name: name, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
+            if (socket) {
+                const name = 'Лобби';
+                socket.emit('create_lobby', { name: name, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
+            }
         }
 
         function refreshProfile() {
-            if (window.Telegram && window.Telegram.WebApp) {
+            if (window.Telegram && window.Telegram.WebApp && socket) {
                 const tg = window.Telegram.WebApp;
                 const user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
                 if (user && user.id) {
@@ -1474,13 +1486,15 @@
         }
 
         function joinLobby(lobbyId) {
-            socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
-            // показываем UI сразу — сервер пришлёт update_lobby чтобы синхронизировать
-            showGameBoard();
+            if (socket) {
+                socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
+                // показываем UI сразу — сервер пришлёт update_lobby чтобы синхронизировать
+                showGameBoard();
+            }
         }
 
         function leaveLobby() {
-            if (currentLobby) {
+            if (currentLobby && socket) {
                 socket.emit('leave_lobby', { lobby_id: currentLobby.id });
                 currentLobby = null;
                 currentPlayer = null;
@@ -1489,7 +1503,7 @@
         }
 
         function makeMove(position) {
-            if (currentLobby && currentPlayer && currentLobby.current_player === currentPlayer.symbol) {
+            if (currentLobby && currentPlayer && currentLobby.current_player === currentPlayer.symbol && socket) {
                 socket.emit('make_move', { lobby_id: currentLobby.id, position: position });
             }
         }
@@ -1509,7 +1523,9 @@
         }
 
         function getLobbies() {
-            socket.emit('get_lobbies');
+            if (socket) {
+                socket.emit('get_lobbies');
+            }
         }
 
         function renderLobbyList(lobbies) {
@@ -1538,7 +1554,7 @@
                     <div class="lobby-players">
                         ${lobby.players.map(p => `
                             <div class="player-info">
-                                <div class="player-avatar">${p.name.charAt(0).toUpperCase()}</div>
+                                <img src="${p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=5865f2&color=ffffff&size=64`}" alt="${p.name}" class="player-avatar-img" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=5865f2&color=ffffff&size=64';">
                                 <div class="player-details">
                                     <div class="player-name">${p.name}</div>
                                     <div class="player-symbol">Игрок ${p.symbol}</div>
