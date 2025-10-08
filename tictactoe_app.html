@@ -1,103 +1,4 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Крестики-нолики | Хесус Инсайд</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <style>
-        /* Minimal ChatGPT-like dark theme: soft shadows, subtle panels, high contrast text */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; }
-        body {
-            background: #0b0c0d; /* deep black */
-            color: #e6eef6; /* soft white */
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            padding: 28px;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 18px;
-        }
-
-        .header {
-            text-align: left;
-            margin-bottom: 22px;
-            padding: 18px;
-            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-            border-radius: 12px;
-            box-shadow: 0 6px 18px rgba(2,6,23,0.6);
-            border: 1px solid rgba(255,255,255,0.03);
-        }
-
-        .header h1 {
-            font-size: 1.6rem;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 6px;
-        }
-
-        .header p { color: #9aa6b2; font-size: 0.95rem; }
-
-    .create-lobby { display:flex; gap:12px; align-items:center; justify-content:center; margin-bottom:18px; }
-    .create-lobby .btn { height:44px; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
-
-        .lobby-list { display: grid; gap: 14px; margin-bottom: 18px; }
-
-        .lobby-card {
-            display:flex; align-items:center; justify-content:space-between;
-            padding:14px; border-radius:10px; background:#0f1113;
-            border:1px solid rgba(255,255,255,0.03);
-            box-shadow: 0 8px 24px rgba(2,6,23,0.55);
-        }
-
-        .lobby-card h3 { font-size:1.05rem; color:#e6eef6; margin-bottom:4px; }
-
-        .lobby-info { display:flex; align-items:center; gap:12px; }
-
-        .player { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background: rgba(255,255,255,0.02); color:#d8e6f0; font-size:0.9rem; }
-        .player img { width:28px; height:28px; border-radius:50%; object-fit:cover; }
-        .player.empty { opacity:0.6; }
-
-        .lobby-status { font-size:0.85rem; color:#9aa6b2; padding:6px 10px; border-radius:8px; background: rgba(255,255,255,0.01); }
-
-        .lobby-actions { display:flex; gap:8px; }
-
-        .btn { background:#11151a; color:#e6eef6; border:1px solid rgba(255,255,255,0.04); padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:600; }
-        .btn:hover { filter:brightness(1.05); }
-        .btn-primary { background:#0b70ff; color:white; border-color: rgba(11,112,255,0.15); }
-        .btn-secondary { background:transparent; color:#cfe6ff; border:1px solid rgba(255,255,255,0.03); }
-
-        .game-board { display:none; margin-top:18px; padding:20px; border-radius:12px; background:#0f1113; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 10px 30px rgba(2,6,23,0.6); }
-
-        .board-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:320px; margin:18px auto; }
-
-        .cell { background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00)); border-radius:8px; height:110px; display:flex; align-items:center; justify-content:center; font-size:2.6rem; cursor:pointer; border:1px solid rgba(255,255,255,0.03); box-shadow: inset 0 -4px 10px rgba(0,0,0,0.6); }
-        .cell:hover { transform:translateY(-3px); box-shadow: 0 10px 20px rgba(2,6,23,0.6); }
-        .cell.x { color:#ffffff; }
-        .cell.o { color:#b9d3ff; }
-
-    .game-info { text-align:center; margin-bottom:14px; color:#cbd7df; display:flex; flex-direction:column; align-items:center; gap:8px; }
-    .current-player { font-weight:600; color:#fff; display:block; margin-bottom:4px; }
-
-    /* Players row in status area */
-    .players-row { display:flex; gap:18px; align-items:center; justify-content:center; flex-wrap:wrap; }
-    .player-small { display:flex; gap:10px; align-items:center; background: rgba(255,255,255,0.01); padding:6px 10px; border-radius:999px; }
-    .player-small img { width:36px; height:36px; border-radius:50%; object-fit:cover; }
-    .player-small .name { font-weight:600; color:#e6eef6; font-size:0.95rem; }
-    .player-small .symbol { font-size:0.85rem; color:#9aa6b2; }
-    .vs-sep { color:#6f7f8f; font-weight:700; margin:0 6px; }
-    .status-line { margin-top:8px; color:#cfe6ff; font-weight:600; }
-
-    .game-actions { display:flex; gap:10px; justify-content:center; margin-top:12px; }
-    .game-actions .btn { flex:1; max-width:220px; }
-
-        .status-message { text-align:center; padding:10px; border-radius:8px; color:#cfe6ff; background: rgba(11,112,255,0.06); border:1px solid rgba(11,112,255,0.08); }
+ ан е браузераolor:#cfe6ff; background: rgba(11,112,255,0.06); border:1px solid rgba(11,112,255,0.08); }
 
         @media (max-width:720px) {
             .container { padding:12px; }
@@ -129,6 +30,10 @@
             <button class="btn btn-secondary" id="refreshProfileBtn">
                 <i class="fas fa-sync-alt" aria-hidden="true"></i>
                 <span>Обновить профиль</span>
+            </button>
+            <button class="btn btn-accent" id="authorizeBtn">
+                <i class="fas fa-user-check" aria-hidden="true"></i>
+                <span>Авторизоваться в боте</span>
             </button>
         </div>
 
@@ -287,12 +192,41 @@
         function setupEventListeners() {
             document.getElementById('createLobbyBtn').addEventListener('click', createLobby);
             document.getElementById('refreshProfileBtn').addEventListener('click', refreshProfile);
+            document.getElementById('authorizeBtn').addEventListener('click', authorizeWithBot);
             document.getElementById('leaveGameBtn').addEventListener('click', leaveLobby);
             document.getElementById('newGameBtn').addEventListener('click', resetGame);
 
             document.querySelectorAll('.cell').forEach((cell, index) => {
                 cell.addEventListener('click', () => makeMove(index));
             });
+        }
+
+        async function authorizeWithBot() {
+            // Запрашиваем у бекенда уникальный код для авторизации
+            try {
+                const resp = await fetch('/auth_code', { method: 'POST' });
+                const data = await resp.json();
+                if (data && data.code) {
+                    const code = data.code;
+                    // Сохраняем временно код (для отладки)
+                    console.log('auth code:', code);
+
+                    // Формируем deeplink на бота с payload auth:<code>
+                    const botUsername = 'hesusinsidemegabot';
+                    const link = `https://t.me/${botUsername}?start=auth:${encodeURIComponent(code)}`;
+
+                    // Открываем deeplink в новом окне (Telegram должен обработать и отправить /start)
+                    window.open(link, '_blank');
+
+                    // Показываем пользователю подсказку
+                    alert('Откроется Telegram. Нажмите кнопку "Start", если потребуется. После успешной авторизации профиль обновится автоматически.');
+                } else {
+                    alert('Не удалось получить код авторизации. Попробуйте позже.');
+                }
+            } catch (e) {
+                console.error('auth error', e);
+                alert('Ошибка запроса к серверу.');
+            }
         }
 
         function createLobby() {

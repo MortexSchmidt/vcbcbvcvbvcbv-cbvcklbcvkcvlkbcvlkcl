@@ -24,6 +24,7 @@ from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboa
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from datetime import datetime, timedelta
 import json
+import uuid
 
 # Применяем nest_asyncio для поддержки вложенных event loops
 nest_asyncio.apply()
@@ -104,6 +105,8 @@ admin_ids = [1648720935]  # Список ID администраторов
 lobbies = {}
 # Временное хранилище для сопоставления Socket.sid -> telegram профиль
 telegram_profiles = {}
+# Временное сопоставление code -> socket.sid для авторизации из Mini-App
+pending_auths = {}  # { code: { 'sid': sid, 'ts': datetime } }
 
 # Функции модерации
 async def add_warning(user_id: int, violation_type: str, context: ContextTypes.DEFAULT_TYPE):
@@ -517,7 +520,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_type = getattr(chat, 'type', 'unknown')
     logger.info(f"/start от user {update.effective_user.id} в чате {chat_id} (type={chat_type})")
 
-    # Проверяем, был ли передан payload (deeplink). Популярные формы: /start tictactoe или /start=tictactoe
+    # Проверяем, был ли передан payload (deeplink). Популярные формы: /start tictactoe, /start=tictactoe или /start=auth:<code>
     payload = None
     try:
         # 1) context.args (если CommandHandler распарсил аргументы)
@@ -538,6 +541,64 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         payload = None
 
     logger.info(f"/start payload detected: {payload}")
+
+    # Если payload указывает на авторизацию вида auth:<code> — пытаемся связать с mini-app
+    if payload and payload.lower().startswith('auth:'):
+        try:
+            code = payload.split(':', 1)[1]
+        except Exception:
+            code = None
+
+        if code:
+            entry = pending_auths.get(code)
+            if entry:
+                sid = entry.get('sid')
+                # Получаем профиль пользователя (включая фото)
+                profile = {'user_id': update.effective_user.id, 'name': update.effective_user.first_name or update.effective_user.username or str(update.effective_user.id), 'avatar': ''}
+                try:
+                    resp = requests.get(f"https://api.telegram.org/bot{token}/getUserProfilePhotos", params={'user_id': update.effective_user.id, 'limit': 1}, timeout=5)
+                    if resp.status_code == 200:
+                        j = resp.json()
+                        if j.get('ok') and j.get('result') and j['result'].get('photos'):
+                            photos = j['result']['photos']
+                            if len(photos) > 0 and len(photos[0]) > 0:
+                                file_id = photos[0][-1]['file_id']
+                                fresp = requests.get(f"https://api.telegram.org/bot{token}/getFile", params={'file_id': file_id}, timeout=5)
+                                if fresp.status_code == 200:
+                                    fj = fresp.json()
+                                    if fj.get('ok') and fj.get('result') and fj['result'].get('file_path'):
+                                        file_path = fj['result']['file_path']
+                                        avatar_url = f"https://api.telegram.org/file/bot{token}/{file_path}"
+                                        profile['avatar'] = avatar_url
+                except Exception as e:
+                    logger.warning(f"не удалось получить аватар при auth: {e}")
+
+                # Отправляем профиль через SocketIO в конкретную сессию
+                try:
+                    socketio.emit('telegram_profile', profile, room=sid)
+                    logger.info(f"Auth success: emitted profile to sid {sid} for code {code}")
+                except Exception as e:
+                    logger.error(f"Ошибка emit profile для auth: {e}")
+
+                # уведомление пользователю в ЛС
+                try:
+                    await context.bot.send_message(chat_id=update.effective_chat.id, text="✅ Авторизация прошла успешно. Возвращайтесь в Mini‑App.")
+                except Exception:
+                    pass
+
+                # удаляем использованный код
+                try:
+                    del pending_auths[code]
+                except KeyError:
+                    pass
+
+                return
+            else:
+                try:
+                    await context.bot.send_message(chat_id=update.effective_chat.id, text="❗ Код авторизации не найден или истёк.")
+                except Exception:
+                    pass
+                return
 
     # Если payload указывает на tictactoe — отправляем Mini-App кнопку в личку и выходим
     if payload and 'tictactoe' in payload.lower():
@@ -1833,6 +1894,33 @@ def check_winner(board):
 @app.route('/tictactoe_app.html')
 def serve_tictactoe_app():
     return app.send_static_file('tictactoe_app.html')
+
+
+@app.route('/auth_code', methods=['POST'])
+def auth_code():
+    """Generates a one-time auth code bound to a Socket.IO sid. Expects JSON body: { sid: 'socketid' }"""
+    try:
+        data = request.get_json(force=True)
+        sid = data.get('sid') if isinstance(data, dict) else None
+        # Очистка устаревших кодов (старше 5 минут)
+        now = datetime.now()
+        expired = [c for c, v in pending_auths.items() if now - v.get('ts', now) > timedelta(minutes=5)]
+        for c in expired:
+            try:
+                del pending_auths[c]
+            except KeyError:
+                pass
+
+        if not sid:
+            return json.dumps({'error': 'sid required'}), 400
+
+        # Генерируем уникальный код
+        code = uuid.uuid4().hex[:8]
+        pending_auths[code] = {'sid': sid, 'ts': datetime.now()}
+        return json.dumps({'code': code}), 200
+    except Exception as e:
+        logger.error(f"Ошибка /auth_code: {e}")
+        return json.dumps({'error': 'server error'}), 500
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
