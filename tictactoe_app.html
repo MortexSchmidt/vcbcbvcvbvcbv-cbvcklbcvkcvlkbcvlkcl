@@ -404,14 +404,37 @@
             });
 
             socket.on('lobby_created', (data) => {
+                console.log('lobby_created', data);
                 currentLobby = data.lobby;
                 currentPlayer = data.lobby.players[0];
                 showGameBoard();
             });
 
             socket.on('update_lobby', (lobby) => {
+                console.log('update_lobby', lobby);
                 currentLobby = lobby;
+                // если в списке игроков есть запись с нашим sid — назначим currentPlayer
+                try {
+                    if (lobby.players && socket.id) {
+                        const me = lobby.players.find(p => p.sid === socket.id);
+                        if (me) {
+                            currentPlayer = me;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('update_lobby player assign failed', e);
+                }
                 updateGameDisplay();
+                try {
+                    // если этот клиент теперь в списке игроков или игра стартовала — показываем доску
+                    const amPlayer = lobby.players && lobby.players.some(p => p.sid === socket.id);
+                    const playing = lobby.status === 'playing';
+                    if (amPlayer || playing) {
+                        showGameBoard();
+                    }
+                } catch (e) {
+                    console.warn('update_lobby showGameBoard check failed', e);
+                }
             });
 
             socket.on('lobbies_list', (lobbies) => {
@@ -451,7 +474,10 @@
         }
 
         function joinLobby(lobbyId) {
+            console.log('emit join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar });
             socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar });
+            // показываем UI сразу — сервер пришлёт update_lobby чтобы синхронизировать
+            showGameBoard();
         }
 
         function leaveLobby() {
