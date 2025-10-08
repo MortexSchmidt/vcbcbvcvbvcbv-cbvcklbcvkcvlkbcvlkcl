@@ -135,6 +135,8 @@
         </style>
     </div>
 
+    <div id="debugStatus" style="display:none;padding:10px 0 0 0;text-align:center;color:#b00;font-size:1.05rem;"></div>
+
     <noscript>
       <div style="padding:32px;text-align:center;color:#b00;font-size:1.2rem;">Для работы Mini‑App требуется включить JavaScript.</div>
     </noscript>
@@ -192,6 +194,21 @@
         function startApp() {
             // Подключаемся к серверу
             socket = io();
+
+            const debugDiv = document.getElementById('debugStatus');
+            socket.on('connect', () => {
+              debugDiv.style.display = 'block';
+              debugDiv.textContent = '✅ Socket.IO: соединение установлено';
+              setTimeout(()=>{debugDiv.style.display='none';}, 2000);
+            });
+            socket.on('connect_error', (err) => {
+              debugDiv.style.display = 'block';
+              debugDiv.textContent = '⛔ Socket.IO: ошибка соединения — ' + (err && err.message ? err.message : err);
+            });
+            socket.on('disconnect', () => {
+              debugDiv.style.display = 'block';
+              debugDiv.textContent = '⛔ Socket.IO: соединение потеряно';
+            });
 
             // Если есть user_id, отправляем профиль
             if (webUserId) {
