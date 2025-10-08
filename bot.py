@@ -23,6 +23,7 @@ from flask import Flask, request
 from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from datetime import datetime, timedelta
+import json
 
 # Применяем nest_asyncio для поддержки вложенных event loops
 nest_asyncio.apply()
@@ -44,10 +45,33 @@ logger = logging.getLogger(__name__)
 # Токен бота
 token = "8054283598:AAF-gnozvA6aVgZDL-AoBVdJ6hVqzzq26r8"
 
+# --- Централизованное хранилище для мутов ---
+MUTED_USERS_FILE = 'muted_users.json'
+file_lock = threading.Lock()
+
+def load_muted_users():
+    """Загружает замученных пользователей из файла."""
+    with file_lock:
+        try:
+            with open(MUTED_USERS_FILE, 'r') as f:
+                data = json.load(f)
+                # Конвертируем строки обратно в datetime объекты
+                return {int(k): datetime.fromisoformat(v) for k, v in data.items()}
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+def save_muted_users(muted_dict):
+    """Сохраняет замученных пользователей в файл."""
+    with file_lock:
+        # Конвертируем datetime в строки для JSON-сериализации
+        savable_data = {k: v.isoformat() for k, v in muted_dict.items()}
+        with open(MUTED_USERS_FILE, 'w') as f:
+            json.dump(savable_data, f)
+
 # Словарь для отслеживания сообщений пользователей (для детекции спама)
 user_messages = {}
-# Словарь для хранения времени мута пользователей
-muted_users = {}
+# Словарь для хранения времени мута пользователей - ЗАМЕНЕНО НА ФАЙЛ
+# muted_users = {}
 # Словарь для хранения предыдущего статуса стрима
 previous_stream_status = {}
 # Множество известных чатов для уведомлений о стримах
@@ -82,7 +106,10 @@ async def add_warning(user_id: int, violation_type: str, context: ContextTypes.D
 async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, context: ContextTypes.DEFAULT_TYPE):
     """Мутит пользователя на указанное количество часов (поддерживает дробные значения для минут)"""
     mute_until = datetime.now() + timedelta(hours=hours)
-    muted_users[user_id] = mute_until
+    
+    muted = load_muted_users()
+    muted[user_id] = mute_until
+    save_muted_users(muted)
     
     try:
         await context.bot.restrict_chat_member(
@@ -565,14 +592,19 @@ async def user_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     warnings_count = warnings.get("warnings", 0)
     violations = warnings.get("violations", [])
 
+    muted = load_muted_users()
     mute_status = "не в муте"
-    if user_id in muted_users:
-        mute_end = muted_users[user_id]
+    if user_id in muted:
+        mute_end = muted[user_id]
         if datetime.now() < mute_end:
             remaining = mute_end - datetime.now()
             hours = remaining.total_seconds() // 3600
             minutes = (remaining.total_seconds() % 3600) // 60
             mute_status = f"в муте еще {int(hours)}ч {int(minutes)}м"
+        else:
+            # Мут истек, удаляем
+            del muted[user_id]
+            save_muted_users(muted)
 
     recent_violations = violations[-3:] if violations else []
     violations_text = ""
@@ -601,8 +633,10 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = update.message.reply_to_message.from_user.id
-    if user_id in muted_users:
-        del muted_users[user_id]
+    muted = load_muted_users()
+    if user_id in muted:
+        del muted[user_id]
+        save_muted_users(muted)
         unmute_msg = f"🔊 {update.message.reply_to_message.from_user.mention_html()} размучен. админ: {update.effective_user.mention_html()}"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=unmute_msg, parse_mode='HTML')
     else:
@@ -683,8 +717,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     known_chats.add(chat_id)
     
     # Проверяем, не находится ли пользователь в муте
-    if user_id in muted_users:
-        mute_end_time = muted_users[user_id]
+    muted = load_muted_users()
+    if user_id in muted:
+        mute_end_time = muted[user_id]
         if datetime.now() < mute_end_time:
             try:
                 await update.message.delete()
@@ -693,7 +728,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         else:
             # Удаляем пользователя из списка заглушенных, если время мута истекло
-            del muted_users[user_id]
+            del muted[user_id]
+            save_muted_users(muted)
     
     # Проверки согласно правилам чата
     
@@ -886,7 +922,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(set(last_3_messages)) == 1:  # Все 3 сообщения одинаковые
             # Мутим пользователя на 10 минут
             mute_until = datetime.now() + timedelta(minutes=10)
-            muted_users[user_id] = mute_until
+            muted = load_muted_users()
+            muted[user_id] = mute_until
+            save_muted_users(muted)
             
             try:
                 # Устанавливаем ограничения на отправку сообщений
@@ -946,7 +984,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if len(set(last_3_stickers)) == 1:  # Все 3 стикера одинаковые
                 # Мутим пользователя на 10 минут
                 mute_until = datetime.now() + timedelta(minutes=10)
-                muted_users[user_id] = mute_until
+                muted = load_muted_users()
+                muted[user_id] = mute_until
+                save_muted_users(muted)
                 
                 try:
                     # Устанавливаем ограничения на отправку сообщений
