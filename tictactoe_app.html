@@ -977,8 +977,8 @@
                         Обновить профиль
                     </button>
                     <button class="menu-btn" id="authorizeBtn">
-                        <i class="fas fa-user-check"></i>
-                        Авторизоваться в боте
+                        <i class="fab fa-telegram-plane"></i>
+                        Авторизоваться
                     </button>
                 </div>
             </div>
@@ -1042,7 +1042,7 @@
                         Покинуть игру
                     </button>
                     <button class="game-btn primary" id="newGameBtn">
-                        <i class="fas fa-redo"></i>
+                        <i class="fas fa-redo-alt"></i>
                         Новая игра
                     </button>
                 </div>
@@ -1289,21 +1289,21 @@
                 if (currentLobby.players.length === 2) {
                     btns.innerHTML += `
                         <button class="game-btn primary" onclick="startGame()">
-                            <i class="fas fa-play"></i>
+                            <i class="fas fa-play-circle"></i>
                             Начать игру
                         </button>
                     `;
                 }
                 btns.innerHTML += `
                     <button class="game-btn danger" onclick="dissolveLobby()">
-                        <i class="fas fa-trash"></i>
+                        <i class="fas fa-times-circle"></i>
                         Распустить лобби
                     </button>
                 `;
             } else {
                 btns.innerHTML += `
                     <button class="game-btn secondary" onclick="leaveLobby()">
-                        <i class="fas fa-sign-out-alt"></i>
+                        <i class="fas fa-arrow-left"></i>
                         Покинуть лобби
                     </button>
                 `;
@@ -1318,12 +1318,28 @@
 
         function dissolveLobby() {
             if (currentLobby && socket) {
+                // Сразу отправляем событие на сервер
                 socket.emit('dissolve_lobby', { lobby_id: currentLobby.id });
+
+                // Немедленно сбрасываем локальное состояние
+                currentLobby = null;
+                currentPlayer = null;
+
+                // Сразу переключаемся на главный экран
+                showLobbyList();
+            }
+        }
+
+        // Обработчик ответа сервера на dissolve_lobby
+        socket.on('lobby_dissolved', (data) => {
+            console.log('Лобби распущено сервером:', data);
+            // Сбрасываем состояние если не было сделано ранее
+            if (currentLobby && currentLobby.id === data.lobby_id) {
                 currentLobby = null;
                 currentPlayer = null;
                 showLobbyList();
             }
-        }
+        });
 
         function startGame() {
             if (currentLobby && socket) {
@@ -1565,7 +1581,7 @@
                     </div>
                     <div class="lobby-actions">
                         <button class="action-btn join-btn" data-id="${lobby.id}">
-                            <i class="fas fa-sign-in-alt"></i> Присоединиться
+                            <i class="fas fa-plus"></i> Присоединиться
                         </button>
                         <button class="action-btn info-btn" data-id="${lobby.id}">
                             <i class="fas fa-info-circle"></i> Инфо
@@ -1809,18 +1825,18 @@
             if (isOwner) {
                 modalBtns.innerHTML = `
                     <button class="game-btn danger" onclick="hideWinModal(); leaveLobby();">
-                        <i class="fas fa-times"></i>
+                        <i class="fas fa-times-circle"></i>
                         Завершить
                     </button>
                     <button class="game-btn primary" onclick="hideWinModal(); resetGame();">
-                        <i class="fas fa-redo"></i>
+                        <i class="fas fa-redo-alt"></i>
                         Играть снова
                     </button>
                 `;
             } else {
                 modalBtns.innerHTML = `
                     <button class="game-btn primary" onclick="hideWinModal(); leaveLobby();">
-                        <i class="fas fa-check"></i>
+                        <i class="fas fa-check-circle"></i>
                         Понятно
                     </button>
                 `;
