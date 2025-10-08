@@ -85,6 +85,15 @@
     .game-info { text-align:center; margin-bottom:14px; color:#cbd7df; display:flex; flex-direction:column; align-items:center; gap:8px; }
     .current-player { font-weight:600; color:#fff; display:block; margin-bottom:4px; }
 
+    /* Players row in status area */
+    .players-row { display:flex; gap:18px; align-items:center; justify-content:center; flex-wrap:wrap; }
+    .player-small { display:flex; gap:10px; align-items:center; background: rgba(255,255,255,0.01); padding:6px 10px; border-radius:999px; }
+    .player-small img { width:36px; height:36px; border-radius:50%; object-fit:cover; }
+    .player-small .name { font-weight:600; color:#e6eef6; font-size:0.95rem; }
+    .player-small .symbol { font-size:0.85rem; color:#9aa6b2; }
+    .vs-sep { color:#6f7f8f; font-weight:700; margin:0 6px; }
+    .status-line { margin-top:8px; color:#cfe6ff; font-weight:600; }
+
     .game-actions { display:flex; gap:10px; justify-content:center; margin-top:12px; }
     .game-actions .btn { flex:1; max-width:220px; }
 
@@ -453,7 +462,8 @@
                 }
             }
 
-            document.getElementById('statusMessage').innerHTML = playersInfo + '<br>' + statusText;
+            // Рендерим игроков и статус через отдельную функцию (безопасный HTML)
+            renderStatusAndPlayers(currentLobby);
             document.getElementById('statusMessage').className = `status-message status-${currentLobby.status === 'finished' ? 'win' : currentLobby.status === 'playing' ? 'playing' : 'waiting'}`;
 
             // Обновить текущего игрока
@@ -463,6 +473,39 @@
                 document.getElementById('currentPlayer').className = isMyTurn ? 'player-turn' : 'player-wait';
             }
         }
+
+            // Безопасная вставка текста в HTML
+            function escapeHTML(s) {
+                return String(s).replace(/[&<>"']/g, function (c) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+                });
+            }
+
+            // Обновлённый рендер статуса/игроков
+            function renderStatusAndPlayers(lobby) {
+                const statusEl = document.getElementById('statusMessage');
+                if (!lobby || !lobby.players) { statusEl.innerHTML = ''; return; }
+
+                const playersHtml = lobby.players.map(p => {
+                    const avatar = p.avatar ? escapeHTML(p.avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(escapeHTML(p.name))}`;
+                    return `
+                        <div class="player-small">
+                            <img src="${avatar}" alt="avatar">
+                            <div style="display:flex;flex-direction:column;">
+                                <span class="name">${escapeHTML(p.name)}</span>
+                                <span class="symbol">(${escapeHTML(p.symbol)})</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('<span class="vs-sep">vs</span>');
+
+                let statusText = '';
+                if (lobby.status === 'playing') statusText = `Игра идет | Ход ${escapeHTML(lobby.current_player)}`;
+                else if (lobby.status === 'waiting') statusText = 'Ожидание игрока';
+                else if (lobby.status === 'finished') statusText = lobby.winner === 'draw' ? 'Ничья' : `Победил ${escapeHTML(lobby.winner)}`;
+
+                statusEl.innerHTML = `<div class="players-row">${playersHtml}</div><div class="status-line">${statusText}</div>`;
+            }
     </script>
 </body>
 </html>
