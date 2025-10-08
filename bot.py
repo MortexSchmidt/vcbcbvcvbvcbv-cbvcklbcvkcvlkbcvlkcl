@@ -1437,18 +1437,44 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
     user_name = update.effective_user.first_name
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
     
-    # Создаем кнопку для открытия Mini-App
-    keyboard = [[InlineKeyboardButton("🎮 Играть в крестики-нолики", web_app={"url": "https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/tictactoe_app.html"})]]
+    # URL Mini-App
+    miniapp_url = "https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/tictactoe_app.html"
+
+    # Создаем кнопку для открытия Mini-App (web_app) и запасную кнопку с обычной ссылкой
+    keyboard = [
+        [
+            InlineKeyboardButton("🎮 Играть в крестики-нолики (Mini-App)", web_app={"url": miniapp_url}),
+        ],
+        [InlineKeyboardButton("Открыть в браузере", url=miniapp_url)]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=f"🎮 <b>крестики-нолики Mini-App</b>\n\n"
-             f"йоу, {user_name}! открывай Mini-App и заходи в игру\n\n"
-             f"<i>вызвал: {user_mention}</i>",
-        parse_mode='HTML',
-        reply_markup=reply_markup
+
+    text = (
+        f"🎮 <b>крестики-нолики Mini-App</b>\n\n"
+        f"Привет, {user_name}! Открой Mini‑App и присоединись к игре.\n\n"
+        f"<i>вызвал: {user_mention}</i>"
     )
+
+    try:
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=text,
+            parse_mode='HTML',
+            reply_markup=reply_markup
+        )
+        logger.info(f"Отправлено сообщение с Mini-App в чат {update.effective_chat.id} для {user_name}")
+    except Exception as e:
+        logger.error(f"Не удалось отправить сообщение с Mini-App в чат {update.effective_chat.id}: {e}")
+        # Fallback: попробуем отправить простую ссылку в чат
+        try:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Открыть Mini‑App: {miniapp_url}")
+        except Exception as e2:
+            logger.error(f"Fallback отправка ссылки не удалась: {e2}")
+            # Последняя попытка: отправить ссылку в личку пользователю
+            try:
+                await context.bot.send_message(chat_id=update.effective_user.id, text=f"Открыть Mini‑App: {miniapp_url}")
+            except Exception as e3:
+                logger.error(f"Не удалось отправить ссылку в ЛС пользователю {update.effective_user.id}: {e3}")
 
 # Запускаем настройку при импорте модуля
 setup_application()
