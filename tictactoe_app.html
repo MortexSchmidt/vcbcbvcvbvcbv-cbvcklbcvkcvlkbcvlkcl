@@ -3,107 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Крестики-нолики Mini‑App</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        body { margin:0; font-family:'Segoe UI',Arial,sans-serif; background:#f7faff; color:#222; }
-        .container { max-width:520px; margin:0 auto; padding:24px; }
-        .header { background:#eaf2ff; padding:18px; border-radius:14px; margin-bottom:18px; text-align:center; }
-        .header h1 { margin:0; font-size:1.7rem; letter-spacing:0.01em; color:#1a2a3a; }
-        .create-lobby { display:flex; gap:10px; margin-bottom:18px; }
-        .btn { border:none; border-radius:8px; padding:10px 16px; font-size:1.05rem; cursor:pointer; transition:background 0.18s; font-weight:500; }
-        .btn-primary { background:#1976d2; color:#fff; }
-        .btn-primary:hover { background:#1256a6; }
-        .btn-secondary { background:#e3eaff; color:#1a2a3a; }
-        .btn-secondary:hover { background:#cfe6ff; }
-        .btn-accent { background:#fffbe6; color:#bfa100; border:1px solid #ffe066; }
-        .btn-accent:hover { background:#fff3bf; }
-        .lobby-list { display:grid; gap:14px; margin-bottom:18px; }
-        .lobby-card { background:#fff; border-radius:10px; box-shadow:0 2px 8px 0 rgba(0,0,0,0.04); padding:14px 16px; display:flex; flex-direction:row; align-items:center; justify-content:space-between; }
-        .lobby-info { display:flex; flex-direction:column; gap:4px; }
-        .lobby-players { display:flex; gap:8px; align-items:center; }
-        .player { display:flex; align-items:center; gap:6px; }
-        .player img { width:24px; height:24px; border-radius:50%; object-fit:cover; }
-        .player.empty { color:#aaa; font-style:italic; }
-        .lobby-status { font-size:0.97rem; color:#1976d2; }
-        .lobby-actions { display:flex; gap:8px; }
-        .lobby-actions .btn { flex:1; }
-        .game-board { background:#fff; border-radius:12px; box-shadow:0 2px 8px 0 rgba(0,0,0,0.04); padding:18px; margin-bottom:18px; }
-        .board-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:420px; margin:0 auto 12px auto; }
-        .cell { background:#eaf2ff; border-radius:8px; min-height:64px; font-size:2.1rem; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.15s; }
-        .cell.x { color:#1976d2; }
-        .cell.o { color:#bfa100; }
-        .cell:hover { background:#cfe6ff; }
-        .game-info { display:flex; flex-direction:row; align-items:center; justify-content:space-between; margin-bottom:10px; }
-        .current-player { font-size:1.1rem; font-weight:500; }
-        .status-message { font-size:0.97rem; color:#1976d2; }
-        .players-row {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: center;
-            gap: 18px;
-            margin-bottom: 6px;
-            max-width: 100%;
-            flex-wrap: wrap;
-            overflow-x: hidden;
-        }
-        .player-small {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #f7faff;
-            border-radius: 8px;
-            padding: 4px 10px 4px 4px;
-            box-shadow: 0 1px 4px 0 rgba(0,0,0,0.03);
-            min-width: 0;
-            max-width: 140px;
-            overflow: hidden;
-        }
-        .player-small img {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-        .player-small .name {
-            font-weight: 500;
-            font-size: 1.01em;
-            color: #1a2a3a;
-            white-space: nowrap;
-            overflow: hidden;
-            max-width: 90px;
-            display: inline-block;
-            position: relative;
-            /* Для анимации */
-        }
-        .player-small .name.marquee {
-            animation: marquee-x 3.5s linear infinite alternate;
-        }
-        @keyframes marquee-x {
-            0% { transform: translateX(0); }
-            90% { transform: translateX(calc(-100% + 90px)); }
-            100% { transform: translateX(calc(-100% + 90px)); }
-        }
-        .player-small .symbol {
-            color: #1976d2;
-            font-size: 1em;
-            margin-left: 2px;
-        }
-        .vs-sep {
-            color: #bfa100;
-            font-size: 1.2em;
-            margin: 0 8px;
-        }
-        @media (max-width:720px) {
-            .container { padding:12px; }
-            .header { padding:12px; border-radius:10px; }
-            .create-lobby { flex-direction:column; align-items:stretch; gap:8px; }
-            .create-lobby .btn { width:100%; }
-            .lobby-card { flex-direction:column; align-items:flex-start; gap:10px; }
-            .lobby-info { width:100%; justify-content:space-between; }
-            .lobby-actions { width:100%; display:flex; gap:8px; }
-            .lobby-actions .btn { flex:1; }
+    /* Новый стиль (ремастер) */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f4f7fb;
+      color: #222;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .container { width:100%; max-width:420px; margin:0 auto; padding:0 16px 28px; }
+    .header { text-align:center; padding:22px 0 12px 0; }
+    .header h1 { margin:0; font-size:1.9rem; color:#1976d2; }
+    .create-lobby { display:flex; gap:10px; margin-bottom:18px; justify-content:center; }
+    .btn { border:none; border-radius:10px; padding:10px 16px; font-size:1.03rem; cursor:pointer; transition:background 0.18s, transform 0.12s; font-weight:600; }
+    .btn:active{ transform: translateY(1px); }
+    .btn-primary { background:#1976d2; color:#fff; }
+    .btn-primary:hover{ background:#1256a6; }
+    .btn-secondary { background:#eef6ff; color:#1976d2; }
+    .btn-accent { background:#fffbe6; color:#bfa100; }
+    .lobby-list { display:grid; gap:12px; margin-bottom:16px; }
+    .lobby-card { background:#fff; border-radius:14px; box-shadow:0 6px 24px #0001; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; }
+    .lobby-info { display:flex; flex-direction:column; gap:6px; }
+    .lobby-players { display:flex; gap:10px; align-items:center; }
+    .player { display:flex; align-items:center; gap:8px; }
+    .player img { width:36px; height:36px; border-radius:50%; object-fit:cover; }
+    .player.empty { color:#aaa; font-style:italic; }
+    .lobby-status { font-size:0.95rem; color:#888; }
+    .lobby-actions { display:flex; gap:8px; }
+    .lobby-actions .btn { min-width:120px; }
+    .game-board { background:#fff; border-radius:14px; box-shadow:0 6px 24px #0001; padding:16px; margin-bottom:18px; }
+    .board-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:360px; margin:0 auto 12px auto; }
+    .cell { background:#eef6ff; border-radius:10px; min-height:64px; font-size:2.2rem; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.12s; }
+    .cell.x { color:#1976d2; }
+    .cell.o { color:#bfa100; }
+    .cell:hover { background:#d6eefd; }
+    .game-info { display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:12px; }
+    .current-player { font-size:1.08rem; font-weight:600; }
+    .status-message { font-size:0.98rem; color:#1976d2; }
+    .players-row { display:flex; gap:16px; align-items:center; justify-content:center; flex-wrap:wrap; margin-bottom:8px; overflow-x:hidden; }
+    .player-small { display:flex; align-items:center; gap:8px; background:#fff; border-radius:10px; padding:6px 10px; box-shadow:0 2px 8px #0001; min-width:0; max-width:160px; overflow:hidden; }
+    .player-small img{ width:36px; height:36px; border-radius:50%; object-fit:cover; }
+    .player-small .name{ font-weight:600; font-size:1.02em; color:#1a2a3a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; }
+    .player-small .symbol{ color:#1976d2; font-weight:600; margin-left:6px; }
+    .vs-sep{ color:#bfa100; font-size:1.1em; margin:0 6px; }
+    @media (max-width:720px){ .container{ padding:0 12px 20px;} .board-grid{ max-width:92vw; gap:8px;} .cell{ min-height:calc((92vw - 32px)/3);} }
+    </style>
             .board-grid { width:100%; max-width:420px; grid-auto-rows: calc((100vw - 48px) / 3); }
             .cell { height: auto; min-height: calc((100vw - 48px) / 3); font-size: calc(1.6rem + (100vw - 320px) / 300); }
             .game-board { padding:14px; }
