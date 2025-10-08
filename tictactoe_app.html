@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-    /* Новый стиль (ремастер) */
+    /* Discord-style theme */
     body {
       margin: 0;
       font-family: 'Segoe UI', Arial, sans-serif;
-      background: #f4f7fb;
-      color: #222;
+      background: #36393f;
+      color: #dcddde;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -18,39 +18,42 @@
     }
     .container { width:100%; max-width:420px; margin:0 auto; padding:0 16px 28px; }
     .header { text-align:center; padding:22px 0 12px 0; }
-    .header h1 { margin:0; font-size:1.9rem; color:#1976d2; }
-    .create-lobby { display:flex; gap:10px; margin-bottom:18px; justify-content:center; }
-    .btn { border:none; border-radius:10px; padding:10px 16px; font-size:1.03rem; cursor:pointer; transition:background 0.18s, transform 0.12s; font-weight:600; }
+    .header h1 { margin:0; font-size:1.9rem; color:#5865f2; }
+    .create-lobby { display:flex; gap:10px; margin-bottom:18px; justify-content:center; flex-wrap:wrap; }
+    .btn { border:none; border-radius:8px; padding:10px 16px; font-size:1.03rem; cursor:pointer; transition:background 0.18s, transform 0.12s; font-weight:600; color:#fff; }
     .btn:active{ transform: translateY(1px); }
-    .btn-primary { background:#1976d2; color:#fff; }
-    .btn-primary:hover{ background:#1256a6; }
-    .btn-secondary { background:#eef6ff; color:#1976d2; }
-    .btn-accent { background:#fffbe6; color:#bfa100; }
+    .btn-primary { background:#5865f2; }
+    .btn-primary:hover{ background:#4752c4; }
+    .btn-secondary { background:#4f545c; color:#dcddde; }
+    .btn-secondary:hover{ background:#5d6269; }
+    .btn-accent { background:#faa61a; color:#fff; }
+    .btn-accent:hover{ background:#e69516; }
     .lobby-list { display:grid; gap:12px; margin-bottom:16px; }
-    .lobby-card { background:#fff; border-radius:14px; box-shadow:0 6px 24px #0001; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; }
+    .lobby-card { background:#2f3136; border:1px solid #202225; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.3); padding:12px 14px; display:flex; align-items:center; justify-content:space-between; color:#dcddde; }
     .lobby-info { display:flex; flex-direction:column; gap:6px; }
-    .lobby-players { display:flex; gap:10px; align-items:center; }
+    .lobby-players { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .player { display:flex; align-items:center; gap:8px; }
     .player img { width:36px; height:36px; border-radius:50%; object-fit:cover; }
-    .player.empty { color:#aaa; font-style:italic; }
-    .lobby-status { font-size:0.95rem; color:#888; }
-    .lobby-actions { display:flex; gap:8px; }
+    .player.empty { color:#72767d; font-style:italic; }
+    .lobby-status { font-size:0.95rem; color:#72767d; }
+    .lobby-actions { display:flex; gap:8px; flex-wrap:wrap; }
     .lobby-actions .btn { min-width:120px; }
-    .game-board { background:#fff; border-radius:14px; box-shadow:0 6px 24px #0001; padding:16px; margin-bottom:18px; }
+    .game-board { background:#2f3136; border:1px solid #202225; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.3); padding:16px; margin-bottom:18px; }
     .board-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:360px; margin:0 auto 12px auto; }
-    .cell { background:#eef6ff; border-radius:10px; min-height:64px; font-size:2.2rem; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.12s; }
-    .cell.x { color:#1976d2; }
-    .cell.o { color:#bfa100; }
-    .cell:hover { background:#d6eefd; }
+    .cell { background:#36393f; border:1px solid #202225; border-radius:8px; min-height:64px; font-size:2.2rem; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.12s; color:#dcddde; }
+    .cell.x { color:#5865f2; }
+    .cell.o { color:#faa61a; }
+    .cell:hover { background:#40444b; }
     .game-info { display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:12px; }
-    .current-player { font-size:1.08rem; font-weight:600; }
-    .status-message { font-size:0.98rem; color:#1976d2; }
+    .current-player { font-size:1.08rem; font-weight:600; color:#dcddde; }
+    .status-message { font-size:0.98rem; color:#5865f2; }
     .players-row { display:flex; gap:16px; align-items:center; justify-content:center; flex-wrap:wrap; margin-bottom:8px; overflow-x:hidden; }
-    .player-small { display:flex; align-items:center; gap:8px; background:#fff; border-radius:10px; padding:6px 10px; box-shadow:0 2px 8px #0001; min-width:0; max-width:160px; overflow:hidden; }
+    .player-small { display:flex; align-items:center; gap:8px; background:#2f3136; border:1px solid #202225; border-radius:8px; padding:6px 10px; box-shadow:0 2px 8px rgba(0,0,0,0.3); min-width:0; max-width:160px; overflow:hidden; }
     .player-small img{ width:36px; height:36px; border-radius:50%; object-fit:cover; }
-    .player-small .name{ font-weight:600; font-size:1.02em; color:#1a2a3a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; }
-    .player-small .symbol{ color:#1976d2; font-weight:600; margin-left:6px; }
-    .vs-sep{ color:#bfa100; font-size:1.1em; margin:0 6px; }
+    .player-small .name{ font-weight:600; font-size:1.02em; color:#dcddde; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; }
+    .player-small .symbol{ color:#5865f2; font-weight:600; margin-left:6px; }
+    .vs-sep{ color:#faa61a; font-size:1.1em; margin:0 6px; }
+    .game-actions { display:flex; gap:12px; justify-content:center; }
     @media (max-width:720px){ .container{ padding:0 12px 20px;} .board-grid{ max-width:92vw; gap:8px;} .cell{ min-height:calc((92vw - 32px)/3);} }
     </style>
             .board-grid { width:100%; max-width:420px; grid-auto-rows: calc((100vw - 48px) / 3); }
@@ -69,10 +72,10 @@
             <div id="lobbyRoomBtns" style="display:flex;gap:12px;justify-content:center;"></div>
         </div>
     <!-- Модальное окно победы -->
-    <div id="winModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(30,40,60,0.32);align-items:center;justify-content:center;">
-        <div id="winModalBox" style="background:#fff;max-width:340px;width:92%;border-radius:16px;box-shadow:0 6px 32px 0 #0002;padding:32px 18px 24px 18px;text-align:center;animation:popWin .5s cubic-bezier(.23,1.12,.62,1.01);position:relative;">
+    <div id="winModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
+        <div id="winModalBox" style="background:#2f3136;border:1px solid #202225;border-radius:8px;max-width:340px;width:92%;box-shadow:0 4px 20px rgba(0,0,0,0.5);padding:32px 18px 24px 18px;text-align:center;color:#dcddde;animation:popWin .5s cubic-bezier(.23,1.12,.62,1.01);position:relative;">
             <div id="winModalAnim" style="font-size:2.5rem;margin-bottom:12px;">🎉</div>
-            <div id="winModalText" style="font-size:1.25rem;font-weight:600;margin-bottom:18px;">Победа!</div>
+            <div id="winModalText" style="font-size:1.25rem;font-weight:600;margin-bottom:18px;color:#dcddde;">Победа!</div>
             <div id="winModalBtns" style="display:flex;gap:12px;justify-content:center;"></div>
         </div>
         <style>
@@ -140,15 +143,15 @@
     </div>
     <!-- Оверлей авторизации — блокирует доступ пока не придёт профиль из бота -->
     <div id="authOverlay" style="display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;pointer-events:auto;">
-        <div style="max-width:340px;width:92%;background:rgba(255,255,255,0.97);box-shadow:0 2px 16px 0 rgba(0,0,0,0.10);padding:22px 18px 18px 18px;border-radius:14px;text-align:center;backdrop-filter:blur(2px);border:1.5px solid #e3eaff;animation:fadeIn .3s;">
-            <h2 style="margin:0 0 8px 0;font-size:1.25rem;color:#1a2a3a;font-weight:700;letter-spacing:0.01em;">Авторизация</h2>
-            <p style="margin:0 0 14px 0;color:#3a4a5a;font-size:1.01rem;">Для игры требуется подтверждение через Telegram-бота.<br>Это займёт 5 секунд.</p>
+        <div style="max-width:340px;width:92%;background:#2f3136;border:1px solid #202225;box-shadow:0 4px 20px rgba(0,0,0,0.5);padding:22px 18px 18px 18px;border-radius:8px;text-align:center;color:#dcddde;backdrop-filter:blur(2px);border:1.5px solid #5865f2;animation:fadeIn .3s;">
+            <h2 style="margin:0 0 8px 0;font-size:1.25rem;color:#dcddde;font-weight:700;letter-spacing:0.01em;">Авторизация</h2>
+            <p style="margin:0 0 14px 0;color:#b9bbbe;font-size:1.01rem;">Для игры требуется подтверждение через Telegram-бота.<br>Это займёт 5 секунд.</p>
             <button id="authActionBtn" class="btn btn-primary" style="font-size:1.07rem;padding:10px 18px;margin-bottom:8px;">Войти через бота</button>
-            <div id="authStatus" style="margin-top:8px;color:#6a7a8a;font-size:0.97rem;">Ожидание авторизации…</div>
+            <div id="authStatus" style="margin-top:8px;color:#b9bbbe;font-size:0.97rem;">Ожидание авторизации…</div>
         </div>
         <style>
         #authOverlay {
-            background: rgba(240,245,255,0.82);
+            background: rgba(54,57,63,0.9);
             position: fixed;
             inset: 0;
             display: flex;
@@ -163,10 +166,10 @@
         </style>
     </div>
 
-    <div id="debugStatus" style="display:none;padding:10px 0 0 0;text-align:center;color:#b00;font-size:1.05rem;"></div>
+    <div id="debugStatus" style="display:none;padding:10px 0 0 0;text-align:center;color:#ff6b6b;font-size:1.05rem;"></div>
 
         <noscript>
-            <div style="padding:32px;text-align:center;color:#b00;font-size:1.2rem;">Для работы Mini‑App требуется включить JavaScript.</div>
+            <div style="padding:32px;text-align:center;color:#ff6b6b;font-size:1.2rem;">Для работы Mini‑App требуется включить JavaScript.</div>
         </noscript>
         <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
         <script>
@@ -209,7 +212,7 @@
                 // DEBUG: выводим initDataUnsafe на экран
                 const debugDiv = document.getElementById('debugStatus');
                 debugDiv.style.display = 'block';
-                debugDiv.innerHTML = '<b>tg.initDataUnsafe:</b><br><pre style="white-space:pre-wrap;text-align:left;font-size:0.95em;background:#fffbe6;padding:8px 10px;border-radius:8px;max-width:95vw;overflow-x:auto;">' +
+                debugDiv.innerHTML = '<b>tg.initDataUnsafe:</b><br><pre style="white-space:pre-wrap;text-align:left;font-size:0.95em;background:#2f3136;padding:8px 10px;border:1px solid #202225;border-radius:8px;max-width:95vw;overflow-x:auto;color:#dcddde;">' +
                   JSON.stringify(tg.initDataUnsafe, null, 2) + '</pre>';
 
                 // Ждем немного и пытаемся получить профиль
@@ -337,15 +340,15 @@
             list.innerHTML = '';
             currentLobby.players.forEach((p, idx) => {
                 const div = document.createElement('div');
-                div.style = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;';
-                div.innerHTML = `<img src="${p.avatar ? p.avatar : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" alt="avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;"> <b>${p.name}</b> <span style="color:#888;">(${p.symbol})</span> ${idx === 0 ? '<span style="color:#1976d2;font-size:0.98em;">создатель</span>' : ''}`;
+                div.style = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;color:#dcddde;';
+                div.innerHTML = `<img src="${p.avatar ? p.avatar : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" alt="avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;"> <b>${p.name}</b> <span style="color:#72767d;">(${p.symbol})</span> ${idx === 0 ? '<span style="color:#5865f2;font-size:0.98em;">создатель</span>' : ''}`;
                 list.appendChild(div);
             });
             // Пустые места
             for (let i = currentLobby.players.length; i < 2; i++) {
                 const div = document.createElement('div');
-                div.style = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;color:#aaa;';
-                div.innerHTML = `<span style="width:32px;height:32px;display:inline-block;background:#eaf2ff;border-radius:50%;"></span> <i>Свободно</i>`;
+                div.style = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;color:#72767d;';
+                div.innerHTML = `<span style="width:32px;height:32px;display:inline-block;background:#40444b;border-radius:50%;"></span> <i>Свободно</i>`;
                 list.appendChild(div);
             }
             // Кнопки
@@ -437,11 +440,11 @@
 
                     // Показываем код и инструкцию для ручной авторизации
                     document.getElementById('authStatus').innerHTML =
-                        `<b>1.</b> <a href="${link}" target="_blank">Откройте бота в Telegram</a><br>` +
+                        `<b>1.</b> <a href="${link}" target="_blank" style="color:#5865f2;">Откройте бота в Telegram</a><br>` +
                         `<b>2.</b> Если бот не авторизует автоматически, <b>нажмите на команду ниже</b> чтобы скопировать её, и отправьте боту:<br>` +
-                        `<div id="copyAuthCode" style="margin:8px 0;padding:6px 10px;background:#fffbe6;border-radius:8px;font-size:1.08em;word-break:break-all;cursor:pointer;user-select:all;transition:background 0.2s;">/start auth:${code}</div>` +
-                        `<span id="copyHint" style="display:none;color:#1976d2;font-size:0.97em;">Скопировано!</span>` +
-                        `<span style="color:#b00;font-size:0.98em;display:block;margin-top:4px;">После этого вернитесь в Mini‑App — авторизация завершится автоматически.</span>`;
+                        `<div id="copyAuthCode" style="margin:8px 0;padding:6px 10px;background:#40444b;border:1px solid #202225;border-radius:8px;font-size:1.08em;word-break:break-all;cursor:pointer;user-select:all;transition:background 0.2s;color:#dcddde;">/start auth:${code}</div>` +
+                        `<span id="copyHint" style="display:none;color:#5865f2;font-size:0.97em;">Скопировано!</span>` +
+                        `<span style="color:#b9bbbe;font-size:0.98em;display:block;margin-top:4px;">После этого вернитесь в Mini‑App — авторизация завершится автоматически.</span>`;
                     // Добавляем обработчик для копирования
                     setTimeout(() => {
                         const copyDiv = document.getElementById('copyAuthCode');
@@ -464,8 +467,8 @@
                                     hint.style.display = 'inline';
                                     setTimeout(()=>{hint.style.display='none';}, 1200);
                                 }
-                                copyDiv.style.background = '#e3eaff';
-                                setTimeout(()=>{copyDiv.style.background='#fffbe6';}, 600);
+                                copyDiv.style.background = '#5865f2';
+                                setTimeout(()=>{copyDiv.style.background='#40444b';}, 600);
                             };
                         }
                     }, 100);
@@ -553,13 +556,13 @@
                 const lobbyCard = document.createElement('div');
                 lobbyCard.className = 'lobby-card';
                 lobbyCard.innerHTML = `
-                    <h3>${lobby.name}</h3>
+                    <h3 style="margin:0 0 8px 0;color:#dcddde;">${lobby.name}</h3>
                     <div class="lobby-info">
                         <div class="lobby-players">
                             ${lobby.players.map(p => `
                                 <div class="player" style="display:flex;align-items:center;gap:6px;">
                                     <img src="${p.avatar ? p.avatar : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" alt="avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">
-                                    <span>${p.name} <b>(${p.symbol})</b></span>
+                                    <span style="color:#dcddde;">${p.name} <b style="color:#5865f2;">(${p.symbol})</b></span>
                                 </div>
                             `).join('')}
                             ${lobby.players.length < 2 ? '<div class="player empty">Свободно</div>' : ''}
