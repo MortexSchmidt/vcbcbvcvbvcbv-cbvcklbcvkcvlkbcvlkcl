@@ -1462,16 +1462,37 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
         logger.info(f"Отправлено сообщение с Mini-App в чат {update.effective_chat.id} для {user_name}")
     except Exception as e:
         logger.error(f"Не удалось отправить сообщение с Mini-App в чат {update.effective_chat.id}: {e}")
-        # Fallback: попробуем отправить простую ссылку в чат
+        # Fallback: повторно попытаемся отправить сообщение с web_app кнопкой в чат
         try:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Открыть Mini‑App: {miniapp_url}")
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=text,
+                parse_mode='HTML',
+                reply_markup=reply_markup
+            )
+            logger.info(f"Повторно отправлено сообщение с web_app в чат {update.effective_chat.id}")
+            return
         except Exception as e2:
-            logger.error(f"Fallback отправка ссылки не удалась: {e2}")
-            # Последняя попытка: отправить ссылку в личку пользователю
-            try:
-                await context.bot.send_message(chat_id=update.effective_user.id, text=f"Открыть Mini‑App: {miniapp_url}")
-            except Exception as e3:
-                logger.error(f"Не удалось отправить ссылку в ЛС пользователю {update.effective_user.id}: {e3}")
+            logger.warning(f"Повторная отправка web_app в чат не удалась: {e2}")
+
+        # Попытка отправить web_app кнопку в личку пользователя
+        try:
+            await context.bot.send_message(
+                chat_id=update.effective_user.id,
+                text=text,
+                parse_mode='HTML',
+                reply_markup=reply_markup
+            )
+            logger.info(f"Отправлено сообщение с web_app в ЛС пользователю {update.effective_user.id}")
+            return
+        except Exception as e3:
+            logger.error(f"Отправка web_app в ЛС не удалась: {e3}")
+
+        # Если всё упало — отправим короткое уведомление без ссылки (чтобы не было обычной URL)
+        try:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Не удалось доставить кнопку Mini‑App. Проверьте, разрешено ли боту отправлять сообщения в этом чате и поддерживает ли клиент Web Apps.")
+        except Exception:
+            logger.error(f"Не удалось отправить уведомление об ошибке в чат {update.effective_chat.id}")
 
 # Запускаем настройку при импорте модуля
 setup_application()
