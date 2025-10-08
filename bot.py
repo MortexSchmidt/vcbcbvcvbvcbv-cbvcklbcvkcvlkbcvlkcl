@@ -363,7 +363,7 @@ async def join_tictactoe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     tictactoe_game["players"].append(update.effective_user)
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ <b>{update.effective_user.first_name}</b> присоединился к игре!", parse_mode='HTML')
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Пользователь <b>{update.effective_user.first_name}</b> присоединился к игре.", parse_mode='HTML')
     await update_board_message(context)
 
 async def handle_tictactoe_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -394,23 +394,23 @@ async def handle_tictactoe_callback(update: Update, context: ContextTypes.DEFAUL
     if data == "tic_forfeit":
         user = query.from_user
         if user.id not in [p.id for p in tictactoe_game["players"]]:
-            await query.answer("❌ ты не в игре, не фейь")
+            await query.answer("Вы не участвуете в игре")
             return
-        # Побеждает другой игрок
+
         other = [p for p in tictactoe_game["players"] if p.id != user.id]
-        winner_text = "<b>Победитель:</b> " + (other[0].first_name if other else "—")
+        winner_text = other[0].first_name if other else "—"
         tictactoe_game["active"] = False
-        await query.edit_message_text(create_board_text(tictactoe_game["board"], tictactoe_game["players"], tictactoe_game["current_player"]) + "\n\n⛔ Нихуя себе — игрок сдался. " + winner_text + " — gg", parse_mode='HTML')
+        await query.edit_message_text(create_board_text(tictactoe_game["board"], tictactoe_game["players"], tictactoe_game["current_player"]) + f"\n\nИгрок сдался. Победитель: <b>{winner_text}</b>", parse_mode='HTML')
         return
 
     # Завершить игру (только создатель или админ)
     if data == "tic_end":
         user = query.from_user
         if user.id != tictactoe_game.get("creator_id") and user.id not in admin_ids:
-            await query.answer("❌ только создатель или админ может закрыть игру")
+            await query.answer("Только создатель или администратор может закрыть игру")
             return
         tictactoe_game["active"] = False
-        await query.edit_message_text("🔚 Игра принудительно закрыта. Пока-пока, бро.")
+        await query.edit_message_text("Игра завершена принудительно.")
         return
 
     # Ход по позиции
@@ -439,10 +439,10 @@ async def handle_tictactoe_callback(update: Update, context: ContextTypes.DEFAUL
         winner = check_winner(tictactoe_game["board"])
         if winner:
             if winner == "draw":
-                result_text = "🤝 <b>НИЧЬЯ!</b> 🤝\n\nПацаны, ничья — лол. 🎉"
+                result_text = "Ничья."
             else:
                 winner_name = tictactoe_game["players"][tictactoe_game["current_player"]].first_name
-                result_text = f"🎉 <b>ПОБЕДА!</b> 🎉\n\n{winner} <b>{winner_name}</b> взорвал доску — он красавчик! 🏆"
+                result_text = f"Победа: <b>{winner_name}</b>."
             tictactoe_game["active"] = False
             await query.edit_message_text(create_board_text(tictactoe_game["board"], tictactoe_game["players"], tictactoe_game["current_player"]) + "\n\n" + result_text, parse_mode='HTML')
             return
