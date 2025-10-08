@@ -54,7 +54,7 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="mainContainer" style="display:none;">
         <div class="header">
             <h1>Крестики-нолики</h1>
         </div>
@@ -189,7 +189,7 @@
             // Если нет профиля — показываем обязательный оверлей авторизации
             if (!webUserId) {
                 showAuthOverlay();
-            }
+            } else { hideAuthOverlay(); }
 
             // Настраиваем слушатели
             setupSocketListeners();
@@ -300,6 +300,7 @@
         function showAuthOverlay() {
             const ov = document.getElementById('authOverlay');
             ov.style.display = 'flex';
+            document.getElementById('mainContainer').style.display = 'none';
             // bind default action
             document.getElementById('authActionBtn').onclick = authorizeWithBot;
         }
@@ -307,6 +308,7 @@
         function hideAuthOverlay() {
             const ov = document.getElementById('authOverlay');
             ov.style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'block';
         }
 
         function createLobby() {
