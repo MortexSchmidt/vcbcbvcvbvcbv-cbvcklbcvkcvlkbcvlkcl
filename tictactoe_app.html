@@ -35,7 +35,7 @@
             display:flex;
             align-items:flex-start; /* align to top, not center */
             justify-content:center; /* keep horizontal centering */
-            padding:16px 22px; /* slightly reduce top padding */
+            padding:10px 16px; /* reduce top padding further to remove empty space */
         }
 
         .app-container{
@@ -97,7 +97,7 @@
     .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
     .section-title i{color:var(--accent)}
 
-    .lobby-grid{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:flex-end;overflow:auto}
+    .lobby-grid{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:flex-end;overflow:auto;padding-top:6px}
     .lobby-card{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent}
     .lobby-meta{display:flex;align-items:center;gap:12px}
     .lobby-name{font-weight:600}
@@ -175,7 +175,7 @@
 
             <div class="profile-row">
                 <div class="avatar" id="profileAvatar">
-                    <img id="profileAvatarImg" src="" alt="avatar" onerror="this.style.display='none'">
+                    <img id="profileAvatarImg" src="" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=Guest&background=5865f2&color=ffffff&size=128';">
                 </div>
                 <div class="profile-info">
                     <div class="profile-name" id="profileName">Гость</div>
@@ -191,8 +191,14 @@
                     </svg>
                     Создать лобби
                 </button>
-                <button class="menu-btn" id="refreshProfileBtn"><i class="fas fa-sync-alt"></i>Обновить профиль</button>
-                <button class="menu-btn" id="authorizeBtn"><i class="fab fa-telegram-plane"></i>Авторизоваться</button>
+                <button class="menu-btn" id="refreshProfileBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;color:var(--accent);margin-right:10px;"><path d="M12 6V3L8 7l4 4V8c2.761 0 5 2.239 5 5a5 5 0 0 1-5 5 5 5 0 0 1-5-5H5a7 7 0 0 0 7 7 7 7 0 0 0 7-7c0-3.866-3.134-7-7-7z"/></svg>
+                    Обновить профиль
+                </button>
+                <button class="menu-btn" id="authorizeBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;color:var(--accent);margin-right:10px;"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2H9v-2h2V9h2v2h2v2h-2v2z"/></svg>
+                    Авторизоваться
+                </button>
             </div>
             <!-- moved: 'Доступные игры' section below the menu buttons so it appears after auth buttons -->
             <div class="section" id="lobbySection">
