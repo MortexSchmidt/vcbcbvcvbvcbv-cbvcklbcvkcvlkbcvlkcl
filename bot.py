@@ -36,7 +36,7 @@ PORT = int(os.environ.get('PORT', 8080))
 app = Flask(__name__, static_folder='.')
 
 # SocketIO для реального времени
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 # Включаем логирование
 logging.basicConfig(
@@ -1634,4 +1634,4 @@ def health():
     return "Bot is running", 200
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=PORT)
+    socketio.run(app, host='0.0.0.0', port=PORT, allow_unsafe_werkzeug=True)
