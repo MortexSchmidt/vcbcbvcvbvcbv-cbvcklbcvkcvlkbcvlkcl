@@ -44,7 +44,8 @@
 
         .header p { color: #9aa6b2; font-size: 0.95rem; }
 
-        .create-lobby { display:flex; gap:12px; align-items:center; margin-bottom:18px; }
+    .create-lobby { display:flex; gap:12px; align-items:center; margin-bottom:18px; }
+    .create-lobby .btn { height:44px; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
 
         .lobby-list { display: grid; gap: 14px; margin-bottom: 18px; }
 
@@ -81,10 +82,11 @@
         .cell.x { color:#ffffff; }
         .cell.o { color:#b9d3ff; }
 
-        .game-info { text-align:center; margin-bottom:10px; color:#cbd7df; }
-        .current-player { font-weight:600; color:#fff; }
+    .game-info { text-align:center; margin-bottom:14px; color:#cbd7df; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .current-player { font-weight:600; color:#fff; display:block; margin-bottom:4px; }
 
-        .game-actions { display:flex; gap:10px; justify-content:center; margin-top:12px; }
+    .game-actions { display:flex; gap:10px; justify-content:center; margin-top:12px; }
+    .game-actions .btn { flex:1; max-width:220px; }
 
         .status-message { text-align:center; padding:10px; border-radius:8px; color:#cfe6ff; background: rgba(11,112,255,0.06); border:1px solid rgba(11,112,255,0.08); }
 
@@ -97,8 +99,8 @@
             .lobby-info { width:100%; justify-content:space-between; }
             .lobby-actions { width:100%; display:flex; gap:8px; }
             .lobby-actions .btn { flex:1; }
-            .board-grid { width:100%; max-width:420px; grid-auto-rows: calc((100vw - 56px) / 3); }
-            .cell { height: auto; min-height: calc((100vw - 56px) / 3); font-size: calc(2rem + (100vw - 320px) / 200); }
+            .board-grid { width:100%; max-width:420px; grid-auto-rows: calc((100vw - 48px) / 3); }
+            .cell { height: auto; min-height: calc((100vw - 48px) / 3); font-size: calc(1.6rem + (100vw - 320px) / 300); }
             .game-board { padding:14px; }
             .status-message { font-size:0.95rem; }
         }
@@ -107,16 +109,15 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎮 Крестики-нолики</h1>
-            <p>Движ запущен! Выбирай лобби и заходи в игру</p>
+            <h1>Крестики-нолики</h1>
         </div>
 
         <div class="create-lobby">
             <button class="btn btn-primary" id="createLobbyBtn">
-                <i class="fas fa-plus"></i> Создать новое лобби
+                Создать лобби
             </button>
             <button class="btn btn-secondary" id="refreshProfileBtn" style="margin-left:10px;">
-                <i class="fas fa-refresh"></i> Обновить профиль
+                Обновить профиль
             </button>
         </div>
 
@@ -148,10 +149,10 @@
             
             <div class="game-actions">
                 <button class="btn btn-secondary" id="leaveGameBtn">
-                    <i class="fas fa-sign-out-alt"></i> Покинуть игру
+                    Покинуть
                 </button>
                 <button class="btn btn-primary" id="newGameBtn">
-                    <i class="fas fa-redo"></i> Новая игра
+                    Новая
                 </button>
             </div>
         </div>
