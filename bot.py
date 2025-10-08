@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-🔥 хесус инсайдбот 🔥
+Хесус Инсайд — Телеграм бот.
 
-🤖 современный телеграм бот для чата хесус инсайд
-📺 мониторинг стримов на kick.com
-🛡️ умная модерация чата
-💰 актуальные курсы валют
+Функции:
+- мониторинг стримов на kick.com
+- модерация чата
+- курсы валют
+- мини‑приложение крестики‑нолики (Mini‑App)
 
-💻 создан с любовью для хесус инсайда
-👨‍💻 разработчик: @TrempelChan
-версия: 2.0 🚀
+Разработчик: @TrempelChan
 """
 
 import os
@@ -321,7 +320,7 @@ async def start_tictactoe(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     global tictactoe_game
     if tictactoe_game["active"]:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ игра уже идет в этом чате, бро — жди или напиши создателю")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="В этом чате уже идёт игра. Подождите или обратитесь к создателю.")
         return
 
     tictactoe_game = {
@@ -352,15 +351,15 @@ async def join_tictactoe(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     global tictactoe_game
     if not tictactoe_game["active"]:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ нет активной игры — пиши /tictactoe, чтобы начать")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Нет активной игры. Используйте /tictactoe для начала.")
         return
 
     if len(tictactoe_game["players"]) >= 2:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ игра уже полная")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Игра уже полна.")
         return
 
     if update.effective_user.id in [p.id for p in tictactoe_game["players"]]:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ ты уже в игре")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Вы уже участвуете в игре.")
         return
 
     tictactoe_game["players"].append(update.effective_user)
@@ -375,17 +374,17 @@ async def handle_tictactoe_callback(update: Update, context: ContextTypes.DEFAUL
 
     global tictactoe_game
     if not tictactoe_game["active"]:
-        await query.edit_message_text("❌ игра закончилась или была отменена")
+        await query.edit_message_text("Игра завершена или отменена.")
         return
 
     # Присоединение
     if data == "tic_join":
         user = query.from_user
         if len(tictactoe_game["players"]) >= 2:
-            await query.answer("❌ играть уже занято — дождись следующей очереди")
+            await query.answer("Игра уже занята. Подождите следующего раунда.")
             return
         if user.id in [p.id for p in tictactoe_game["players"]]:
-            await query.answer("❌ ты уже в займе")
+            await query.answer("Вы уже присоединились.")
             return
         tictactoe_game["players"].append(user)
         await query.edit_message_text(create_board_text(tictactoe_game["board"], tictactoe_game["players"], tictactoe_game["current_player"]), parse_mode='HTML', reply_markup=build_board_keyboard(tictactoe_game["board"], tictactoe_game["players"]))
@@ -418,7 +417,7 @@ async def handle_tictactoe_callback(update: Update, context: ContextTypes.DEFAUL
     if data.startswith("tic_pos_"):
         # Требуется 2 игрока
         if len(tictactoe_game["players"]) < 2:
-            await query.answer("❌ пока никого, подожди пока кто-нибудь заскочит")
+            await query.answer("Пока нет второго игрока. Подождите.")
             return
 
         pos = int(data.split("_")[-1])
@@ -426,14 +425,14 @@ async def handle_tictactoe_callback(update: Update, context: ContextTypes.DEFAUL
 
         # Проверяем чей ход
         if user.id != tictactoe_game["players"][tictactoe_game["current_player"]].id:
-            await query.answer("❌ чувачок, не твой ход — отвали пока")
+            await query.answer("Сейчас не ваш ход.")
             return
 
         if tictactoe_game["board"][pos] != " ":
-            await query.answer("❌ она уже занята, выбери другую")
+            await query.answer("Клетка занята. Выберите другую.")
             return
 
-        symbols = ["❌", "⭕"]
+        symbols = ["X", "O"]
         tictactoe_game["board"][pos] = symbols[tictactoe_game["current_player"]]
 
         # Проверяем победителя
@@ -462,7 +461,10 @@ async def handle_tictactoe_callback(update: Update, context: ContextTypes.DEFAUL
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"команда /start от {update.effective_user.first_name} в чате {update.effective_chat.id}")
     try:
-        await update.message.delete()
+        try:
+            await update.message.delete()
+        except:
+            pass
         logger.info("сообщение команды удалено")
     except Exception as e:
         logger.error(f"не удалось удалить сообщение: {e}")
@@ -470,16 +472,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_name = update.effective_user.first_name
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
-    welcome_text = f"""Здравствуйте, {user_name}.
+    welcome_text = f"""👋 Здравствуйте, {user_name}.
 
-Я — бот «Хесус Инсайд». Доступные команды:
+Я — бот «Хесус Инсайд». Краткий список команд:
 
-- /stream — статус стрима
-- /rate — курсы валют
-- /tictactoe или /tictactoe_app — мини‑приложение крестики‑нолики
-- /rules — правила чата
-- /myid — ваш ID
-- /help — помощь
+📡 /stream — статус стрима
+📈 /rate — курсы валют
+🎮 /tictactoe или /tictactoe_app — мини‑приложение крестики‑нолики
+📋 /rules — правила чата
+🆔 /myid — ваш ID
+❓ /help — помощь
 
 Разработчик: @TrempelChan
 
@@ -499,13 +501,13 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
     help_message = f"""Справка — команды для {user_name}:
 
-/stream — статус стрима
-/rate — курсы валют
-/tictactoe или /tictactoe_app — мини‑приложение крестики‑нолики
-/join — присоединиться к игре
-/rules — правила чата
-/myid — ваш ID
-/help — показать это сообщение
+📡 /stream — статус стрима
+📈 /rate — курсы валют
+🎮 /tictactoe или /tictactoe_app — мини‑приложение крестики‑нолики
+➕ /join — присоединиться к игре
+📋 /rules — правила чата
+🆔 /myid — ваш ID
+❓ /help — показать это сообщение
 
 Ссылка на стрим: https://kick.com/jesusavgn
 
@@ -524,11 +526,11 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     if update.effective_user.id not in admin_ids:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ сори, бро, только для админов")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="🔒 Команда доступна только администраторам.")
         return
 
     if not update.message.reply_to_message:
-        help_msg = "🔇 как кинуть в мут: реплай на месседж и /mute [время] [причина] (30м, 2ч, 1д или без аргумента = 1ч)"
+        help_msg = "🔧 Использование: ответьте на сообщение и выполните /mute [время] [причина]. Примеры времени: 30м, 2ч, 1д или без аргумента = 1ч."
         await context.bot.send_message(chat_id=update.effective_chat.id, text=help_msg)
         return
 
@@ -552,14 +554,14 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 minutes = int(time_arg)
         except:
-            await context.bot.send_message(chat_id=chat_id, text="❌ кринжовый формат времени. го так: 30м, 2ч, 1д или просто цифру (в минутах)")
+            await context.bot.send_message(chat_id=chat_id, text="Неверный формат времени. Ожидается: 30м, 2ч, 1д или число в минутах.")
             return
 
     total_hours = hours + (minutes / 60.0)
     # Передаем `update` в функцию `mute_user`
     success = await mute_user(user_id, chat_id, total_hours, reason, context, update)
     if not success:
-        await context.bot.send_message(chat_id=chat_id, text="❌ не получилось замутить (мб он админ или у меня лапки)")
+        await context.bot.send_message(chat_id=chat_id, text="Не удалось применить мут. Возможно, пользователь является администратором или произошла ошибка.")
 
 
 
@@ -572,18 +574,18 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     if update.effective_user.id not in admin_ids:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ сори, бро, команда только для админов")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="🔒 Команда доступна только администраторам.")
         return
 
     if not update.message.reply_to_message:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="реплай на месседж, чтобы выдать варн")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Ответьте на сообщение пользователя, чтобы выдать предупреждение.")
         return
 
     user_id = update.message.reply_to_message.from_user.id
-    violation_type = " ".join(context.args) if context.args else "за кринж"
+    violation_type = " ".join(context.args) if context.args else "Нарушение правил"
     await add_warning(user_id, violation_type, context)
     warnings_count = user_warnings[user_id]["warnings"]
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"⚠️ ловишь варн за кринж, аккуратнее, бро! теперь у тебя их {warnings_count}")
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Пользователь получил предупреждение. Всего предупреждений: {warnings_count}.")
 
 
 async def user_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -594,11 +596,11 @@ async def user_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     if update.effective_user.id not in admin_ids:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ сори, бро, команда только для админов")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="🔒 Команда доступна только администраторам.")
         return
 
     if not update.message.reply_to_message:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="реплай на месседж, чтобы чекнуть инфу")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="ℹ️ Ответьте на сообщение пользователя, чтобы получить информацию.")
         return
 
     user = update.message.reply_to_message.from_user
@@ -629,9 +631,16 @@ async def user_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for v in recent_violations:
         violations_text += f"• {v['type']} ({v['timestamp'].strftime('%d.%m.%Y %H:%M')})\n"
     if not violations_text:
-        violations_text = "чист, как слеза"
+        violations_text = "Нет записей о нарушениях."
 
-    info_msg = f"👤 инфа по челу:\nник: {user_name}\nюзернейм: @{username}\nid: {user_id}\nварны: {warnings_count}\nстатус мута: {mute_status}\n\nпоследние косяки:\n{violations_text}"
+    info_msg = (
+        f"👤 Пользователь: {user_name}\n"
+        f"🔗 Юзернейм: @{username}\n"
+        f"🆔 ID: {user_id}\n"
+        f"⚠️ Предупреждений: {warnings_count}\n"
+        f"🔒 Статус мута: {mute_status}\n\n"
+        f"Последние нарушения:\n{violations_text}"
+    )
     await context.bot.send_message(chat_id=update.effective_chat.id, text=info_msg, parse_mode='HTML')
 
 
@@ -643,7 +652,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     if update.effective_user.id not in admin_ids:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ сори, бро, команда только для админов")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="🔒 Команда доступна только администраторам.")
         return
 
     if not update.message.reply_to_message:
@@ -655,10 +664,10 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in muted:
         del muted[user_id]
         save_muted_users(muted)
-        unmute_msg = f"🔊 {update.message.reply_to_message.from_user.mention_html()} размут, можешь базарить, но не борзей\nадмин: {update.effective_user.mention_html()}"
+        unmute_msg = f"✅ Пользователь {update.message.reply_to_message.from_user.mention_html()} размучен. Администратор: {update.effective_user.mention_html()}"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=unmute_msg, parse_mode='HTML')
     else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"❌ {update.message.reply_to_message.from_user.first_name} и так не в муте, лол")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Пользователь {update.message.reply_to_message.from_user.first_name} не находится в муте.")
 
 
 async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -669,7 +678,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     if update.effective_user.id not in admin_ids:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ сори, бро, команда только для админов")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="🔒 Команда доступна только администраторам.")
         return
 
     if not update.message.reply_to_message:
@@ -680,10 +689,10 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     try:
         await context.bot.unban_chat_member(chat_id, user_id)
-        unban_msg = f"✅ тебя разбанили, не тупи больше, ок?\nадмин: {update.effective_user.mention_html()}"
+        unban_msg = f"✅ Пользователь разбанен. Администратор: {update.effective_user.mention_html()}"
         await context.bot.send_message(chat_id=chat_id, text=unban_msg, parse_mode='HTML')
     except Exception as e:
-        await context.bot.send_message(chat_id=chat_id, text=f"❌ траблы с разбаном: {str(e)}")
+        await context.bot.send_message(chat_id=chat_id, text=f"Ошибка при разбане: {str(e)}")
 
 
 async def clear_warnings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -694,7 +703,7 @@ async def clear_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
         pass
 
     if update.effective_user.id not in admin_ids:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ сори, бро, команда только для админов")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="🔒 Команда доступна только администраторам.")
         return
 
     if not update.message.reply_to_message:
@@ -704,10 +713,10 @@ async def clear_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
     user_id = update.message.reply_to_message.from_user.id
     if user_id in user_warnings:
         del user_warnings[user_id]
-        clear_msg = f"🧹 все варны снесены, чистый лист, юзаем с умом\nадмин: {update.effective_user.mention_html()}"
+        clear_msg = f"🧹 Все предупреждения удалены. Администратор: {update.effective_user.mention_html()}"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=clear_msg, parse_mode='HTML')
     else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"❌ у {update.message.reply_to_message.from_user.first_name} и так нет варнов, але")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"У пользователя {update.message.reply_to_message.from_user.first_name} нет предупреждений.")
 
 
 async def admin_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -718,10 +727,10 @@ async def admin_help_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         pass
 
     if update.effective_user.id not in admin_ids:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ сори, бро, команда только для админов")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Команда доступна только администраторам.")
         return
 
-    admin_help_msg = "🔧 админ-панель:\n/mute, /unmute, /ban, /unban, /warn, /clearwarns, /userinfo"
+    admin_help_msg = "🔧 Справка для администраторов: /mute, /unmute, /ban, /unban, /warn, /clearwarns, /userinfo"
     await context.bot.send_message(chat_id=update.effective_chat.id, text=admin_help_msg)
 
 # Обработчик сообщений
