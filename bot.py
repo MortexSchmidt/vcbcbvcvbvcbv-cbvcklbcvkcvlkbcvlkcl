@@ -1114,10 +1114,8 @@ def get_exchange_rate():
 
 # обработчик команды /rate
 async def exchange_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        await update.message.delete()
-    except:
-        pass  # если нет прав на удаление, просто пропускаем
+    # Не удаляем командное сообщение заранее — удалим только после успешной отправки
+    # чтобы в случае ошибки пользователь видел вызов команды и мог понять, что что-то пошло не так.
     
     user_name = update.effective_user.first_name
     rates = get_exchange_rate()
@@ -1460,9 +1458,15 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
             reply_markup=reply_markup
         )
         logger.info(f"Отправлено сообщение с Mini-App в чат {update.effective_chat.id} для {user_name}")
+        # Попытка удалить командное сообщение (если есть права)
+        try:
+            await update.message.delete()
+        except Exception:
+            pass
+        return
     except Exception as e:
         logger.error(f"Не удалось отправить сообщение с Mini-App в чат {update.effective_chat.id}: {e}")
-        # Fallback: повторно попытаемся отправить сообщение с web_app кнопкой в чат
+        # Fallback: повторно попытаемся отправить web_app кнопку в чат (еще одна попытка)
         try:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
@@ -1471,26 +1475,17 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
                 reply_markup=reply_markup
             )
             logger.info(f"Повторно отправлено сообщение с web_app в чат {update.effective_chat.id}")
+            try:
+                await update.message.delete()
+            except Exception:
+                pass
             return
         except Exception as e2:
             logger.warning(f"Повторная отправка web_app в чат не удалась: {e2}")
 
-        # Попытка отправить web_app кнопку в личку пользователя
+        # Если и повтор не прошёл — пробуем отправить короткое уведомление об ошибке в чат (без ссылки)
         try:
-            await context.bot.send_message(
-                chat_id=update.effective_user.id,
-                text=text,
-                parse_mode='HTML',
-                reply_markup=reply_markup
-            )
-            logger.info(f"Отправлено сообщение с web_app в ЛС пользователю {update.effective_user.id}")
-            return
-        except Exception as e3:
-            logger.error(f"Отправка web_app в ЛС не удалась: {e3}")
-
-        # Если всё упало — отправим короткое уведомление без ссылки (чтобы не было обычной URL)
-        try:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Не удалось доставить кнопку Mini‑App. Проверьте, разрешено ли боту отправлять сообщения в этом чате и поддерживает ли клиент Web Apps.")
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Не удалось доставить кнопку Mini‑App. Убедитесь, что бот может отправлять сообщения в этом чате и клиент поддерживает Web Apps.")
         except Exception:
             logger.error(f"Не удалось отправить уведомление об ошибке в чат {update.effective_chat.id}")
 
