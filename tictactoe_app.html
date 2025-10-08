@@ -1408,6 +1408,13 @@
             document.getElementById('createLobbyBtn').addEventListener('click', createLobby);
             document.getElementById('refreshProfileBtn').addEventListener('click', refreshProfile);
             document.getElementById('authorizeBtn').addEventListener('click', authorizeWithBot);
+      // Кнопка авторизации в оверле — на всякий случай привяжем обработчик
+      try {
+        const authBtnOverlay = document.getElementById('authActionBtn');
+        if (authBtnOverlay) {
+          authBtnOverlay.addEventListener('click', authorizeWithBot);
+        }
+      } catch (e) { /* ignore */ }
 
             // Кнопки игрового поля
             document.getElementById('leaveGameBtn').addEventListener('click', leaveLobby);
@@ -1440,15 +1447,25 @@
         }
 
         async function authorizeWithBot() {
-            // Запрашиваем у бекенда уникальный код для авторизации
-            try {
-                const body = { sid: socket.id };
+      alert('authorizeWithBot вызвана');
+      // Проверяем socket
+      if (!socket) {
+        alert('Socket не инициализирован. Подождите и попробуйте снова.');
+        return;
+      }
+      if (!socket.id) {
+        alert('Socket не имеет ID (ещё не подключён). Подождите и попробуйте снова.');
+        return;
+      }
+      // Запрашиваем у бекенда уникальный код для авторизации
+      try {
+        const body = { sid: socket.id };
                 const resp = await fetch('/auth_code', { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
                 const data = await resp.json();
                 if (data && data.code) {
                     const code = data.code;
                     // Сохраняем временно код (для отладки)
-                    console.log('auth code:', code);
+          alert('Код авторизации получен: ' + code);
 
                     // Формируем deeplink на бота с payload auth:<code>
                     const botUsername = 'hesusinsidemegabot';
