@@ -927,12 +927,6 @@
       transition: opacity 0.3s, transform 0.3s;
     }
     </style>
-            .board-grid { width:100%; max-width:420px; grid-auto-rows: calc((100vw - 48px) / 3); }
-            .cell { height: auto; min-height: calc((100vw - 48px) / 3); font-size: calc(1.6rem + (100vw - 320px) / 300); }
-            .game-board { padding:14px; }
-            .status-message { font-size:0.95rem; }
-        }
-    </style>
 </head>
 <body>
     <div class="app-container">
@@ -1026,7 +1020,6 @@
                     </button>
                 </div>
             </div>
-        </div>
     </div>
     </div>
             <!-- Оверлей авторизации -->
@@ -1508,7 +1501,7 @@
                 currentLobby.status = 'playing';
                 currentLobby.current_player = 'X';
                 // Убираем анимацию победы со всех клеток
-                document.querySelectorAll('.cell').forEach(cell => {
+                document.querySelectorAll('.game-cell').forEach(cell => {
                     cell.classList.remove('win');
                 });
                 updateGameDisplay();
