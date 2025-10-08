@@ -966,7 +966,7 @@
     </style>
 </head>
 <body>
-    <div class="app-container">
+  <div id="mainContainer" class="app-container">
         <div class="app-header">
             <h1 class="app-title">Крестики-нолики</h1>
         </div>
@@ -1093,6 +1093,7 @@
 
         // Инициализация приложения
         document.addEventListener('DOMContentLoaded', function() {
+            alert('DOMContentLoaded сработал');
             // Проверяем localStorage на наличие сохранённого профиля
             let savedProfile = null;
             try {
@@ -1139,6 +1140,7 @@
         });
 
         function startApp() {
+            alert('startApp вызвана');
             // Подключаемся к серверу
             socket = io();
 
@@ -1213,6 +1215,7 @@
             });
         // Показать экран ожидания лобби
         function showLobbyRoom() {
+            alert('showLobbyRoom вызвана');
             // Плавный переход к комнате лобби
             document.getElementById('gameBoard').style.display = 'none';
             document.getElementById('lobbySection').style.display = 'none';
@@ -1254,6 +1257,7 @@
         }
 
         function renderLobbyRoom() {
+            alert('renderLobbyRoom вызвана');
             if (!currentLobby) return;
 
             // Список игроков
@@ -1299,21 +1303,21 @@
             if (isOwner) {
                 if (currentLobby.players.length === 2) {
                     btns.innerHTML += `
-                        <button class="game-btn primary" onclick="startGame()">
+                        <button class="game-btn primary" onclick="alert('Кнопка Начать игру нажата'); startGame()">
                             <i class="fas fa-play-circle"></i>
                             Начать игру
                         </button>
                     `;
                 }
                 btns.innerHTML += `
-                    <button class="game-btn danger" onclick="dissolveLobby()">
+                    <button class="game-btn danger" onclick="alert('Кнопка Закрыть лобби нажата'); dissolveLobby()">
                         <i class="fas fa-times"></i>
                         Закрыть лобби
                     </button>
                 `;
             } else {
                 btns.innerHTML += `
-                    <button class="game-btn secondary" onclick="leaveLobby()">
+                    <button class="game-btn secondary" onclick="alert('Кнопка Покинуть лобби нажата'); leaveLobby()">
                         <i class="fas fa-arrow-left"></i>
                         Покинуть лобби
                     </button>
@@ -1328,6 +1332,7 @@
         }
 
         function dissolveLobby() {
+            alert('Функция dissolveLobby вызвана');
             if (currentLobby && socket) {
                 alert('Отправка dissolve_lobby для лобби: ' + currentLobby.id);
                 socket.emit('dissolve_lobby', { lobby_id: currentLobby.id });
@@ -1383,6 +1388,7 @@
         }
 
         function setupEventListeners() {
+            alert('setupEventListeners вызвана');
             // Основные кнопки меню
             document.getElementById('createLobbyBtn').addEventListener('click', createLobby);
             document.getElementById('refreshProfileBtn').addEventListener('click', refreshProfile);
@@ -1822,6 +1828,7 @@
 
         // Улучшенная обработка кликов по клеткам
         function makeMove(position) {
+            alert('makeMove вызвана с позицией: ' + position);
             if (currentLobby && currentPlayer && currentLobby.current_player === currentPlayer.symbol && socket) {
                 alert('Ход в позицию: ' + position);
                 socket.emit('make_move', { lobby_id: currentLobby.id, position: position });
