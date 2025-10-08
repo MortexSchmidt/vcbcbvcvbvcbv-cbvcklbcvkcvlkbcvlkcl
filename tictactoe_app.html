@@ -1329,15 +1329,15 @@
 
         function dissolveLobby() {
             if (currentLobby && socket) {
-                // Сразу отправляем событие на сервер
+                console.log('Отправка dissolve_lobby для лобби:', currentLobby.id);
                 socket.emit('dissolve_lobby', { lobby_id: currentLobby.id });
 
-                // Немедленно сбрасываем локальное состояние
                 currentLobby = null;
                 currentPlayer = null;
 
-                // Сразу переключаемся на главный экран
                 showLobbyList();
+            } else {
+                console.error('Не удалось распустить лобби: currentLobby или socket отсутствует');
             }
         }
 
@@ -1493,7 +1493,10 @@
         function createLobby() {
             if (socket) {
                 const name = 'Лобби';
+                console.log('Создание лобби');
                 socket.emit('create_lobby', { name: name, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
+            } else {
+                console.error('Socket не подключен, невозможно создать лобби');
             }
         }
 
@@ -1512,9 +1515,12 @@
 
         function joinLobby(lobbyId) {
             if (socket) {
+                console.log('Присоединение к лобби:', lobbyId);
                 socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
                 // показываем UI сразу — сервер пришлёт update_lobby чтобы синхронизировать
                 showGameBoard();
+            } else {
+                console.error('Socket не подключен, невозможно присоединиться к лобби');
             }
         }
 
@@ -1816,17 +1822,11 @@
 
         // Улучшенная обработка кликов по клеткам
         function makeMove(position) {
-            if (currentLobby && currentPlayer && currentLobby.current_player === currentPlayer.symbol) {
-                // Добавляем визуальную обратную связь
-                const cell = document.querySelector(`[data-index="${position}"]`);
-                if (!cell.classList.contains('taken')) {
-                    cell.style.transform = 'scale(0.95)';
-                    setTimeout(() => {
-                        cell.style.transform = '';
-                    }, 150);
-
-                    socket.emit('make_move', { lobby_id: currentLobby.id, position: position });
-                }
+            if (currentLobby && currentPlayer && currentLobby.current_player === currentPlayer.symbol && socket) {
+                console.log('Ход в позицию:', position);
+                socket.emit('make_move', { lobby_id: currentLobby.id, position: position });
+            } else {
+                console.error('Невозможно сделать ход: условия не выполнены');
             }
         }
         // Улучшенное модальное окно победы
