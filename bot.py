@@ -542,10 +542,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Если payload указывает на tictactoe — отправляем Mini-App кнопку в личку и выходим
     if payload and 'tictactoe' in payload.lower():
         miniapp_url = "https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/tictactoe_app.html"
-        # Попробуем отправить WebApp кнопку; добавим запасную URL-кнопку на всякий случай
+        # Отправляем только WebApp кнопку (запасная URL-кнопка убрана по просьбе)
         keyboard = [
-            [InlineKeyboardButton("🎮 Играть в крестики-нолики (Mini-App)", web_app=WebAppInfo(url=miniapp_url))],
-            [InlineKeyboardButton("Открыть в браузере (если не работает)", url=miniapp_url)]
+            [InlineKeyboardButton("🎮 Играть в крестики-нолики (Mini-App)", web_app=WebAppInfo(url=miniapp_url))]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
