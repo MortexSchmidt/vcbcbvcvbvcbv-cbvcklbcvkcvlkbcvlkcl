@@ -333,10 +333,12 @@
                     const botUsername = 'hesusinsidemegabot';
                     const link = `https://t.me/${botUsername}?start=auth:${encodeURIComponent(code)}`;
 
-                    // Открываем deeplink в новом окне (Telegram должен обработать и отправить /start)
-                    // Открываем deeplink — Telegram клиент должен обработать и отправить /start
-                    window.open(link, '_blank');
-                    document.getElementById('authStatus').textContent = 'Открылся Telegram. Завершите авторизацию в нём.';
+                    // Показываем код и инструкцию для ручной авторизации
+                    document.getElementById('authStatus').innerHTML =
+                        `<b>1.</b> <a href="${link}" target="_blank">Откройте бота в Telegram</a><br>` +
+                        `<b>2.</b> Если бот не авторизует автоматически, <b>скопируйте и отправьте</b> эту команду боту:<br>` +
+                        `<div style="margin:8px 0;padding:6px 10px;background:#fffbe6;border-radius:8px;font-size:1.08em;word-break:break-all;">/start auth:${code}</div>` +
+                        `<span style="color:#b00;font-size:0.98em;">После этого вернитесь в Mini‑App — авторизация завершится автоматически.</span>`;
                 } else {
                     alert('Не удалось получить код авторизации. Попробуйте позже.');
                 }
