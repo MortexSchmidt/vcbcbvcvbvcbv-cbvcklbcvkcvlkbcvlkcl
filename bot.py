@@ -93,59 +93,15 @@ def save_muted_users(muted_dict):
 user_messages = {}
 # Словарь для хранения времени мута пользователей - ЗАМЕНЕНО НА ФАЙЛ
 # muted_users = {}
-# Словарь для хранения предыдущего статуса стрима
-previous_stream_status = {}
-# Множество известных чатов для уведомлений о стримах
-known_chats = set()
+
+# Словарь для хранения предыдущего статуса стрима (больше не используется)
+# previous_stream_status = {}
 
 KICK_MINIAPP_URL = os.environ.get('KICK_MINIAPP_URL') or 'https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/kick_stream_miniapp.html'
-# --- Автоуведомления о стриме jesusavgn (Kick.com) ---
+
 # Команда /kickapp — ссылка на мини‑апп
 async def kickapp_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Мини‑апп для статуса стрима Kick: {KICK_MINIAPP_URL}")
-
-stream_status_lock = threading.Lock()
-stream_status = {"live": None}
-
-def notify_stream_status_change(new_status: bool):
-    """Отправляет уведомление во все известные чаты о начале/окончании стрима."""
-    global application
-    if not known_chats or application is None:
-        return
-    text = (
-        '🟢 jesusavgn НАЧАЛ стрим на Kick!\nhttps://kick.com/jesusavgn'
-        if new_status else
-        '🔴 jesusavgn завершил стрим на Kick.'
-    )
-    for chat_id in list(known_chats):
-        try:
-            asyncio.run(application.bot.send_message(chat_id=chat_id, text=text))
-        except Exception as e:
-            logger.error(f"Ошибка отправки уведомления в чат {chat_id}: {e}")
-
-def stream_status_watcher():
-    """Фоновый поток: периодически проверяет статус стрима и уведомляет о смене."""
-    global stream_status
-    while True:
-        try:
-            resp = requests.get('http://localhost:8080/api/kick_stream_status', timeout=10)
-            is_live = False
-            if resp.status_code == 200:
-                data = resp.json()
-                is_live = bool(data.get('live', False))
-            with stream_status_lock:
-                prev = stream_status["live"]
-                if prev is not None and prev != is_live:
-                    notify_stream_status_change(is_live)
-                stream_status["live"] = is_live
-        except Exception as e:
-            logger.error(f"Ошибка проверки статуса стрима: {e}")
-        time.sleep(60)  # Проверять раз в минуту
-
-# Запускать watcher только если это основной процесс
-def start_stream_status_thread():
-    t = threading.Thread(target=stream_status_watcher, daemon=True)
-    t.start()
 
 # Система предупреждений и нарушений
 user_warnings = {}  # {user_id: {"warnings": count, "violations": [{"type": str, "timestamp": datetime}]}}
@@ -1356,75 +1312,9 @@ async def check_stream(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text=stream_message, parse_mode='HTML')
 
-# функция для отправки уведомления о стриме
-async def send_stream_notification(context: ContextTypes.DEFAULT_TYPE):
-    """Периодическая задача для проверки статуса стрима и отправки уведомлений."""
-    application = context.application
-    is_live, stream_title = check_kick_stream()
 
-    if is_live:
-        if not previous_stream_status.get("live", False):
-            # стрим только начался, отправляем уведомление
-            stream_notification = f"Стрим начался: {stream_title}\nСсылка: https://kick.com/jesusavgn"
 
-            # Отправляем во все известные чаты
-            global known_chats
-            for chat_id in known_chats:
-                try:
-                    await application.bot.send_message(
-                        chat_id=chat_id,
-                        text=stream_notification,
-                        parse_mode='HTML'
-                    )
-                except Exception as e:
-                    logger.error(f"ошибка отправки уведомления в чат {chat_id}: {e}")
 
-            # Отправляем в ЛС админам
-            for admin_id in admin_ids:
-                try:
-                    await application.bot.send_message(
-                        chat_id=admin_id,
-                        text=f"🔴 <b>стрим хесуса стартовал!</b> 🔴\n\n🎬 {stream_title}\n🔗 https://kick.com/jesusavgn",
-                        parse_mode='HTML'
-                    )
-                except Exception as e:
-                    logger.error(f"ошибка отправки уведомления админу {admin_id}: {e}")
-
-            previous_stream_status["live"] = True
-            previous_stream_status["title"] = stream_title
-            logger.info(f"уведомления о стриме отправлены в {len(known_chats)} чатов и {len(admin_ids)} админов")
-    else:
-        previous_stream_status["live"] = False
-        previous_stream_status["title"] = ""
-
-# команда для получения ID чата (для администраторов)
-async def get_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        await update.message.delete()
-    except:
-        pass  # если нет прав на удаление, просто пропускаем
-    
-    chat_id = update.effective_chat.id
-    user_name = update.effective_user.first_name
-    user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
-    admin_message = f"""🔧 <b>системная инфа</b> 🔧
-
-👨‍💻 для админов онли:
-
-🆔 <b>ID этого чата:</b>
-<code>{chat_id}</code>
-
-⚙️ <b>гайд:</b>
-1. копируй айдишник
-2. вставляй в код
-3. переменная: chat_id
-4. функция: send_stream_notification
-
-🔐 <i>не для всех, сам понимаешь</i>
-
-<i>вызвал: {user_mention}</i>"""
-    
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=admin_message, parse_mode='HTML')
 
 # команда для получения ID пользователя
 async def get_my_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1518,7 +1408,7 @@ def setup_application():
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("rules", rules_command))
     application.add_handler(CommandHandler("rate", exchange_rate))
-    application.add_handler(CommandHandler("get_chat_id", get_chat_id))
+
     application.add_handler(CommandHandler("myid", get_my_id))
     application.add_handler(CommandHandler("stream", check_stream))
     application.add_handler(CommandHandler("legend", legend_command))
@@ -1590,9 +1480,7 @@ def setup_application():
         logger.info("Команды бота установлены")
 
         # Запускаем периодическую задачу проверки стрима
-        job_queue = application.job_queue
-        job_queue.run_repeating(send_stream_notification, interval=1, first=0)
-        logger.info("Периодическая задача проверки стрима запущена с интервалом 1 секунда")
+
 
         # Установка webhook
         railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
@@ -2060,5 +1948,5 @@ if __name__ == '__main__':
         application.add_handler(CommandHandler('kickapp', kickapp_command))
     except Exception as e:
         logger.error(f"Ошибка регистрации /kickapp: {e}")
-    start_stream_status_thread()
+
     socketio.run(app, host='0.0.0.0', port=PORT, allow_unsafe_werkzeug=True)
