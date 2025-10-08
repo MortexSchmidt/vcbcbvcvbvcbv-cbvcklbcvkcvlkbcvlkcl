@@ -1454,17 +1454,18 @@ def handle_disconnect():
 def handle_create_lobby(data):
     name = data.get('name', 'Лобби')
     player_name = data.get('player_name', 'Игрок')
-    
+    player_avatar = data.get('player_avatar', '')
+
     lobby_id = str(len(lobbies) + 1)
     lobbies[lobby_id] = {
         'id': lobby_id,
         'name': name,
-        'players': [{'sid': request.sid, 'name': player_name, 'symbol': 'X'}],
+        'players': [{'sid': request.sid, 'name': player_name, 'symbol': 'X', 'avatar': player_avatar}],
         'status': 'waiting',
         'board': ['', '', '', '', '', '', '', '', ''],
         'current_player': 'X'
     }
-    
+
     join_room(lobby_id)
     emit('lobby_created', {'lobby_id': lobby_id, 'lobby': lobbies[lobby_id]})
 
@@ -1472,22 +1473,23 @@ def handle_create_lobby(data):
 def handle_join_lobby(data):
     lobby_id = data.get('lobby_id')
     player_name = data.get('player_name', 'Игрок')
-    
+    player_avatar = data.get('player_avatar', '')
+
     if lobby_id not in lobbies:
         emit('error', {'message': 'Лобби не найдено'})
         return
-    
+
     lobby = lobbies[lobby_id]
     if len(lobby['players']) >= 2:
         emit('error', {'message': 'Лобби полное'})
         return
-    
+
     symbol = 'O' if len(lobby['players']) == 1 else 'X'
-    lobby['players'].append({'sid': request.sid, 'name': player_name, 'symbol': symbol})
-    
+    lobby['players'].append({'sid': request.sid, 'name': player_name, 'symbol': symbol, 'avatar': player_avatar})
+
     if len(lobby['players']) == 2:
         lobby['status'] = 'playing'
-    
+
     join_room(lobby_id)
     emit('update_lobby', lobby, room=lobby_id)
 

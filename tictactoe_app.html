@@ -315,14 +315,52 @@
         let socket;
         let currentLobby = null;
         let currentPlayer = null;
-        let playerName = 'Игрок'; // Можно сделать ввод имени
+        let playerName = '';
+        let playerAvatar = '';
+
+        // Показываем окно выбора ника и аватарки
+        function showPlayerDialog(callback) {
+            const dialog = document.createElement('div');
+            dialog.style.position = 'fixed';
+            dialog.style.top = '0';
+            dialog.style.left = '0';
+            dialog.style.width = '100vw';
+            dialog.style.height = '100vh';
+            dialog.style.background = 'rgba(0,0,0,0.7)';
+            dialog.style.display = 'flex';
+            dialog.style.alignItems = 'center';
+            dialog.style.justifyContent = 'center';
+            dialog.innerHTML = `
+                <div style="background:#222;padding:32px 24px;border-radius:12px;min-width:280px;max-width:90vw;text-align:center;box-shadow:0 4px 32px #0008;">
+                    <h2 style="color:#fff;margin-bottom:16px;">Вход в игру</h2>
+                    <div style="margin-bottom:12px;">
+                        <input id="playerNameInput" type="text" placeholder="Твой ник" style="padding:8px 12px;border-radius:6px;border:1px solid #444;width:90%;font-size:1em;" maxlength="20">
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <input id="playerAvatarInput" type="url" placeholder="Ссылка на аватарку (необязательно)" style="padding:8px 12px;border-radius:6px;border:1px solid #444;width:90%;font-size:1em;">
+                    </div>
+                    <button id="playerDialogOk" class="btn btn-primary" style="width:100%;">Войти</button>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+            document.getElementById('playerDialogOk').onclick = function() {
+                const name = document.getElementById('playerNameInput').value.trim() || 'Гость';
+                const avatar = document.getElementById('playerAvatarInput').value.trim();
+                dialog.remove();
+                callback(name, avatar);
+            };
+        }
 
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
-            socket = io();
-            setupSocketListeners();
-            setupEventListeners();
-            getLobbies();
+            showPlayerDialog((name, avatar) => {
+                playerName = name;
+                playerAvatar = avatar;
+                socket = io();
+                setupSocketListeners();
+                setupEventListeners();
+                getLobbies();
+            });
         });
 
         function setupSocketListeners() {
@@ -366,11 +404,11 @@
 
         function createLobby() {
             const name = prompt('Название лобби:', 'Мое лобби') || 'Лобби';
-            socket.emit('create_lobby', { name: name, player_name: playerName });
+            socket.emit('create_lobby', { name: name, player_name: playerName, player_avatar: playerAvatar });
         }
 
         function joinLobby(lobbyId) {
-            socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName });
+            socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar });
         }
 
         function leaveLobby() {
@@ -413,7 +451,12 @@
                     <h3>${lobby.name}</h3>
                     <div class="lobby-info">
                         <div class="lobby-players">
-                            ${lobby.players.map(p => `<div class="player">${p.name} (${p.symbol})</div>`).join('')}
+                            ${lobby.players.map(p => `
+                                <div class="player" style="display:flex;align-items:center;gap:6px;">
+                                    <img src="${p.avatar ? p.avatar : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" alt="avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">
+                                    <span>${p.name} <b>(${p.symbol})</b></span>
+                                </div>
+                            `).join('')}
                             ${lobby.players.length < 2 ? '<div class="player empty">Свободно</div>' : ''}
                         </div>
                         <div class="lobby-status">${getStatusText(lobby.status)}</div>
@@ -444,7 +487,7 @@
                     const lobbyId = this.getAttribute('data-id');
                     const lobby = lobbies.find(l => l.id === lobbyId);
                     if (lobby) {
-                        alert(`Лобби: ${lobby.name}\nИгроки: ${lobby.players.map(p => p.name).join(', ')}\nСтатус: ${getStatusText(lobby.status)}`);
+                        alert(`Лобби: ${lobby.name}\nИгроки: ${lobby.players.map(p => p.name + ' (' + p.symbol + ')').join(', ')}\nСтатус: ${getStatusText(lobby.status)}`);
                     }
                 });
             });
@@ -486,6 +529,17 @@
                 }
             });
 
+            // Показываем игроков с аватарками и символами
+            let playersInfo = '';
+            if (currentLobby.players && currentLobby.players.length > 0) {
+                playersInfo = currentLobby.players.map(p => `
+                    <span style="display:inline-flex;align-items:center;gap:6px;margin:0 8px;">
+                        <img src="${p.avatar ? p.avatar : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" alt="avatar" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;">
+                        <b>${p.name}</b> <span style="font-size:1.1em;">(${p.symbol})</span>
+                    </span>
+                `).join('vs');
+            }
+
             // Обновить статус
             let statusText = getStatusText(currentLobby.status);
             if (currentLobby.status === 'playing') {
@@ -494,11 +548,13 @@
                 if (currentLobby.winner === 'draw') {
                     statusText += ' | Ничья!';
                 } else {
-                    statusText += ` | Победил ${currentLobby.winner}!`;
+                    // Найти победителя по символу
+                    const winner = currentLobby.players.find(p => p.symbol === currentLobby.winner);
+                    statusText += winner ? ` | Победил ${winner.name}!` : ` | Победил ${currentLobby.winner}!`;
                 }
             }
 
-            document.getElementById('statusMessage').textContent = statusText;
+            document.getElementById('statusMessage').innerHTML = playersInfo + '<br>' + statusText;
             document.getElementById('statusMessage').className = `status-message status-${currentLobby.status === 'finished' ? 'win' : currentLobby.status === 'playing' ? 'playing' : 'waiting'}`;
 
             // Обновить текущего игрока
