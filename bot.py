@@ -133,7 +133,6 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
         days = int(hours // 24)
         remaining_hours = int(hours % 24)
         minutes = int((hours * 60) % 60)
-        
         time_parts = []
         if days > 0:
             time_parts.append(f"{days}д")
@@ -141,30 +140,32 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
             time_parts.append(f"{remaining_hours}ч")
         if minutes > 0:
             time_parts.append(f"{minutes}м")
-        
         time_str = " ".join(time_parts) if time_parts else "меньше минуты"
 
-        # Отправляем уведомление
-        user_to_mute = None
+        # Определяем user_mention максимально надежно
+        user_mention = None
         admin_mention = ""
-
         if update:
-            user_to_mute = update.message.reply_to_message.from_user if update.message.reply_to_message else update.effective_user
-            admin_mention = update.effective_user.mention_html()
+            # Если есть reply_to_message, берем оттуда пользователя
+            if hasattr(update, "message") and update.message and update.message.reply_to_message:
+                user_mention = update.message.reply_to_message.from_user.mention_html()
+            # Иначе берем самого отправителя
+            elif hasattr(update, "effective_user") and update.effective_user:
+                user_mention = update.effective_user.mention_html()
+            admin_mention = update.effective_user.mention_html() if hasattr(update, "effective_user") and update.effective_user else ""
+        if not user_mention:
+            # fallback: просто id
+            user_mention = f"Пользователь с ID {user_id}"
 
-        user_mention = user_to_mute.mention_html() if user_to_mute else f"Пользователь с ID {user_id}"
+        mute_msg = f"""🔇 <b>СЛОВИЛ МУТ</b> 🔇\n\n🚫 {user_mention} отлетает в мут\n⏰ <b>Срок:</b> {time_str}\n📝 <b>Причина:</b> {reason}\n"""
+        if update and hasattr(update, "effective_user") and update.effective_user and update.effective_user.id in admin_ids:
+            mute_msg += f"👨‍💼 <b>Админ:</b> {admin_mention}"
 
-        mute_msg = f"""🔇 <b>СЛОВИЛ МУТ</b> 🔇
+        try:
+            await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML')
+        except Exception as send_err:
+            logger.error(f"Ошибка отправки сообщения о муте: {send_err}")
 
-🚫 {user_mention} отлетает в мут
-⏰ <b>Срок:</b> {time_str}
-📝 <b>Причина:</b> {reason}
-"""
-        if update and update.effective_user.id in admin_ids:
-             mute_msg += f"👨‍💼 <b>Админ:</b> {admin_mention}"
-
-        await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML')
-        
         return True
     except Exception as e:
         logger.error(f"Не удалось замутить пользователя {user_id}: {e}")
