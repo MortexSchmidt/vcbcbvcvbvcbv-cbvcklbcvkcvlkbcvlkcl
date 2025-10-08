@@ -509,6 +509,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_name = update.effective_user.first_name
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
+
+    # Диагностика: явно определяем chat_id и тип чата
+    chat = update.effective_chat
+    chat_id = chat.id if chat else None
+    chat_type = getattr(chat, 'type', 'unknown')
+    logger.info(f"tictactoe invoked by user {update.effective_user.id} in chat {chat_id} (type={chat_type})")
     welcome_text = f"""👋 Здравствуйте, {user_name}.
 
 Я — бот «Хесус Инсайд». Краткий список команд:
@@ -1427,13 +1433,16 @@ def setup_application():
 # Команда для открытия Mini-App с крестиками-ноликами
 async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда для открытия Mini-App с крестиками-ноликами"""
-    try:
-        await update.message.delete()
-    except:
-        pass  # если нет прав на удаление, просто пропускаем
-    
+    # Не удаляем командное сообщение заранее — удалим только после успешной отправки
+    # чтобы в случае ошибки пользователь видел вызов команды и мог понять, что что-то пошло не так.
     user_name = update.effective_user.first_name
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
+
+    # Диагностика: явно определяем chat_id и тип чата
+    chat = update.effective_chat
+    chat_id = chat.id if chat else None
+    chat_type = getattr(chat, 'type', 'unknown')
+    logger.info(f"tictactoe invoked by user {update.effective_user.id} in chat {chat_id} (type={chat_type})")
     
     # URL Mini-App
     miniapp_url = "https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/tictactoe_app.html"
@@ -1452,7 +1461,7 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
 
     try:
         await context.bot.send_message(
-            chat_id=update.effective_chat.id,
+            chat_id=chat_id,
             text=text,
             parse_mode='HTML',
             reply_markup=reply_markup
@@ -1469,12 +1478,12 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
         # Fallback: повторно попытаемся отправить web_app кнопку в чат (еще одна попытка)
         try:
             await context.bot.send_message(
-                chat_id=update.effective_chat.id,
+                chat_id=chat_id,
                 text=text,
                 parse_mode='HTML',
                 reply_markup=reply_markup
             )
-            logger.info(f"Повторно отправлено сообщение с web_app в чат {update.effective_chat.id}")
+            logger.info(f"Повторно отправлено сообщение с web_app в чат {chat_id}")
             try:
                 await update.message.delete()
             except Exception:
