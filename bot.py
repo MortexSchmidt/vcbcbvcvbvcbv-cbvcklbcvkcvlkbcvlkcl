@@ -47,6 +47,7 @@ token = "8054283598:AAF-gnozvA6aVgZDL-AoBVdJ6hVqzzq26r8"
 
 # --- Централизованное хранилище для мутов ---
 MUTED_USERS_FILE = 'muted_users.json'
+MUTE_REASONS_FILE = 'mute_reasons.json'  # файл для хранения причин мутов
 file_lock = threading.Lock()
 
 def load_muted_users():
@@ -59,6 +60,21 @@ def load_muted_users():
                 return {int(k): datetime.fromisoformat(v) for k, v in data.items()}
         except (FileNotFoundError, json.JSONDecodeError):
             return {}
+
+def load_mute_reasons():
+    """Загружает причины мутов из файла."""
+    with file_lock:
+        try:
+            with open(MUTE_REASONS_FILE, 'r') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+def save_mute_reasons(reasons_dict):
+    """Сохраняет причины мутов в файл."""
+    with file_lock:
+        with open(MUTE_REASONS_FILE, 'w') as f:
+            json.dump(reasons_dict, f)
 
 def save_muted_users(muted_dict):
     """Сохраняет замученных пользователей в файл."""
@@ -113,6 +129,11 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
     muted[user_id] = mute_until
     save_muted_users(muted)
     
+    # Сохраняем причину мута
+    mute_reasons = load_mute_reasons()
+    mute_reasons[str(user_id)] = reason
+    save_mute_reasons(mute_reasons)
+    
     try:
         # Формируем строку времени
         days = int(hours // 24)
@@ -161,7 +182,6 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
                 await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML')
             except Exception as send_err:
                 logger.error(f"ошибка обычного мут msg: {send_err}")
-
         await context.bot.restrict_chat_member(
             chat_id=chat_id,
             user_id=user_id,
@@ -176,7 +196,18 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
                 can_pin_messages=False
             )
         )
+        
+        # Отправляем уведомление пользователю в ЛС о муте
+        try:
+            mute_notification = f"🔇 ты в муте до {mute_until.strftime('%d.%m.%Y %H:%M')} по Киеву\nпричина: {reason}\n\nты не можешь писать в чате, пока не закончится мут"
+            await context.bot.send_message(chat_id=user_id, text=mute_notification, parse_mode='HTML')
+        except Exception as e:
+            logger.warning(f"Не удалось отправить уведомление в ЛС пользователю {user_id}: {e}")
+            # Если не удалось отправить в ЛС, отправляем в чат
+            await context.bot.send_message(chat_id=chat_id, text=f"{user_mention} замуться, ты в муте до {mute_until.strftime('%d.%m.%Y %H:%M')} по Киеву", parse_mode='HTML')
+        
         return True
+
     except Exception as e:
         logger.error(f"Не удалось замутить пользователя {user_id}: {e}")
         return False
@@ -733,10 +764,53 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Проверяем, не находится ли пользователь в муте
     muted = load_muted_users()
+    mute_reasons = load_mute_reasons()
     if user_id in muted:
         mute_end_time = muted[user_id]
+        reason = mute_reasons.get(str(user_id), "нарушение правил")
         if datetime.now() < mute_end_time:
-            # Просто игнорируем сообщение, Telegram сам ограничит отправку
+            # Удаляем сообщение пользователя и отправляем уведомление
+            try:
+                await update.message.delete()
+            except:
+                pass  # Если нет прав на удаление, просто пропускаем
+            
+            # Проверяем, не отправлял ли пользователь это же сообщение недавно, чтобы не спамить
+            user_mute_notification_key = f"{user_id}_mute_notify"
+            last_mute_notify = user_messages.get(user_mute_notification_key, datetime.min)
+            if datetime.now() - last_mute_notify > timedelta(minutes=1):
+                try:
+                    # Отправляем уведомление в ЛС
+                    remaining_time = mute_end_time - datetime.now()
+                    hours = int(remaining_time.total_seconds() // 3600)
+                    minutes = int((remaining_time.total_seconds() % 3600) // 60)
+                    time_str = ""
+                    if hours > 0:
+                        time_str += f"{hours}ч "
+                    if minutes > 0:
+                        time_str += f"{minutes}м"
+                    
+                    mute_msg = f"🔇 ты в муте, чилишь еще {time_str.strip()} 😎\nпричина: {reason}"
+                    await context.bot.send_message(chat_id=user_id, text=mute_msg, parse_mode='HTML')
+                    user_messages[user_mute_notification_key] = datetime.now()
+                except:
+                    # Если не удалось отправить в ЛС, пробуем в чат
+                    try:
+                        remaining_time = mute_end_time - datetime.now()
+                        hours = int(remaining_time.total_seconds() // 3600)
+                        minutes = int((remaining_time.total_seconds() % 3600) // 60)
+                        time_str = ""
+                        if hours > 0:
+                            time_str += f"{hours}ч "
+                        if minutes > 0:
+                            time_str += f"{minutes}м"
+                        
+                        mute_msg = f"🔇 {update.effective_user.mention_html()} ты в муте, чилишь еще {time_str.strip()} 😎\nпричина: {reason}"
+                        await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML')
+                        user_messages[user_mute_notification_key] = datetime.now()
+                    except:
+                        pass  # Если не получилось отправить нигде, просто пропускаем
+            
             return
         else:
             # Удаляем пользователя из списка заглушенных, если время мута истекло
