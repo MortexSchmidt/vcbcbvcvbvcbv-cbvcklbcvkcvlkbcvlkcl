@@ -196,6 +196,10 @@
             socket = io();
 
             const debugDiv = document.getElementById('debugStatus');
+            let socketUrl = window.location.origin;
+            debugDiv.style.display = 'block';
+            debugDiv.innerHTML = 'Socket.IO URL: <b>' + socketUrl + '</b><br>';
+
             socket.on('connect', () => {
               debugDiv.style.display = 'block';
               debugDiv.textContent = '✅ Socket.IO: соединение установлено';
