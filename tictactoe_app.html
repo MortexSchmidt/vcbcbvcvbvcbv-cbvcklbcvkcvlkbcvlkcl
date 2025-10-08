@@ -15,7 +15,7 @@
         }
 
         body {
-            background: linear-gradient(135deg, #000000 0%, #1a1a2e 50%, #16213e 100%);
+            background: #000000;
             color: #ffffff;
             min-height: 100vh;
             padding: 20px;
@@ -32,21 +32,16 @@
         .header {
             text-align: center;
             margin-bottom: 30px;
-            padding: 30px;
-            background: linear-gradient(135deg, #1e1e2f 0%, #2a2a3e 100%);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            background: #111111;
+            border-radius: 8px;
+            border: 1px solid #333333;
         }
 
         .header h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
             color: #ffffff;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
         .header p {
@@ -61,19 +56,16 @@
         }
 
         .lobby-card {
-            background: linear-gradient(135deg, #1e1e2f 0%, #2a2a3e 100%);
-            border-radius: 16px;
-            padding: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
+            background: #111111;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #333333;
+            transition: background-color 0.2s ease;
             cursor: pointer;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
         .lobby-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.2);
-            border-color: rgba(102, 126, 234, 0.3);
+            background: #222222;
         }
 
         .lobby-card h3 {
@@ -94,26 +86,24 @@
         }
 
         .player {
-            background: linear-gradient(135deg, #3a3a4e 0%, #2e2e3f 100%);
-            padding: 8px 12px;
+            background: #333333;
+            padding: 5px 10px;
             border-radius: 20px;
             font-size: 0.9em;
-            color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
         }
 
         .player.empty {
-            background: linear-gradient(135deg, #4a4a5e 0%, #3e3e4f 100%);
-            color: #a0aec0;
+            background: #444444;
+            color: #cccccc;
         }
 
         .lobby-status {
-            background: linear-gradient(135deg, #3a3a4e 0%, #2e2e3f 100%);
-            padding: 8px 12px;
+            background: #333333;
+            padding: 5px 10px;
             border-radius: 20px;
             font-size: 0.9em;
-            color: #fbb6ce;
-            border: 1px solid rgba(251, 182, 206, 0.3);
+            color: #cccccc;
         }
 
         .lobby-actions {
@@ -124,40 +114,36 @@
         .btn {
             padding: 12px 24px;
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             text-transform: none;
             font-size: 0.95em;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #007bff;
             color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            background: #0056b3;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #007bff;
             color: white;
         }
 
         .btn-primary:hover {
-            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            background: #0056b3;
         }
 
         .btn-secondary {
-            background: linear-gradient(135deg, #434343 0%, #000000 100%);
-            color: #e2e8f0;
-            border: 1px solid #555;
+            background: #6c757d;
+            color: white;
         }
 
         .btn-secondary:hover {
-            background: linear-gradient(135deg, #555 0%, #222 100%);
-            border-color: #777;
+            background: #545b62;
         }
 
         .create-lobby {
@@ -167,12 +153,11 @@
 
         .game-board {
             display: none;
-            background: linear-gradient(135deg, #1e1e2f 0%, #2a2a3e 100%);
-            border-radius: 16px;
+            background: #111111;
+            border-radius: 8px;
             padding: 30px;
             margin: 20px 0;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid #333333;
         }
 
         .board-grid {
@@ -186,32 +171,27 @@
 
         .cell {
             aspect-ratio: 1;
-            background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2f 100%);
-            border: 2px solid rgba(255, 255, 255, 0.1);
+            background: #222222;
+            border: 2px solid #444444;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 3em;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border-radius: 8px;
+            transition: background-color 0.2s ease;
         }
 
         .cell:hover {
-            background: linear-gradient(135deg, #3a3a4e 0%, #2e2e3f 100%);
-            border-color: rgba(102, 126, 234, 0.5);
-            transform: scale(1.05);
+            background: #333333;
         }
 
         .cell.x {
             color: #ffffff;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
         }
 
         .cell.o {
-            color: #fbb6ce;
-            text-shadow: 0 0 20px rgba(251, 182, 206, 0.5);
+            color: #cccccc;
         }
 
         .game-info {
@@ -241,30 +221,27 @@
 
         .status-message {
             text-align: center;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 12px;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
             font-weight: 500;
-            background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2f 100%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #222222;
+            border: 1px solid #444444;
         }
 
         .status-waiting {
-            background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2f 100%);
-            color: #fbb6ce;
-            border-color: rgba(251, 182, 206, 0.3);
+            background: #222222;
+            color: #cccccc;
         }
 
         .status-playing {
-            background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2f 100%);
-            color: #68d391;
-            border-color: rgba(104, 211, 145, 0.3);
+            background: #222222;
+            color: #ffffff;
         }
 
         .status-win {
-            background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2f 100%);
-            color: #9ae6b4;
-            border-color: rgba(154, 230, 180, 0.3);
+            background: #222222;
+            color: #ffffff;
         }
 
         .hidden {
