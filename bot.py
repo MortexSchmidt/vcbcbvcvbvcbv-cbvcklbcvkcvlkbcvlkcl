@@ -1433,12 +1433,10 @@ def setup_application():
 # Команда для открытия Mini-App с крестиками-ноликами
 async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда для открытия Mini-App с крестиками-ноликами"""
-    # Не удаляем командное сообщение заранее — удалим только после успешной отправки
-    # чтобы в случае ошибки пользователь видел вызов команды и мог понять, что что-то пошло не так.
     user_name = update.effective_user.first_name
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
 
-    # Диагностика: явно определяем chat_id и тип чата
+    # Определяем чат и тип
     chat = update.effective_chat
     chat_id = chat.id if chat else None
     chat_type = getattr(chat, 'type', 'unknown')
@@ -1460,43 +1458,50 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
     )
 
     try:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=text,
-            parse_mode='HTML',
-            reply_markup=reply_markup
-        )
-        logger.info(f"Отправлено сообщение с Mini-App в чат {update.effective_chat.id} для {user_name}")
-        # Попытка удалить командное сообщение (если есть права)
-        try:
-            await update.message.delete()
-        except Exception:
-            pass
-        return
-    except Exception as e:
-        logger.error(f"Не удалось отправить сообщение с Mini-App в чат {update.effective_chat.id}: {e}")
-        # Fallback: повторно попытаемся отправить web_app кнопку в чат (еще одна попытка)
-        try:
+        # Если команда вызвана в личке — открываем Mini-App прямо в этом чате
+        if chat_type == 'private':
             await context.bot.send_message(
                 chat_id=chat_id,
                 text=text,
                 parse_mode='HTML',
                 reply_markup=reply_markup
             )
-            logger.info(f"Повторно отправлено сообщение с web_app в чат {chat_id}")
+            logger.info(f"Отправлено сообщение с Mini-App в личку {chat_id} для {user_name}")
             try:
                 await update.message.delete()
             except Exception:
                 pass
             return
-        except Exception as e2:
-            logger.warning(f"Повторная отправка web_app в чат не удалась: {e2}")
 
-        # Если и повтор не прошёл — пробуем отправить короткое уведомление об ошибке в чат (без ссылки)
+        # Если команда в группе/супергруппе — удаляем команду и отправляем web_app в ЛС пользователя
         try:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="⚠️ Не удалось доставить кнопку Mini‑App. Убедитесь, что бот может отправлять сообщения в этом чате и клиент поддерживает Web Apps.")
+            await update.message.delete()
         except Exception:
-            logger.error(f"Не удалось отправить уведомление об ошибке в чат {update.effective_chat.id}")
+            pass
+
+        await context.bot.send_message(
+            chat_id=update.effective_user.id,
+            text=text,
+            parse_mode='HTML',
+            reply_markup=reply_markup
+        )
+        logger.info(f"Отправлено сообщение с Mini-App в ЛС пользователю {update.effective_user.id}")
+
+        # Подтверждение в группе (без ссылки)
+        try:
+            await context.bot.send_message(chat_id=chat_id, text=(f"✅ {update.effective_user.mention_html()}, открытие Mini‑App отправлено вам в личные сообщения. "
+                                                                     "Если вы не получили сообщение — откройте личку с ботом и нажмите /start, затем попробуйте снова."), parse_mode='HTML')
+        except Exception:
+            logger.warning(f"Не удалось отправить подтверждение в чат {chat_id}")
+        return
+    except Exception as e:
+        logger.error(f"Ошибка при отправке Mini-App: {e}")
+        # Если попытка отправить в ЛС не удалась — сообщаем в группе, чтобы пользователь сделал /start в ЛС бота
+        try:
+            await context.bot.send_message(chat_id=chat_id, text=(f"❗ Не удалось отправить Mini‑App в ЛС пользователя {update.effective_user.mention_html()}. "
+                                                                 "Попросите пользователя открыть личку с ботом и нажать /start, затем повторите команду."), parse_mode='HTML')
+        except Exception:
+            logger.error(f"Не удалось уведомить чат {chat_id} о неудачном DM для пользователя {update.effective_user.id}")
 
 # Запускаем настройку при импорте модуля
 setup_application()
