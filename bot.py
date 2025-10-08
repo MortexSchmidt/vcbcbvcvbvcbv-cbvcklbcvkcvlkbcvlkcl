@@ -1273,17 +1273,27 @@ def check_kick_stream():
         username = "jesusavgn"
         headers = {"User-Agent": "Mozilla/5.0 (compatible; Bot/1.0; +https://t.me/hesusinsidemegabot)"}
         proxies = {
-            "http": "http://161.35.70.249:8080",
-            "https": "http://161.35.70.249:8080"
+            "http": "http://103.56.205.84:8080",
+            "https": "http://103.56.205.84:8080"
         }
         response = requests.get(f"https://kick.com/api/v1/channels/{username}", headers=headers, proxies=proxies, timeout=15)
-        data = response.json()
+        try:
+            data = response.json()
+        except Exception:
+            data = {}
         # DEBUG: логируем ответ
+        print(f"[kick.com] API status: {response.status_code}")
+        print(f"[kick.com] API text: {response.text[:500]}")
         print("[kick.com] API response:", data)
+        debug_info = {
+            'status_code': response.status_code,
+            'text': response.text[:500],
+            'json': data
+        }
         if "livestream" in data and data["livestream"] is not None:
-            return True, data["livestream"].get("title", "Стрим в эфире!"), data
+            return True, data["livestream"].get("title", "Стрим в эфире!"), debug_info
         else:
-            return False, "", data
+            return False, "", debug_info
     except Exception as e:
         print(f"[kick.com] API error: {e}")
         return False, f"Ошибка запроса: {e}", {}
