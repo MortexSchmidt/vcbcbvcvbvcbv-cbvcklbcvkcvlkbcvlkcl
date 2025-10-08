@@ -94,7 +94,7 @@
     .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
     .section-title i{color:var(--accent)}
 
-    .lobby-grid{display:flex;flex-direction:column;gap:12px}
+    .lobby-grid{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:flex-end;overflow:auto}
     .lobby-card{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent}
     .lobby-meta{display:flex;align-items:center;gap:12px}
     .lobby-name{font-weight:600}
@@ -147,7 +147,7 @@
     #lobbyPlayersList{flex:1;overflow:auto}
     #lobbyRoomBtns{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
         /* Ensure lobby list in lobbySection is anchored to bottom (title stays top) */
-        #lobbySection{display:flex;flex-direction:column;gap:12px;min-height:220px}
+        #lobbySection{display:flex;flex-direction:column;gap:12px;min-height:220px;flex:1}
         #lobbyList{margin-top:auto}
     </style>
     <style>
