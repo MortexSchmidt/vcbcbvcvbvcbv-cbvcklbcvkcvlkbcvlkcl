@@ -6,59 +6,59 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pzw+XrVhK1iKq6V+6mZrY1lFQYVq6nXj3Zc1g1k6s6b6Q9K1y1q1Z1y1+Y1Z1y1Z1y1Z1y1Z1y1Z1y1Z1y1Z1y1Z1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-    /* Clean, human-made flat UI — no gradients, simple shapes, clear hierarchy */
-    :root{
-      --bg: #f6f7fb;          /* page background */
-      --card: #ffffff;        /* cards and panels */
-      --muted: #6b7280;       /* secondary text */
-      --text: #0f172a;        /* primary text */
-      --accent: #2b6ef6;      /* accent color */
-      --success: #16a34a;
-      --danger: #dc2626;
-      --glass: rgba(15,23,42,0.03);
-      --shadow-1: 0 6px 18px rgba(12,18,36,0.06);
-      --radius: 12px;
-      --radius-sm: 8px;
-      --gap: 14px;
-      --transition: 180ms cubic-bezier(.2,.9,.2,1);
-    }
+        /* Dark, human-made flat UI — no gradients, readable, comfortable */
+        :root{
+            --bg: #0b0f14;          /* page background - very dark */
+            --card: #0f1720;        /* cards and panels */
+            --muted: #98a0b3;       /* secondary text (lighter for dark bg) */
+            --text: #e6eef8;        /* primary text */
+            --accent: #6c8cff;      /* accent color */
+            --success: #22c55e;
+            --danger: #ff6b6b;
+            --glass: rgba(255,255,255,0.03);
+            --shadow-1: 0 8px 28px rgba(2,6,23,0.6);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --gap: 14px;
+            --transition: 180ms cubic-bezier(.2,.9,.2,1);
+        }
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-      background:var(--bg);
-      color:var(--text);
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:28px;
-    }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+            margin:0;
+            font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+            background:var(--bg);
+            color:var(--text);
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:22px;
+        }
 
-    .app-container{
-      width:100%;
-      max-width:880px;
-      border-radius:18px;
-      overflow:hidden;
-      box-shadow:var(--shadow-1);
-      background:linear-gradient(0deg, rgba(255,255,255,0.999), rgba(255,255,255,0.999)); /* subtle flat */
-      display:grid;
-      grid-template-columns: 360px 1fr;
-      gap:24px;
-    }
+        .app-container{
+            width:100%;
+            max-width:920px;
+            border-radius:16px;
+            overflow:hidden;
+            box-shadow:var(--shadow-1);
+            background:var(--card);
+            display:grid;
+            grid-template-columns: 320px 1fr;
+            gap:22px;
+        }
 
-    /* Sidebar */
-    .app-sidebar{
-      padding:22px;
-      background:var(--card);
-      border-right:1px solid var(--glass);
-      display:flex;
-      flex-direction:column;
-      gap:16px;
-    }
+        /* Sidebar */
+        .app-sidebar{
+            padding:18px;
+            background:transparent;
+            border-right:1px solid rgba(255,255,255,0.03);
+            display:flex;
+            flex-direction:column;
+            gap:12px;
+        }
 
     .app-header{display:flex;align-items:center;gap:12px}
     .app-title{
@@ -68,63 +68,76 @@
 
     .profile-row{display:flex;align-items:center;gap:12px}
     .avatar{
-      width:56px;height:56px;border-radius:12px;flex:0 0 56px;overflow:hidden;background:var(--glass);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--card);
+            width:56px;height:56px;max-width:56px;max-height:56px;border-radius:12px;flex:0 0 56px;overflow:hidden;background:var(--glass);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--card);
     }
     .avatar img{width:100%;height:100%;object-fit:cover}
+        /* Normalize other avatar images across UI */
+        .player-display-avatar-img, .lobby-player-avatar-img, .player-avatar-img, .player-display img {
+            width:48px;height:48px;border-radius:8px;object-fit:cover;display:block;flex-shrink:0;
+        }
 
     .profile-info{display:flex;flex-direction:column}
     .profile-name{font-weight:600}
     .profile-sub{font-size:0.9rem;color:var(--muted)}
 
     .menu-buttons{display:flex;flex-direction:column;gap:10px;margin-top:6px}
-    .menu-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:1px solid var(--glass);background:transparent;color:var(--text);cursor:pointer;transition:all var(--transition);font-weight:600}
-    .menu-btn i{width:20px;text-align:center;color:var(--accent)}
-    .menu-btn.primary{background:var(--accent);color:#fff;border:0}
-    .menu-btn:hover{transform:translateY(-4px);box-shadow:var(--shadow-1)}
+    /* Menu buttons: allow wrapping, prevent icon wrap, consistent min height */
+    .menu-btn{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);cursor:pointer;transition:all var(--transition);font-weight:600;white-space:normal;word-break:break-word;text-align:left;min-height:48px;line-height:1.15;overflow-wrap:anywhere}
+    .menu-btn i{width:28px;text-align:center;color:var(--accent);flex-shrink:0;flex-basis:28px}
+    .menu-btn.primary{background:var(--accent);color:#07102a;border:0}
+    .menu-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,0.55)}
 
     /* Main area */
-    .app-main{padding:22px;display:flex;flex-direction:column;gap:18px}
+    .app-main{padding:22px;display:flex;flex-direction:column;gap:18px;background:transparent}
+    /* Sections keep the card background to ensure consistent dark surfaces */
     .section{background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--glass)}
     .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
     .section-title i{color:var(--accent)}
 
     .lobby-grid{display:flex;flex-direction:column;gap:12px}
-    .lobby-card{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;border:1px solid var(--glass);background:transparent}
+    .lobby-card{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent}
     .lobby-meta{display:flex;align-items:center;gap:12px}
     .lobby-name{font-weight:600}
     .lobby-players{display:flex;gap:8px;align-items:center}
-    .player-small{width:36px;height:36px;border-radius:8px;overflow:hidden;border:1px solid var(--glass);background:var(--glass);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent)}
+    .player-small{width:36px;height:36px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent)}
 
     .lobby-actions{display:flex;gap:8px}
-    .action-btn{padding:8px 12px;border-radius:10px;border:1px solid var(--glass);background:transparent;cursor:pointer;font-weight:600}
-    .action-btn.primary{background:var(--accent);color:#fff;border:0}
+    .action-btn{padding:8px 12px;border-radius:10px;border:1px solid var(--glass);background:transparent;cursor:pointer;font-weight:600;min-height:40px;line-height:1.05}
+    .action-btn.primary{background:var(--accent);color:#07102a;border:0}
     .action-btn.ghost{background:transparent;color:var(--muted)}
 
     /* Board */
     .game-board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px}
-    .game-cell{aspect-ratio:1;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:2.25rem;font-weight:800;color:var(--text);cursor:pointer;border:1px solid var(--glass);transition:transform var(--transition),box-shadow var(--transition)}
-    .game-cell:hover{transform:translateY(-6px);box-shadow:var(--shadow-1)}
+    .game-cell{aspect-ratio:1;border-radius:12px;background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:center;font-size:2.1rem;font-weight:800;color:var(--text);cursor:pointer;border:1px solid rgba(255,255,255,0.03);transition:transform var(--transition),box-shadow var(--transition);padding:4px}
+    .game-cell:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.5)}
     .game-cell.taken{opacity:0.9;cursor:default}
 
     .game-controls{display:flex;gap:10px;justify-content:center}
-    .game-btn{padding:10px 14px;border-radius:10px;border:1px solid var(--glass);background:transparent;cursor:pointer;font-weight:700}
-    .game-btn.primary{background:var(--accent);color:#fff;border:0}
+    .game-btn{padding:10px 14px;border-radius:10px;border:1px solid var(--glass);background:transparent;cursor:pointer;font-weight:700;min-height:44px;line-height:1.05}
+    .game-btn.primary{background:var(--accent);color:#07102a;border:0}
     .game-btn.danger{background:transparent;color:var(--danger);border:1px solid rgba(220,38,38,0.12)}
 
     /* Modal / overlay tweaks */
-    .modal-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.4);z-index:60}
-    .modal-content{width:420px;background:var(--card);border-radius:12px;padding:20px;border:1px solid var(--glass);box-shadow:var(--shadow-1)}
+    .modal-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:60}
+    .modal-content{width:420px;background:#0c1318;border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.03);box-shadow:var(--shadow-1)}
 
     /* Auth overlay uses same modal style but centered */
-    .auth-overlay{display:none}
+    /* Auth overlay uses modal-like fullscreen styling to avoid white flashes */
+    .auth-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:70}
 
     /* Responsive */
-    @media (max-width:880px){
-      .app-container{grid-template-columns:1fr;max-width:920px}
-      .app-sidebar{order:2}
-      .app-main{order:1}
-      body{padding:18px}
-    }
+        @media (max-width:880px){
+            .app-container{grid-template-columns:1fr;max-width:920px}
+            .app-sidebar{order:2}
+            .app-main{order:1}
+            body{padding:18px}
+        }
+
+        /* Smaller devices: reduce button font-size to avoid clipping */
+        @media (max-width:480px){
+            .menu-btn{font-size:0.95rem;padding:10px;min-height:46px}
+            .game-cell{font-size:1.45rem}
+        }
 
     /* Small helpers */
     .muted{color:var(--muted);font-size:0.95rem}
@@ -138,6 +151,7 @@
     .toast.success{background:var(--success)}
     .toast.warn{background:#ff8c00}
     .toast.error{background:var(--danger)}
+    .toast{color:#07102a}
     .toast.hide{opacity:0;transform:translateX(12px) scale(.98)}
     </style>
 </head>
@@ -268,7 +282,8 @@
                 webUserId = savedProfile.user_id;
                 playerName = savedProfile.name || 'Игрок';
                 playerAvatar = savedProfile.avatar || '';
-                startApp();
+            updateProfileUI();
+            startApp();
             } else if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready(); // Сообщаем Telegram, что Mini-App готова
@@ -282,6 +297,7 @@
                         webUserId = user.id;
                         playerName = user.first_name || user.username || 'Игрок';
                         playerAvatar = '';
+                        updateProfileUI();
                         // Сохраняем профиль в localStorage
                         localStorage.setItem('tic_profile', JSON.stringify({ user_id: webUserId, name: playerName, avatar: playerAvatar }));
                         startApp();
@@ -290,6 +306,7 @@
                         playerName = 'Гость';
                         playerAvatar = '';
                         webUserId = null;
+                        updateProfileUI();
                         startApp();
                     }
                 }, 500);
@@ -538,6 +555,8 @@
                     if (profile && profile.name) playerName = profile.name;
                     if (profile && profile.avatar) playerAvatar = profile.avatar;
                     if (profile && profile.user_id) webUserId = profile.user_id;
+                    // Update UI with new profile
+                    updateProfileUI();
                     // Сохраняем профиль в localStorage
                     localStorage.setItem('tic_profile', JSON.stringify({ user_id: webUserId, name: playerName, avatar: playerAvatar }));
                     // если уже в лобби — обновим
@@ -663,19 +682,32 @@
             }
         }
 
-    function showAuthOverlay() {
-      const ov = document.getElementById('authOverlay');
-      ov.style.display = 'flex';
-      document.getElementById('mainContainer').style.display = 'none';
-      // bind default action
-      const authBtn = document.getElementById('authActionBtn');
-      if (authBtn) authBtn.onclick = authorizeWithBot;
-    }
+        // Unified auth overlay controls (single implementation)
+        function showAuthOverlay() {
+            const ov = document.getElementById('authOverlay');
+            const main = document.getElementById('mainContainer');
+            if (main) {
+                main.style.display = 'none';
+                main.style.pointerEvents = 'none';
+            }
+            if (ov) {
+                ov.style.display = 'flex';
+                ov.style.opacity = '1';
+            }
+            // bind default action
+            const authBtn = document.getElementById('authActionBtn');
+            if (authBtn) authBtn.onclick = authorizeWithBot;
+        }
 
         function hideAuthOverlay() {
             const ov = document.getElementById('authOverlay');
-            ov.style.display = 'none';
-            document.getElementById('mainContainer').style.display = 'block';
+            const main = document.getElementById('mainContainer');
+            if (ov) ov.style.display = 'none';
+            if (main) {
+                main.style.display = 'block';
+                main.style.pointerEvents = '';
+                main.style.filter = '';
+            }
         }
 
     function createLobby() {
@@ -694,8 +726,10 @@
                 if (user && user.id) {
                     webUserId = user.id;
                     playerName = user.first_name || user.username || 'Гость';
-                    playerAvatar = '';
-                    socket.emit('identify', { user_id: user.id, name: playerName, avatar: '' });
+                    // Telegram WebApp does not always expose avatar URL — keep empty if not present
+                    playerAvatar = user.photo_url || '';
+                    updateProfileUI();
+                    socket.emit('identify', { user_id: user.id, name: playerName, avatar: playerAvatar });
                 }
             }
         }
@@ -1143,6 +1177,27 @@
                 return String(s).replace(/[&<>"']/g, function (c) {
                     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
                 });
+            }
+
+            // Обновляет UI профиля в сайдбаре (аватар + имя + подсказка)
+            function updateProfileUI() {
+                try {
+                    const nameEl = document.getElementById('profileName');
+                    const subEl = document.getElementById('profileSub');
+                    const avatarImg = document.getElementById('profileAvatarImg');
+                    if (nameEl) nameEl.textContent = playerName || 'Гость';
+                    if (subEl) subEl.textContent = webUserId ? 'Авторизован' : 'Не авторизован';
+                    if (avatarImg) {
+                        if (playerAvatar) {
+                            avatarImg.src = playerAvatar;
+                            avatarImg.style.display = 'block';
+                        } else {
+                            // fallback: генерируем UI-avatars URL
+                            avatarImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(playerName || 'Гость')}&background=5865f2&color=ffffff&size=128`;
+                            avatarImg.style.display = 'block';
+                        }
+                    }
+                } catch (e) { /* ignore UI update errors */ }
             }
 
             // Обновлённый рендер статуса/игроков
