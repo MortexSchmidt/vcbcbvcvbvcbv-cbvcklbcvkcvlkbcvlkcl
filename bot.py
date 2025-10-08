@@ -103,6 +103,8 @@ admin_ids = [1648720935]  # Список ID администраторов
 
 # Словарь для хранения лобби крестиков-ноликов
 lobbies = {}
+# Временное хранилище для сопоставления Socket.sid -> telegram профиль
+telegram_profiles = {}
 
 # Функции модерации
 async def add_warning(user_id: int, violation_type: str, context: ContextTypes.DEFAULT_TYPE):
@@ -1435,6 +1437,43 @@ setup_application()
 @socketio.on('connect')
 def handle_connect():
     logger.info(f"Клиент подключился: {request.sid}")
+    # по умолчанию нет профиля
+    telegram_profiles.pop(request.sid, None)
+
+
+@socketio.on('identify')
+def handle_identify(data):
+    """Клиент шлёт telegram_webapp профиль: {user_id, name, avatar} """
+    try:
+        user_id = data.get('user_id')
+        name = data.get('name')
+        avatar = data.get('avatar')
+        telegram_profiles[request.sid] = {'user_id': user_id, 'name': name, 'avatar': avatar}
+
+        # если аватар пустой — попытаемся получить через Bot API
+        try:
+            if (not avatar) and user_id:
+                resp = requests.get(f"https://api.telegram.org/bot{token}/getUserProfilePhotos", params={'user_id': user_id, 'limit': 1}, timeout=5)
+                if resp.status_code == 200:
+                    j = resp.json()
+                    if j.get('ok') and j.get('result') and j['result'].get('photos'):
+                        photos = j['result']['photos']
+                        if len(photos) > 0 and len(photos[0]) > 0:
+                            file_id = photos[0][-1]['file_id']
+                            # получить file_path
+                            fresp = requests.get(f"https://api.telegram.org/bot{token}/getFile", params={'file_id': file_id}, timeout=5)
+                            if fresp.status_code == 200:
+                                fj = fresp.json()
+                                if fj.get('ok') and fj.get('result') and fj['result'].get('file_path'):
+                                    file_path = fj['result']['file_path']
+                                    avatar_url = f"https://api.telegram.org/file/bot{token}/{file_path}"
+                                    telegram_profiles[request.sid]['avatar'] = avatar_url
+        except Exception as e:
+            logger.warning(f"не удалось получить аватар через Bot API: {e}")
+
+        emit('telegram_profile', telegram_profiles[request.sid])
+    except Exception as e:
+        logger.error(f"ошибка в identify: {e}")
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -1453,18 +1492,28 @@ def handle_disconnect():
     for lobby_id in to_delete:
         if lobby_id in lobbies:
             del lobbies[lobby_id]
+    # удаляем профиль телеги для этого sid
+    telegram_profiles.pop(request.sid, None)
 
 @socketio.on('create_lobby')
 def handle_create_lobby(data):
     name = data.get('name', 'Лобби')
-    player_name = data.get('player_name', 'Игрок')
+    player_name = data.get('player_name', '')
     player_avatar = data.get('player_avatar', '')
+
+    # если клиент представился через Telegram WebApp — используем профиль
+    tp = telegram_profiles.get(request.sid)
+    if tp:
+        if not player_name:
+            player_name = tp.get('name') or player_name or 'Игрок'
+        if not player_avatar:
+            player_avatar = tp.get('avatar', '')
 
     lobby_id = str(len(lobbies) + 1)
     lobbies[lobby_id] = {
         'id': lobby_id,
         'name': name,
-        'players': [{'sid': request.sid, 'name': player_name, 'symbol': 'X', 'avatar': player_avatar}],
+        'players': [{'sid': request.sid, 'name': player_name or 'Игрок', 'symbol': 'X', 'avatar': player_avatar or ''}],
         'status': 'waiting',
         'board': ['', '', '', '', '', '', '', '', ''],
         'current_player': 'X'
@@ -1476,8 +1525,16 @@ def handle_create_lobby(data):
 @socketio.on('join_lobby')
 def handle_join_lobby(data):
     lobby_id = data.get('lobby_id')
-    player_name = data.get('player_name', 'Игрок')
+    player_name = data.get('player_name', '')
     player_avatar = data.get('player_avatar', '')
+
+    # если клиент представился через Telegram WebApp — используем профиль
+    tp = telegram_profiles.get(request.sid)
+    if tp:
+        if not player_name:
+            player_name = tp.get('name') or player_name or 'Игрок'
+        if not player_avatar:
+            player_avatar = tp.get('avatar', '')
 
     if lobby_id not in lobbies:
         emit('error', {'message': 'Лобби не найдено'})

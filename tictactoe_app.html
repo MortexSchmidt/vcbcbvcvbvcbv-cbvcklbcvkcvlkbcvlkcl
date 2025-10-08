@@ -318,8 +318,8 @@
         let playerName = '';
         let playerAvatar = '';
 
-        // Показываем окно выбора ника и аватарки
-        function showPlayerDialog(callback) {
+    // Показываем окно выбора ника и аватарки (fallback)
+    function showPlayerDialog(callback) {
             const dialog = document.createElement('div');
             dialog.style.position = 'fixed';
             dialog.style.top = '0';
@@ -353,14 +353,45 @@
 
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
-            showPlayerDialog((name, avatar) => {
-                playerName = name;
-                playerAvatar = avatar;
-                socket = io();
-                setupSocketListeners();
-                setupEventListeners();
-                getLobbies();
-            });
+            // Если запущено внутри Telegram Web App — пробуем получить данные автоматически
+            if (window.Telegram && window.Telegram.WebApp) {
+                try {
+                    const tg = window.Telegram.WebApp;
+                    const name = (tg.initDataUnsafe && tg.initDataUnsafe.user && (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name)) || tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name || 'Гость';
+                    const avatar = ''; // WebApp напрямую не отдаёт ссылку на фото, поставим пусто и попросим бэкенд получить
+                    playerName = name;
+                    playerAvatar = avatar;
+                    socket = io();
+                    setupSocketListeners();
+                    setupEventListeners();
+                    // сообщим бэкенду о телеги-профиле — бэк сможет запросить фото через Bot API по user_id если потребуется
+                    const user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
+                    if (user) {
+                        socket.emit('identify', { user_id: user.id, name: user.first_name || user.username, avatar: '' });
+                    }
+                    getLobbies();
+                } catch (e) {
+                    // fallback
+                    showPlayerDialog((name, avatar) => {
+                        playerName = name;
+                        playerAvatar = avatar;
+                        socket = io();
+                        setupSocketListeners();
+                        setupEventListeners();
+                        getLobbies();
+                    });
+                }
+            } else {
+                // Обычный браузер — показываем диалог
+                showPlayerDialog((name, avatar) => {
+                    playerName = name;
+                    playerAvatar = avatar;
+                    socket = io();
+                    setupSocketListeners();
+                    setupEventListeners();
+                    getLobbies();
+                });
+            }
         });
 
         function setupSocketListeners() {
@@ -385,6 +416,18 @@
 
             socket.on('lobbies_list', (lobbies) => {
                 renderLobbyList(lobbies);
+            });
+
+            // Когда бек вернул профиль из Telegram (включая ссылку на фото)
+            socket.on('telegram_profile', (profile) => {
+                try {
+                    if (profile && profile.name) playerName = profile.name;
+                    if (profile && profile.avatar) playerAvatar = profile.avatar;
+                    // если уже в лобби — обновим
+                    if (currentLobby) {
+                        socket.emit('get_lobbies');
+                    }
+                } catch (e) { console.warn(e); }
             });
 
             socket.on('error', (data) => {
