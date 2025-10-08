@@ -135,7 +135,19 @@
         </style>
     </div>
 
+    <noscript>
+      <div style="padding:32px;text-align:center;color:#b00;font-size:1.2rem;">Для работы Mini‑App требуется включить JavaScript.</div>
+    </noscript>
     <script>
+        // Fallback: если через 2 секунды ни mainContainer, ни authOverlay не видны — показать ошибку
+        setTimeout(() => {
+          const main = document.getElementById('mainContainer');
+          const auth = document.getElementById('authOverlay');
+          if (main && auth && main.style.display === 'none' && auth.style.display === 'none') {
+            document.body.innerHTML = '<div style="padding:32px;text-align:center;color:#b00;font-size:1.2rem;">⛔ Ошибка загрузки Mini‑App.<br>Возможно, не удалось подключиться к серверу или Telegram.<br>Попробуйте обновить страницу или открыть позже.</div>';
+          }
+        }, 2000);
+
         // Глобальные переменные
         let socket;
         let currentLobby = null;
