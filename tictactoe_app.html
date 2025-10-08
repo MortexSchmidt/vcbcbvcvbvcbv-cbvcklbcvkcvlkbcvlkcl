@@ -44,7 +44,7 @@
 
         .header p { color: #9aa6b2; font-size: 0.95rem; }
 
-    .create-lobby { display:flex; gap:12px; align-items:center; margin-bottom:18px; }
+    .create-lobby { display:flex; gap:12px; align-items:center; justify-content:center; margin-bottom:18px; }
     .create-lobby .btn { height:44px; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
 
         .lobby-list { display: grid; gap: 14px; margin-bottom: 18px; }
@@ -114,10 +114,12 @@
 
         <div class="create-lobby">
             <button class="btn btn-primary" id="createLobbyBtn">
-                Создать лобби
+                <i class="fas fa-plus" aria-hidden="true"></i>
+                <span>Создать лобби</span>
             </button>
-            <button class="btn btn-secondary" id="refreshProfileBtn" style="margin-left:10px;">
-                Обновить профиль
+            <button class="btn btn-secondary" id="refreshProfileBtn">
+                <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                <span>Обновить профиль</span>
             </button>
         </div>
 
