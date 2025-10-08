@@ -20,7 +20,7 @@ import nest_asyncio
 import threading
 from flask import Flask, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
-from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
+from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from datetime import datetime, timedelta
 import json
@@ -1440,12 +1440,9 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
     # URL Mini-App
     miniapp_url = "https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/tictactoe_app.html"
 
-    # Создаем кнопку для открытия Mini-App (web_app) и запасную кнопку с обычной ссылкой
+    # Создаем кнопку для открытия Mini-App (web_app)
     keyboard = [
-        [
-            InlineKeyboardButton("🎮 Играть в крестики-нолики (Mini-App)", web_app={"url": miniapp_url}),
-        ],
-        [InlineKeyboardButton("Открыть в браузере", url=miniapp_url)]
+        [InlineKeyboardButton("🎮 Играть в крестики-нолики (Mini-App)", web_app=WebAppInfo(url=miniapp_url))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
