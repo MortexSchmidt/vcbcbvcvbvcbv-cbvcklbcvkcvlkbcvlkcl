@@ -1273,13 +1273,15 @@ def check_kick_stream():
         username = "jesusavgn"
         response = requests.get(f"https://kick.com/api/v1/channels/{username}")
         data = response.json()
-        
+        # DEBUG: логируем ответ
+        print("[kick.com] API response:", data)
         if "livestream" in data and data["livestream"] is not None:
-            return True, data["livestream"]["title"] if "title" in data["livestream"] else "Стрим в эфире!"
+            return True, data["livestream"].get("title", "Стрим в эфире!"), data
         else:
-            return False, ""
-    except:
-        return False, ""
+            return False, "", data
+    except Exception as e:
+        print(f"[kick.com] API error: {e}")
+        return False, f"Ошибка запроса: {e}", {}
 
 # команда для проверки статуса стрима
 async def check_stream(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1289,15 +1291,15 @@ async def check_stream(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass  # если нет прав на удаление, просто пропускаем
     
     user_name = update.effective_user.first_name
-    is_live, stream_title = check_kick_stream()
+    is_live, stream_title, debug_data = check_kick_stream()
 
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
     if is_live:
         stream_message = f"Стрим в эфире: {stream_title}\nСсылка: https://kick.com/jesusavgn"
     else:
-        stream_message = "Стрим в настоящее время неактивен. Я оповещу, когда начнётся."
+        stream_message = "Стрим в настоящее время неактивен. Я оповещу, когда начнётся.\n\n<b>Debug:</b> <code>" + str(debug_data)[:1000] + "</code>"
 
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=stream_message)
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=stream_message, parse_mode='HTML')
 
 # функция для отправки уведомления о стриме
 async def send_stream_notification(context: ContextTypes.DEFAULT_TYPE):
