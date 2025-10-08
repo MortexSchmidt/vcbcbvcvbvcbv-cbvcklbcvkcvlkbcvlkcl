@@ -32,7 +32,7 @@ nest_asyncio.apply()
 PORT = int(os.environ.get('PORT', 8080))
 
 # Flask app для webhook
-app = Flask(__name__)
+app = Flask(__name__, static_folder='.')
 
 # Включаем логирование
 logging.basicConfig(
@@ -484,6 +484,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /stream — че по стриму?
 /rate — че по бабкам?
 /tictactoe — сыграем в крестики-нолики?
+/tictactoe_app — крестики-нолики в Mini-App
 /rules — правила тусовки
 /myid — твой айди
 /help — если че не понял
@@ -522,6 +523,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 🎮 <b>игры:</b>
 • /tictactoe - начать крестики-нолики
+• /tictactoe_app - крестики-нолики в Mini-App
 • /join - присоединиться если ждёт второй
 • жми на клетки чтобы ходить
 
@@ -1331,6 +1333,11 @@ def setup_application():
     application.add_handler(CommandHandler("stream", check_stream))
     application.add_handler(CommandHandler("legend", legend_command))
     
+    # обработчики крестиков-ноликов
+    application.add_handler(CommandHandler("tictactoe", start_tictactoe))
+    application.add_handler(CommandHandler("join", join_tictactoe))
+    application.add_handler(CallbackQueryHandler(handle_tictactoe_callback, pattern="^tic_"))
+    
     # обработчик команды для открытия Mini-App
     application.add_handler(CommandHandler("tictactoe_app", tictactoe_miniapp_command))
 
@@ -1343,10 +1350,6 @@ def setup_application():
     application.add_handler(CommandHandler("clearwarns", clear_warnings_command))
     application.add_handler(CommandHandler("adminhelp", admin_help_command))
 
-    # обработчики крестиков-ноликов
-    application.add_handler(CommandHandler("tictactoe", start_tictactoe))
-    application.add_handler(CommandHandler("join", join_tictactoe))
-    application.add_handler(CallbackQueryHandler(handle_tictactoe_callback, pattern="^tic_"))
 
     # обработчик текстовых команд без /
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex(r'^курс$'), exchange_rate))
@@ -1376,9 +1379,9 @@ def setup_application():
             BotCommand("rules", "Правила чата"),
             BotCommand("myid", "Твой ID"),
             BotCommand("tictactoe", "Крестики-нолики"),
+            BotCommand("tictactoe_app", "Крестики-нолики Mini-App"),
             BotCommand("join", "Присоединиться к игре"),
             BotCommand("legend", "Легенда чата"),
-            BotCommand("tictactoe_app", "Крестики-нолики Mini-App"),
             BotCommand("mute", "Замутить (админы)"),
             BotCommand("warn", "Предупредить (админам)"),
             BotCommand("userinfo", "Инфо о пользователе (админам)"),
@@ -1404,9 +1407,7 @@ def setup_application():
     except Exception as e:
         logger.error(f"Критическая ошибка при настройке приложения: {e}")
 
-# Запускаем настройку при импорте модуля
-setup_application()
-
+# Команда для открытия Mini-App с крестиками-ноликами
 async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда для открытия Mini-App с крестиками-ноликами"""
     try:
@@ -1430,6 +1431,13 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
         parse_mode='HTML',
         reply_markup=reply_markup
     )
+
+# Запускаем настройку при импорте модуля
+setup_application()
+
+@app.route('/tictactoe_app.html')
+def serve_tictactoe_app():
+    return app.send_static_file('tictactoe_app.html')
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
