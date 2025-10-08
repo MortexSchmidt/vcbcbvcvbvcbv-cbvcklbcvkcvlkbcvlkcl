@@ -421,6 +421,14 @@
       font-weight: 500;
     }
 
+    .current-player-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--discord-primary);
+      object-fit: cover;
+    }
+
     .game-status-indicator.your-turn {
       background: rgba(88, 101, 242, 0.2);
       color: var(--discord-primary);
@@ -1014,7 +1022,8 @@
                 <div class="game-status">
                     <p class="game-status-text">Ход игрока</p>
                     <div class="game-status-indicator your-turn" id="gameStatusIndicator">
-                        Ваш ход
+                        <img id="currentPlayerAvatar" src="" alt="avatar" class="current-player-avatar">
+                        <span id="currentPlayerName">Игрок</span>
                     </div>
                 </div>
 
@@ -1333,12 +1342,10 @@
         // Обработчик ответа сервера на dissolve_lobby
         socket.on('lobby_dissolved', (data) => {
             console.log('Лобби распущено сервером:', data);
-            // Сбрасываем состояние если не было сделано ранее
-            if (currentLobby && currentLobby.id === data.lobby_id) {
-                currentLobby = null;
-                currentPlayer = null;
-                showLobbyList();
-            }
+            // Сбрасываем состояние для всех игроков
+            currentLobby = null;
+            currentPlayer = null;
+            showLobbyList();
         });
 
         function startGame() {
@@ -1654,28 +1661,39 @@
 
             const statusText = document.querySelector('.game-status-text');
             const statusIndicator = document.getElementById('gameStatusIndicator');
+            const currentPlayerAvatar = document.getElementById('currentPlayerAvatar');
+            const currentPlayerName = document.getElementById('currentPlayerName');
 
             switch(currentLobby.status) {
                 case 'playing':
-                    if (currentPlayer) {
+                    if (currentPlayer && currentLobby.players) {
+                        const currentPlayerObj = currentLobby.players.find(p => p.symbol === currentLobby.current_player);
+                        if (currentPlayerObj) {
+                            currentPlayerAvatar.src = currentPlayerObj.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentPlayerObj.name)}&background=5865f2&color=ffffff&size=64`;
+                            currentPlayerName.textContent = currentPlayerObj.name;
+                        }
                         const isMyTurn = currentLobby.current_player === currentPlayer.symbol;
                         statusText.textContent = isMyTurn ? 'Ваш ход' : 'Ход соперника';
-                        statusIndicator.textContent = isMyTurn ? `Играйте как игрок ${currentPlayer.symbol}` : 'Ожидание хода оппонента';
                         statusIndicator.className = `game-status-indicator ${isMyTurn ? 'your-turn' : 'waiting'}`;
                     }
                     break;
                 case 'waiting':
                     statusText.textContent = 'Ожидание игрока';
-                    statusIndicator.textContent = 'Дождитесь второго игрока';
+                    currentPlayerName.textContent = 'Ожидание второго игрока';
+                    currentPlayerAvatar.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiM3MjY3N2QiLz4KPHBhdGggZD0iTTE2IDE2QzE4LjIxIDE2IDIwIDE0LjIxIDIwIDEyQzIwIDEwLjc5IDE4LjIxIDkgMTYgOUMxMy43OSA5IDEyIDEwLjc5IDEyIDEyQzEyIDE0LjIxIDEzLjc5IDE2IDE2Wk0xNiAyMEMxOS4zMTggMjAgMjIgMTguMzE4IDIyIDE2QzIyIDEzLjY4MiAxOS4zMTggMTEgMTYgMTFDMTIuNjgyIDExIDEwIDEzLjY4MiAxMCAxNkMxMCAxOC4zMTggMTIuNjgyIDIwIDE2IDIwWk0xNiAyNEMyMS41ODIgMjQgMjYgMTkuNTgyIDI2IDE0QzI2IDguNDE4IDIxLjU4MiA0IDE2IDRDMTAuNDE4IDQgNiA4LjQxOCA2IDE0QzYgMTkuNTgyIDEwLjQxOCAyNCAxNiAyNFoiIGZpbGw9IiNkY2RkZGUiLz4KPC9zdmc+';
                     statusIndicator.className = 'game-status-indicator waiting';
                     break;
                 case 'finished':
                     statusText.textContent = 'Игра завершена';
                     if (currentLobby.winner === 'draw') {
-                        statusIndicator.textContent = 'Ничья!';
+                        currentPlayerName.textContent = 'Ничья!';
+                        currentPlayerAvatar.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiNmZWU3NWMiLz4KPHBhdGggZD0iTTggMTJMMTEgMTVMMTYgMTBNMjEgMTJMMjQgMTVMMjEgMThMMTEgMTVMMjQgMTJMMjEgOUwxNiA2TDExIDlMMTEgMTJMMTEgMTVMMTEgMThMMTEgMjFMMTEgMjRMMTEgMjdsLTMgMyIvPgo8L3N2Zz4=';
                     } else {
                         const winner = currentLobby.players.find(p => p.symbol === currentLobby.winner);
-                        statusIndicator.textContent = `Победил ${winner ? winner.name : currentLobby.winner}!`;
+                        if (winner) {
+                            currentPlayerAvatar.src = winner.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(winner.name)}&background=5865f2&color=ffffff&size=64`;
+                            currentPlayerName.textContent = `Победил ${winner.name}!`;
+                        }
                     }
                     statusIndicator.className = 'game-status-indicator';
                     break;
@@ -1750,11 +1768,18 @@
 
             const statusIndicator = document.getElementById('gameStatusIndicator');
             const statusText = document.querySelector('.game-status-text');
+            const currentPlayerAvatar = document.getElementById('currentPlayerAvatar');
+            const currentPlayerName = document.getElementById('currentPlayerName');
 
-            if (currentPlayer) {
+            if (currentPlayer && currentLobby.players) {
+                const currentPlayerObj = currentLobby.players.find(p => p.symbol === currentLobby.current_player);
+                if (currentPlayerObj) {
+                    currentPlayerAvatar.src = currentPlayerObj.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentPlayerObj.name)}&background=5865f2&color=ffffff&size=64`;
+                    currentPlayerName.textContent = currentPlayerObj.name;
+                }
+
                 const isMyTurn = currentLobby.status === 'playing' && currentLobby.current_player === currentPlayer.symbol;
                 statusText.textContent = isMyTurn ? 'Ваш ход' : 'Ход соперника';
-                statusIndicator.textContent = isMyTurn ? `Играйте как ${currentPlayer.symbol}` : 'Ожидание хода';
                 statusIndicator.className = `game-status-indicator ${isMyTurn ? 'your-turn' : 'waiting'}`;
             }
 
