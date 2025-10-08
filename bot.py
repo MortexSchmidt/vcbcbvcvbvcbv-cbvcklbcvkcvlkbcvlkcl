@@ -142,11 +142,11 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
         if not user_mention:
             user_mention = f"<code>{user_id}</code>"
 
-        mute_msg = f"""🔇 <b>СЛОВИЛ МУТ</b> 🔇\n\n🚫 {user_mention} отлетает в мут\n⏰ <b>Срок:</b> {time_str}\n📝 <b>Причина:</b> {reason}\n"""
-        if update and hasattr(update, "effective_user") and update.effective_user and update.effective_user.id in admin_ids:
-            mute_msg += f"👨‍💼 <b>Админ:</b> {admin_mention}"
 
-        # СНАЧАЛА отправляем сообщение о муте, потом мутим
+        # зумерский мут
+        mute_msg = f"🔇 {user_mention} в муте, чилишь {time_str} 😎\nпричина: {reason}"
+        if update and hasattr(update, "effective_user") and update.effective_user and update.effective_user.id in admin_ids:
+            mute_msg += f"\nадмин: {admin_mention}"
         try:
             await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML')
         except Exception as send_err:
@@ -175,6 +175,8 @@ async def ban_user(user_id: int, chat_id: int, context: ContextTypes.DEFAULT_TYP
     """Банит пользователя"""
     try:
         await context.bot.ban_chat_member(chat_id=chat_id, user_id=user_id)
+        # зумерский бан
+        await context.bot.send_message(chat_id=chat_id, text="🔨 ты отлетел в бан, не обижайся, тут свои правила 🚫")
         return True
     except:
         return False
@@ -599,7 +601,7 @@ async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     violation_type = " ".join(context.args) if context.args else "за кринж"
     await add_warning(user_id, violation_type, context)
     warnings_count = user_warnings[user_id]["warnings"]
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"⚠️ выписал варн. теперь у него их {warnings_count}")
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"⚠️ ловишь варн за кринж, аккуратнее, бро! теперь у тебя их {warnings_count}")
 
 
 async def user_info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -671,7 +673,7 @@ async def unmute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in muted:
         del muted[user_id]
         save_muted_users(muted)
-        unmute_msg = f"🔊 {update.message.reply_to_message.from_user.mention_html()} размучен. админ: {update.effective_user.mention_html()}"
+        unmute_msg = f"🔊 {update.message.reply_to_message.from_user.mention_html()} размут, можешь базарить, но не борзей\nадмин: {update.effective_user.mention_html()}"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=unmute_msg, parse_mode='HTML')
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f"❌ {update.message.reply_to_message.from_user.first_name} и так не в муте, лол")
@@ -696,7 +698,7 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     try:
         await context.bot.unban_chat_member(chat_id, user_id)
-        unban_msg = f"✅ {update.message.reply_to_message.from_user.mention_html()} амнистирован. админ: {update.effective_user.mention_html()}"
+        unban_msg = f"✅ тебя разбанили, не тупи больше, ок?\nадмин: {update.effective_user.mention_html()}"
         await context.bot.send_message(chat_id=chat_id, text=unban_msg, parse_mode='HTML')
     except Exception as e:
         await context.bot.send_message(chat_id=chat_id, text=f"❌ траблы с разбаном: {str(e)}")
@@ -720,7 +722,7 @@ async def clear_warnings_command(update: Update, context: ContextTypes.DEFAULT_T
     user_id = update.message.reply_to_message.from_user.id
     if user_id in user_warnings:
         del user_warnings[user_id]
-        clear_msg = f"🧹 варны снесены для {update.message.reply_to_message.from_user.mention_html()}\nадмин: {update.effective_user.mention_html()}"
+        clear_msg = f"🧹 все варны снесены, чистый лист, юзаем с умом\nадмин: {update.effective_user.mention_html()}"
         await context.bot.send_message(chat_id=update.effective_chat.id, text=clear_msg, parse_mode='HTML')
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f"❌ у {update.message.reply_to_message.from_user.first_name} и так нет варнов, але")
