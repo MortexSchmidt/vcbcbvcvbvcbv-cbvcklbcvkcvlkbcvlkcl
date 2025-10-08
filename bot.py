@@ -496,16 +496,17 @@ async def handle_tictactoe_callback(update: Update, context: ContextTypes.DEFAUL
 
 # обработчик команды /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"команда /start от {update.effective_user.first_name} в чате {update.effective_chat.id}")
+    logger.info(f"команда /start от {update.effective_user.first_name} в чате {getattr(update.effective_chat, 'id', None)}")
+    # Пытаемся удалить командное сообщение, если есть права
     try:
         try:
-            await update.message.delete()
-        except:
+            if update.message:
+                await update.message.delete()
+        except Exception:
             pass
-        logger.info("сообщение команды удалено")
+        logger.info("сообщение команды удалено (если было)")
     except Exception as e:
         logger.error(f"не удалось удалить сообщение: {e}")
-        pass # если нет прав на удаление, просто пропускаем
 
     user_name = update.effective_user.first_name
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
@@ -514,7 +515,59 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     chat_id = chat.id if chat else None
     chat_type = getattr(chat, 'type', 'unknown')
-    logger.info(f"tictactoe invoked by user {update.effective_user.id} in chat {chat_id} (type={chat_type})")
+    logger.info(f"/start от user {update.effective_user.id} в чате {chat_id} (type={chat_type})")
+
+    # Проверяем, был ли передан payload (deeplink). Популярные формы: /start tictactoe или /start=tictactoe
+    payload = None
+    try:
+        # 1) context.args (если CommandHandler распарсил аргументы)
+        if context.args:
+            payload = " ".join(context.args)
+
+        # 2) Попробуем спарсить напрямую из текста сообщения (вариант /start=payload)
+        if not payload and update.message and update.message.text:
+            m = re.match(r'^/start(?:@\w+)?(?:[\s=]+)(.+)$', update.message.text.strip())
+            if m:
+                payload = m.group(1).strip()
+
+        # 3) Иногда Telegram присылает payload в entities/parameters — проверим на всякий случай
+        if not payload and update.message and hasattr(update.message, 'entities') and update.message.entities:
+            # ничего специфичного обычно не хранится, оставляем None
+            payload = None
+    except Exception:
+        payload = None
+
+    logger.info(f"/start payload detected: {payload}")
+
+    # Если payload указывает на tictactoe — отправляем Mini-App кнопку в личку и выходим
+    if payload and 'tictactoe' in payload.lower():
+        miniapp_url = "https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/tictactoe_app.html"
+        # Попробуем отправить WebApp кнопку; добавим запасную URL-кнопку на всякий случай
+        keyboard = [
+            [InlineKeyboardButton("🎮 Играть в крестики-нолики (Mini-App)", web_app=WebAppInfo(url=miniapp_url))],
+            [InlineKeyboardButton("Открыть в браузере (если не работает)", url=miniapp_url)]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        text = (
+            f"🎮 <b>крестики-нолики Mini-App</b>\n\n"
+            f"Привет, {user_name}! Открой Mini‑App и присоединись к игре.\n\n"
+            f"<i>вызвал: {user_mention}</i>"
+        )
+
+        try:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=text, parse_mode='HTML', reply_markup=reply_markup)
+            logger.info(f"Отправлено сообщение с Mini-App в личку {update.effective_chat.id} через /start payload")
+        except Exception as e:
+            logger.error(f"Не удалось отправить Mini-App по /start payload: {e}")
+            try:
+                # запасной вариант: отправляем текстовую инструкцию с прямой ссылкой
+                await context.bot.send_message(chat_id=update.effective_chat.id, text=(f"Откройте мини‑приложение по ссылке: {miniapp_url}\nЕсли кнопка не появилась, попробуйте написать /tictactoe."))
+            except Exception:
+                pass
+        return
+
+    # Если payload не распознан — показываем стандартное приветствие
     welcome_text = f"""👋 Здравствуйте, {user_name}.
 
 Я — бот «Хесус Инсайд». Краткий список команд:
@@ -530,8 +583,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Вызвал: {user_mention}"""
 
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=welcome_text, parse_mode='HTML')
-    logger.info("ответ на /start отправлен")
+    try:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=welcome_text, parse_mode='HTML')
+        logger.info("ответ на /start отправлен")
+    except Exception as e:
+        logger.error(f"Ошибка при отправке ответа на /start: {e}")
 
 # команда помощи
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1473,26 +1529,50 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
                 pass
             return
 
-        # Если команда в группе/супергруппе — удаляем команду и отправляем web_app в ЛС пользователя
+        # Если команда в группе/супергруппе — удаляем команду и отправляем web_app в ЛС пользователя.
+        # Дополнительно: публикуем в группе deeplink-кнопку, чтобы пользователь мог открыть бота в ЛС
+        # с payload=/start=tictactoe (имитирует "нажатие Start" — пользователь должен нажать сам).
         try:
             await update.message.delete()
         except Exception:
             pass
 
-        await context.bot.send_message(
-            chat_id=update.effective_user.id,
-            text=text,
-            parse_mode='HTML',
-            reply_markup=reply_markup
-        )
-        logger.info(f"Отправлено сообщение с Mini-App в ЛС пользователю {update.effective_user.id}")
-
-        # Подтверждение в группе (без ссылки)
+        dm_sent = False
         try:
-            await context.bot.send_message(chat_id=chat_id, text=(f"✅ {update.effective_user.mention_html()}, открытие Mini‑App отправлено вам в личные сообщения. "
-                                                                     "Если вы не получили сообщение — откройте личку с ботом и нажмите /start, затем попробуйте снова."), parse_mode='HTML')
-        except Exception:
-            logger.warning(f"Не удалось отправить подтверждение в чат {chat_id}")
+            await context.bot.send_message(
+                chat_id=update.effective_user.id,
+                text=text,
+                parse_mode='HTML',
+                reply_markup=reply_markup
+            )
+            dm_sent = True
+            logger.info(f"Отправлено сообщение с Mini-App в ЛС пользователю {update.effective_user.id}")
+        except Exception as e:
+            logger.warning(f"Не удалось отправить Mini-App в ЛС пользователю {update.effective_user.id}: {e}")
+
+        # Пытаемся получить юзернейм бота для deeplink. Если не удалось — используем общую инструкцию без ссылки
+        deep_link = None
+        try:
+            me = await context.bot.get_me()
+            if getattr(me, 'username', None):
+                deep_link = f"https://t.me/{me.username}?start=tictactoe"
+        except Exception as e:
+            logger.warning(f"Не удалось получить username бота для deep link: {e}")
+
+        # Формируем подтверждение в группе: если у нас есть deep_link — добавим кнопку
+        try:
+            if deep_link:
+                group_kbd = InlineKeyboardMarkup([[InlineKeyboardButton("➡️ Открыть в личке", url=deep_link)]])
+                group_text = (f"✅ {update.effective_user.mention_html()}, я попытался отправить Mini‑App вам в личку. "
+                              "Если вы не получили сообщение — нажмите кнопку ниже, чтобы открыть бота и автоматически запустить /start.")
+                await context.bot.send_message(chat_id=chat_id, text=group_text, parse_mode='HTML', reply_markup=group_kbd)
+            else:
+                group_text = (f"✅ {update.effective_user.mention_html()}, я попытался отправить Mini‑App вам в личку. "
+                              "Если вы не получили сообщение — откройте личку с ботом и нажмите /start, затем попробуйте снова.")
+                await context.bot.send_message(chat_id=chat_id, text=group_text, parse_mode='HTML')
+        except Exception as e:
+            logger.warning(f"Не удалось отправить подтверждение в чат {chat_id}: {e}")
+
         return
     except Exception as e:
         logger.error(f"Ошибка при отправке Mini-App: {e}")
