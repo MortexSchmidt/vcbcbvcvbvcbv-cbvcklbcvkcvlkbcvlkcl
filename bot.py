@@ -162,11 +162,11 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
         if not user_mention:
             user_mention = f"<code>{user_id}</code>"
 
-
-        # зумерский мут
-        mute_msg = f"🔇 {user_mention} в муте, чилишь {time_str} 😎\nпричина: {reason}"
+        # системное сообщение о муте
+        mute_msg = f"{user_mention} был ограничен в праве отправки сообщений на {time_str}. Причина: {reason}"
         if update and hasattr(update, "effective_user") and update.effective_user and update.effective_user.id in admin_ids:
             mute_msg += f"\nадмин: {admin_mention}"
+
         # всегда кидаем сообщение о муте, даже если это стикер без текста
         sent = False
         try:
@@ -176,11 +176,13 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
                 sent = True
         except Exception as send_err:
             logger.error(f"ошибка reply-мут msg: {send_err}")
+
         if not sent:
             try:
                 await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML')
             except Exception as send_err:
                 logger.error(f"ошибка обычного мут msg: {send_err}")
+
         await context.bot.restrict_chat_member(
             chat_id=chat_id,
             user_id=user_id,
@@ -195,16 +197,19 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
                 can_pin_messages=False
             )
         )
-        
+
         # Отправляем уведомление пользователю в ЛС о муте
         try:
-            mute_notification = f"🔇 ты в муте до {mute_until.strftime('%d.%m.%Y %H:%M')} по Киеву\nпричина: {reason}\n\nты не можешь писать в чате, пока не закончится мут"
+            mute_notification = f"Вы ограничены в праве отправки сообщений до {mute_until.strftime('%d.%m.%Y %H:%M')}. Причина: {reason}."
             await context.bot.send_message(chat_id=user_id, text=mute_notification, parse_mode='HTML')
         except Exception as e:
             logger.warning(f"Не удалось отправить уведомление в ЛС пользователю {user_id}: {e}")
             # Если не удалось отправить в ЛС, отправляем в чат
-            await context.bot.send_message(chat_id=chat_id, text=f"{user_mention} замуться, ты в муте до {mute_until.strftime('%d.%m.%Y %H:%M')} по Киеву", parse_mode='HTML')
-        
+            try:
+                await context.bot.send_message(chat_id=chat_id, text=f"{user_mention} ограничен в праве отправки сообщений до {mute_until.strftime('%d.%m.%Y %H:%M')}", parse_mode='HTML')
+            except Exception:
+                pass
+
         return True
 
     except Exception as e:
