@@ -2,7 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pzw+XrVhK1iKq6V+6mZrY1lFQYVq6nXj3Zc1g1k6s6b6Q9K1y1q1Z1y1+Y1Z1y1Z1y1Z1y1Z1y1Z1y1Z1y1Z1y1Z1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
     /* Максимально современный Discord ремастер */
     :root {
@@ -94,7 +95,7 @@
       left: 0;
       right: 0;
       height: 3px;
-      background: linear-gradient(90deg, var(--discord-primary), var(--discord-success));
+      background: var(--discord-primary);
     }
 
     .app-title {
@@ -171,15 +172,16 @@
       content: '';
       position: absolute;
       top: 0;
-      left: -100%;
+      left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-      transition: left 0.5s;
+      background: rgba(255, 255, 255, 0.02);
+      opacity: 0;
+      transition: opacity 0.25s;
     }
 
     .menu-btn:hover::before {
-      left: 100%;
+      opacity: 1;
     }
 
     .menu-btn:hover {
@@ -254,7 +256,7 @@
       left: 0;
       right: 0;
       height: 3px;
-      background: linear-gradient(90deg, var(--discord-primary), var(--discord-success));
+      background: var(--discord-primary);
       opacity: 0;
       transition: opacity var(--transition-medium);
     }
@@ -545,7 +547,7 @@
       content: '';
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle at center, transparent 70%, rgba(255, 255, 255, 0.05));
+      background: none;
       opacity: 0;
       transition: opacity var(--transition-medium);
     }
@@ -615,7 +617,7 @@
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(135deg, var(--discord-primary), var(--discord-success));
+      background: rgba(255,255,255,0.02);
       opacity: 0;
       transition: opacity var(--transition-medium);
     }
@@ -1291,38 +1293,51 @@
                 list.appendChild(div);
             }
 
-            // Кнопки управления
-            const btns = document.getElementById('lobbyRoomBtns');
-            btns.innerHTML = '';
+      // Кнопки управления
+      const btns = document.getElementById('lobbyRoomBtns');
+      btns.innerHTML = '';
 
-            let isOwner = false;
-            if (currentLobby && currentPlayer && currentLobby.players && currentLobby.players.length > 0) {
-                isOwner = currentLobby.players[0].user_id === currentPlayer.user_id;
-            }
+      let isOwner = false;
+      if (currentLobby && currentPlayer && currentLobby.players && currentLobby.players.length > 0) {
+        isOwner = currentLobby.players[0].user_id === currentPlayer.user_id;
+      }
 
-            if (isOwner) {
-                if (currentLobby.players.length === 2) {
-                    btns.innerHTML += `
-                        <button class="game-btn primary" onclick="alert('Кнопка Начать игру нажата'); startGame()">
-                            <i class="fas fa-play-circle"></i>
-                            Начать игру
-                        </button>
-                    `;
-                }
-                btns.innerHTML += `
-                    <button class="game-btn danger" onclick="alert('Кнопка Закрыть лобби нажата'); dissolveLobby()">
-                        <i class="fas fa-times"></i>
-                        Закрыть лобби
-                    </button>
-                `;
-            } else {
-                btns.innerHTML += `
-                    <button class="game-btn secondary" onclick="alert('Кнопка Покинуть лобби нажата'); leaveLobby()">
-                        <i class="fas fa-arrow-left"></i>
-                        Покинуть лобби
-                    </button>
-                `;
-            }
+      // Делегируем клики — для динамически созданных кнопок это надёжнее
+      btns.addEventListener('click', function(e) {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        if (btn.dataset.action === 'start') {
+          alert('Кнопка Начать игру нажата');
+          startGame();
+        } else if (btn.dataset.action === 'dissolve') {
+          alert('Кнопка Закрыть лобби нажата');
+          dissolveLobby();
+        } else if (btn.dataset.action === 'leave') {
+          alert('Кнопка Покинуть лобби нажата');
+          leaveLobby();
+        }
+      });
+
+      if (isOwner) {
+        if (currentLobby.players.length === 2) {
+          const startBtn = document.createElement('button');
+          startBtn.className = 'game-btn primary';
+          startBtn.dataset.action = 'start';
+          startBtn.innerHTML = '<i class="fas fa-play-circle"></i> Начать игру';
+          btns.appendChild(startBtn);
+        }
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'game-btn danger';
+        closeBtn.dataset.action = 'dissolve';
+        closeBtn.innerHTML = '<i class="fas fa-times"></i> Закрыть лобби';
+        btns.appendChild(closeBtn);
+      } else {
+        const leaveBtn = document.createElement('button');
+        leaveBtn.className = 'game-btn secondary';
+        leaveBtn.dataset.action = 'leave';
+        leaveBtn.innerHTML = '<i class="fas fa-arrow-left"></i> Покинуть лобби';
+        btns.appendChild(leaveBtn);
+      }
         }
 
         function startGame() {
