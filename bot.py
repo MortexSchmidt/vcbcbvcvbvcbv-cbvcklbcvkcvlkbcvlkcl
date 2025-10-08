@@ -98,7 +98,7 @@ previous_stream_status = {}
 # Множество известных чатов для уведомлений о стримах
 known_chats = set()
 
-KICK_MINIAPP_URL = os.environ.get('KICK_MINIAPP_URL') or 'https://YOUR_DOMAIN/kick_stream_miniapp.html'  # <-- Укажи свой домен!
+KICK_MINIAPP_URL = os.environ.get('KICK_MINIAPP_URL') or 'https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/kick_stream_miniapp.html'
 # --- Автоуведомления о стриме jesusavgn (Kick.com) ---
 # Команда /kickapp — ссылка на мини‑апп
 async def kickapp_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
