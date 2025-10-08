@@ -182,6 +182,42 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
             except Exception as send_err:
                 logger.error(f"ошибка обычного мут msg: {send_err}")
 
+        # Проверяем, есть ли у бота право ограничивать участников в этом чате
+        try:
+            bot_me = await context.bot.get_me()
+            try:
+                bot_member = await context.bot.get_chat_member(chat_id=chat_id, user_id=bot_me.id)
+            except Exception:
+                bot_member = None
+
+            can_restrict = False
+            if bot_member:
+                # ChatMemberAdministrator и ChatMemberOwner имеют разные атрибуты
+                status = getattr(bot_member, 'status', '')
+                # Если владелец — разрешено
+                if status == 'creator':
+                    can_restrict = True
+                else:
+                    # У администратора проверяем флаг can_restrict_members
+                    can_restrict = bool(getattr(bot_member, 'can_restrict_members', False))
+            else:
+                can_restrict = False
+
+            if not can_restrict:
+                # Оповещаем чат об отсутствии прав и возвращаем False
+                try:
+                    await context.bot.send_message(chat_id=chat_id, text=(f"⚠️ Не удалось применить телеграм-ограничение для <code>{user_id}</code>. "
+                                                                          "У бота нет права ограничивать участников (can_restrict_members). "
+                                                                          "Пожалуйста, назначьте бота администратором с правом 'Ограничивать участников'."), parse_mode='HTML')
+                except Exception:
+                    pass
+                logger.warning(f"Бот не имеет права can_restrict_members в чате {chat_id}")
+                return False
+
+        except Exception as e:
+            logger.warning(f"Не удалось проверить права бота: {e}")
+
+        # Применяем ограничение на уровне Telegram
         await context.bot.restrict_chat_member(
             chat_id=chat_id,
             user_id=user_id,
@@ -194,8 +230,7 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
                 can_change_info=False,
                 can_invite_users=False,
                 can_pin_messages=False
-            )
-            ,
+            ),
             until_date=mute_until
         )
 
@@ -918,7 +953,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         last_3_messages = user_msg_list[-3:]
         if len(set(last_3_messages)) == 1:
             # Авто-мутаем за спам на 1 час
-            await mute_user(user_id, chat_id, 1, "спам", context, update)
+            success = await mute_user(user_id, chat_id, 1, "спам", context, update)
+            if not success:
+                try:
+                    await context.bot.send_message(chat_id=chat_id, text=f"⚠️ Не удалось применить мут к {update.effective_user.mention_html()}. Проверьте права бота (нужен can_restrict_members).", parse_mode='HTML')
+                except Exception:
+                    pass
             user_messages[user_id]["messages"] = []
             user_messages[user_id]["timestamps"] = []
             return
@@ -950,39 +990,84 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             last_3_stickers = user_sticker_list[-3:]
             if len(set(last_3_stickers)) == 1:
                 # Авто-мутаем за спам стикерами на 1 час
-                await mute_user(user_id, chat_id, 1, "спам", context, update)
+                success = await mute_user(user_id, chat_id, 1, "спам", context, update)
+                if not success:
+                    try:
+                        await context.bot.send_message(chat_id=chat_id, text=f"⚠️ Не удалось применить мут к {update.effective_user.mention_html()}. Проверьте права бота (нужен can_restrict_members).", parse_mode='HTML')
+                    except Exception:
+                        pass
                 user_messages[user_id]["stickers"] = []
                 user_messages[user_id]["sticker_timestamps"] = []
                 return
 
     # мут за любые медиа — всегда плашка
     if update.message.animation and user_id not in admin_ids:
-        await mute_user(user_id, chat_id, 0.166, "гифка, чилишь в муте", context, update)
+        success = await mute_user(user_id, chat_id, 0.166, "гифка, чилишь в муте", context, update)
+        if not success:
+            try:
+                await context.bot.send_message(chat_id=chat_id, text=f"⚠️ Не удалось применить мут к {update.effective_user.mention_html()}. Проверьте права бота.", parse_mode='HTML')
+            except Exception:
+                pass
         return
     if update.message.document and user_id not in admin_ids:
-        await mute_user(user_id, chat_id, 0.166, "файл, чилишь в муте", context, update)
+        success = await mute_user(user_id, chat_id, 0.166, "файл, чилишь в муте", context, update)
+        if not success:
+            try:
+                await context.bot.send_message(chat_id=chat_id, text=f"⚠️ Не удалось применить мут к {update.effective_user.mention_html()}. Проверьте права бота.", parse_mode='HTML')
+            except Exception:
+                pass
         return
     if update.message.photo and user_id not in admin_ids:
-        await mute_user(user_id, chat_id, 0.166, "фотка, чилишь в муте", context, update)
+        success = await mute_user(user_id, chat_id, 0.166, "фотка, чилишь в муте", context, update)
+        if not success:
+            try:
+                await context.bot.send_message(chat_id=chat_id, text=f"⚠️ Не удалось применить мут к {update.effective_user.mention_html()}. Проверьте права бота.", parse_mode='HTML')
+            except Exception:
+                pass
         return
     if update.message.video and user_id not in admin_ids:
         caption = (update.message.caption or "").lower()
         filename = update.message.video.file_name.lower() if update.message.video.file_name else ""
         loud_indicators = ['крик', 'орет', 'громко', 'звук', 'bass', 'loud', 'scream']
         if any(word in caption + filename for word in loud_indicators):
-            await mute_user(user_id, chat_id, 0.166, "громкий контент, уши минус", context, update)
+            success = await mute_user(user_id, chat_id, 0.166, "громкий контент, уши минус", context, update)
+            if not success:
+                try:
+                    await context.bot.send_message(chat_id=chat_id, text=f"⚠️ Не удалось применить мут к {update.effective_user.mention_html()}. Проверьте права бота.", parse_mode='HTML')
+                except Exception:
+                    pass
         else:
-            await mute_user(user_id, chat_id, 0.166, "видос, чилишь в муте", context, update)
+            success = await mute_user(user_id, chat_id, 0.166, "видос, чилишь в муте", context, update)
+            if not success:
+                try:
+                    await context.bot.send_message(chat_id=chat_id, text=f"⚠️ Не удалось применить мут к {update.effective_user.mention_html()}. Проверьте права бота.", parse_mode='HTML')
+                except Exception:
+                    pass
         return
     if update.message.audio and user_id not in admin_ids:
         filename = update.message.audio.file_name.lower() if update.message.audio.file_name else ""
         if any(word in filename for word in ['крик', 'орет', 'громко', 'звук', 'bass', 'loud', 'scream']):
-            await mute_user(user_id, chat_id, 0.166, "громкий контент, уши минус", context, update)
+            success = await mute_user(user_id, chat_id, 0.166, "громкий контент, уши минус", context, update)
+            if not success:
+                try:
+                    await context.bot.send_message(chat_id=chat_id, text=f"⚠️ Не удалось применить мут к {update.effective_user.mention_html()}. Проверьте права бота.", parse_mode='HTML')
+                except Exception:
+                    pass
         else:
-            await mute_user(user_id, chat_id, 0.166, "аудио, чилишь в муте", context, update)
+            success = await mute_user(user_id, chat_id, 0.166, "аудио, чилишь в муте", context, update)
+            if not success:
+                try:
+                    await context.bot.send_message(chat_id=chat_id, text=f"⚠️ Не удалось применить мут к {update.effective_user.mention_html()}. Проверьте права бота.", parse_mode='HTML')
+                except Exception:
+                    pass
         return
     if update.message.voice and user_id not in admin_ids:
-        await mute_user(user_id, chat_id, 0.166, "войс, чилишь в муте", context, update)
+        success = await mute_user(user_id, chat_id, 0.166, "войс, чилишь в муте", context, update)
+        if not success:
+            try:
+                await context.bot.send_message(chat_id=chat_id, text=f"⚠️ Не удалось применить мут к {update.effective_user.mention_html()}. Проверьте права бота.", parse_mode='HTML')
+            except Exception:
+                pass
         return
 
 # Функция для получения курса валют
