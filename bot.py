@@ -114,21 +114,6 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
     save_muted_users(muted)
     
     try:
-        await context.bot.restrict_chat_member(
-            chat_id=chat_id,
-            user_id=user_id,
-            permissions=ChatPermissions(
-                can_send_messages=False,
-                can_send_media_messages=False,
-                can_send_polls=False,
-                can_send_other_messages=False,
-                can_add_web_page_previews=False,
-                can_change_info=False,
-                can_invite_users=False,
-                can_pin_messages=False
-            )
-        )
-
         # Формируем строку времени
         days = int(hours // 24)
         remaining_hours = int(hours % 24)
@@ -161,11 +146,26 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
         if update and hasattr(update, "effective_user") and update.effective_user and update.effective_user.id in admin_ids:
             mute_msg += f"👨‍💼 <b>Админ:</b> {admin_mention}"
 
+        # СНАЧАЛА отправляем сообщение о муте, потом мутим
         try:
             await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML')
         except Exception as send_err:
             logger.error(f"Ошибка отправки сообщения о муте: {send_err}")
 
+        await context.bot.restrict_chat_member(
+            chat_id=chat_id,
+            user_id=user_id,
+            permissions=ChatPermissions(
+                can_send_messages=False,
+                can_send_media_messages=False,
+                can_send_polls=False,
+                can_send_other_messages=False,
+                can_add_web_page_previews=False,
+                can_change_info=False,
+                can_invite_users=False,
+                can_pin_messages=False
+            )
+        )
         return True
     except Exception as e:
         logger.error(f"Не удалось замутить пользователя {user_id}: {e}")
