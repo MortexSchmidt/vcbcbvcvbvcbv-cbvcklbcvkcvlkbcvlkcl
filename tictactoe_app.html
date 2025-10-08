@@ -215,8 +215,19 @@
 
         // Инициализация приложения
         document.addEventListener('DOMContentLoaded', function() {
-            // Инициализируем Telegram WebApp если доступно
-            if (window.Telegram && window.Telegram.WebApp) {
+            // Проверяем localStorage на наличие сохранённого профиля
+            let savedProfile = null;
+            try {
+                savedProfile = JSON.parse(localStorage.getItem('tic_profile'));
+            } catch (e) { savedProfile = null; }
+
+            if (savedProfile && savedProfile.user_id) {
+                // Если профиль сохранён — используем его
+                webUserId = savedProfile.user_id;
+                playerName = savedProfile.name || 'Игрок';
+                playerAvatar = savedProfile.avatar || '';
+                startApp();
+            } else if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
                 tg.ready(); // Сообщаем Telegram, что Mini-App готова
                 tg.expand(); // Расширяем на весь экран если возможно
@@ -233,7 +244,9 @@
                     if (user && user.id) {
                         webUserId = user.id;
                         playerName = user.first_name || user.username || 'Игрок';
-                        playerAvatar = ''; // Фото получим через backend
+                        playerAvatar = '';
+                        // Сохраняем профиль в localStorage
+                        localStorage.setItem('tic_profile', JSON.stringify({ user_id: webUserId, name: playerName, avatar: playerAvatar }));
                         startApp();
                     } else {
                         // Если не удалось, используем дефолт
@@ -346,6 +359,9 @@
                 try {
                     if (profile && profile.name) playerName = profile.name;
                     if (profile && profile.avatar) playerAvatar = profile.avatar;
+                    if (profile && profile.user_id) webUserId = profile.user_id;
+                    // Сохраняем профиль в localStorage
+                    localStorage.setItem('tic_profile', JSON.stringify({ user_id: webUserId, name: playerName, avatar: playerAvatar }));
                     // если уже в лобби — обновим
                     if (currentLobby) {
                         socket.emit('get_lobbies');
