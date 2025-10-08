@@ -1272,11 +1272,7 @@ def check_kick_stream():
         # Используем никнейм jesusavgn с Kick.com
         username = "jesusavgn"
         headers = {"User-Agent": "Mozilla/5.0 (compatible; Bot/1.0; +https://t.me/hesusinsidemegabot)"}
-        proxies = {
-            "http": "http://103.56.205.84:8080",
-            "https": "http://103.56.205.84:8080"
-        }
-        response = requests.get(f"https://kick.com/api/v1/channels/{username}", headers=headers, proxies=proxies, timeout=15)
+        response = requests.get(f"https://kick.com/api/v1/channels/{username}", headers=headers, timeout=15)
         try:
             data = response.json()
         except Exception:
