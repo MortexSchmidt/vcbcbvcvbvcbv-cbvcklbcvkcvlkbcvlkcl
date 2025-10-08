@@ -74,13 +74,28 @@
         </div>
     </div>
     <!-- Оверлей авторизации — блокирует доступ пока не придёт профиль из бота -->
-    <div id="authOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;color:#fff;">
-        <div style="max-width:420px;width:90%;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));padding:20px;border-radius:12px;text-align:center;">
-            <h2 style="margin-top:0;margin-bottom:8px;color:#fff;">Требуется авторизация</h2>
-            <p style="margin:0 0 12px;color:#ddd;">Чтобы продолжить и играть в мини‑приложении, подтвердите себя через бот в Telegram.</p>
-            <button id="authActionBtn" class="btn btn-primary" style="font-size:1.05rem;padding:10px 16px;">Авторизоваться в боте</button>
-            <div id="authStatus" style="margin-top:10px;color:#ccc;font-size:0.95rem;">Ожидание авторизации...</div>
+    <div id="authOverlay" style="display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;pointer-events:auto;">
+        <div style="max-width:340px;width:92%;background:rgba(255,255,255,0.97);box-shadow:0 2px 16px 0 rgba(0,0,0,0.10);padding:22px 18px 18px 18px;border-radius:14px;text-align:center;backdrop-filter:blur(2px);border:1.5px solid #e3eaff;animation:fadeIn .3s;">
+            <h2 style="margin:0 0 8px 0;font-size:1.25rem;color:#1a2a3a;font-weight:700;letter-spacing:0.01em;">Авторизация</h2>
+            <p style="margin:0 0 14px 0;color:#3a4a5a;font-size:1.01rem;">Для игры требуется подтверждение через Telegram-бота.<br>Это займёт 5 секунд.</p>
+            <button id="authActionBtn" class="btn btn-primary" style="font-size:1.07rem;padding:10px 18px;margin-bottom:8px;">Войти через бота</button>
+            <div id="authStatus" style="margin-top:8px;color:#6a7a8a;font-size:0.97rem;">Ожидание авторизации…</div>
         </div>
+        <style>
+        #authOverlay {
+            background: rgba(240,245,255,0.82);
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.25s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        </style>
     </div>
 
     <script>
