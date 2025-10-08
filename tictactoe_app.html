@@ -137,10 +137,11 @@
 
     <div id="debugStatus" style="display:none;padding:10px 0 0 0;text-align:center;color:#b00;font-size:1.05rem;"></div>
 
-    <noscript>
-      <div style="padding:32px;text-align:center;color:#b00;font-size:1.2rem;">Для работы Mini‑App требуется включить JavaScript.</div>
-    </noscript>
-    <script>
+        <noscript>
+            <div style="padding:32px;text-align:center;color:#b00;font-size:1.2rem;">Для работы Mini‑App требуется включить JavaScript.</div>
+        </noscript>
+        <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+        <script>
         // Fallback: если через 2 секунды ни mainContainer, ни authOverlay не видны — показать ошибку
         setTimeout(() => {
           const main = document.getElementById('mainContainer');
