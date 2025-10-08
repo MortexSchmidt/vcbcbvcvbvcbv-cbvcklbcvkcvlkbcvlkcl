@@ -68,8 +68,18 @@
             color: #1a2a3a;
             white-space: nowrap;
             overflow: hidden;
-            text-overflow: ellipsis;
             max-width: 90px;
+            display: inline-block;
+            position: relative;
+            /* Для анимации */
+        }
+        .player-small .name.marquee {
+            animation: marquee-x 3.5s linear infinite alternate;
+        }
+        @keyframes marquee-x {
+            0% { transform: translateX(0); }
+            90% { transform: translateX(calc(-100% + 90px)); }
+            100% { transform: translateX(calc(-100% + 90px)); }
         }
         .player-small .symbol {
             color: #1976d2;
@@ -627,11 +637,13 @@
 
                 const playersHtml = lobby.players.map(p => {
                     const avatar = p.avatar ? escapeHTML(p.avatar) : `https://ui-avatars.com/api/?name=${encodeURIComponent(escapeHTML(p.name))}`;
+                    // Если ник длиннее 10 символов — добавляем класс marquee
+                    const isLong = p.name && p.name.length > 10;
                     return `
                         <div class="player-small">
                             <img src="${avatar}" alt="avatar">
                             <div style="display:flex;flex-direction:column;">
-                                <span class="name">${escapeHTML(p.name)}</span>
+                                <span class="name${isLong ? ' marquee' : ''}">${escapeHTML(p.name)}</span>
                                 <span class="symbol">(${escapeHTML(p.symbol)})</span>
                             </div>
                         </div>
