@@ -167,6 +167,9 @@
                 tg.ready(); // Сообщаем Telegram, что Mini-App готова
                 tg.expand(); // Расширяем на весь экран если возможно
 
+                // DEBUG: выводим initDataUnsafe в консоль
+                console.log('tg.initDataUnsafe:', tg.initDataUnsafe);
+
                 // Ждем немного и пытаемся получить профиль
                 setTimeout(() => {
                     const user = tg.initDataUnsafe?.user;
