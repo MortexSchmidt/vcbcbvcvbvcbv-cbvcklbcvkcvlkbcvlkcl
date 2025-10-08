@@ -736,10 +736,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in muted:
         mute_end_time = muted[user_id]
         if datetime.now() < mute_end_time:
-            try:
-                await update.message.delete()
-            except:
-                pass  # Сообщение уже удалено или нет прав
+            # Просто игнорируем сообщение, Telegram сам ограничит отправку
             return
         else:
             # Удаляем пользователя из списка заглушенных, если время мута истекло
