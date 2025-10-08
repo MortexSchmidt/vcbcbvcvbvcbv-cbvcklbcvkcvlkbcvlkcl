@@ -1,5 +1,42 @@
- ан е браузераolor:#cfe6ff; background: rgba(11,112,255,0.06); border:1px solid rgba(11,112,255,0.08); }
-
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Крестики-нолики Mini‑App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body { margin:0; font-family:'Segoe UI',Arial,sans-serif; background:#f7faff; color:#222; }
+        .container { max-width:520px; margin:0 auto; padding:24px; }
+        .header { background:#eaf2ff; padding:18px; border-radius:14px; margin-bottom:18px; text-align:center; }
+        .header h1 { margin:0; font-size:1.7rem; letter-spacing:0.01em; color:#1a2a3a; }
+        .create-lobby { display:flex; gap:10px; margin-bottom:18px; }
+        .btn { border:none; border-radius:8px; padding:10px 16px; font-size:1.05rem; cursor:pointer; transition:background 0.18s; font-weight:500; }
+        .btn-primary { background:#1976d2; color:#fff; }
+        .btn-primary:hover { background:#1256a6; }
+        .btn-secondary { background:#e3eaff; color:#1a2a3a; }
+        .btn-secondary:hover { background:#cfe6ff; }
+        .btn-accent { background:#fffbe6; color:#bfa100; border:1px solid #ffe066; }
+        .btn-accent:hover { background:#fff3bf; }
+        .lobby-list { display:grid; gap:14px; margin-bottom:18px; }
+        .lobby-card { background:#fff; border-radius:10px; box-shadow:0 2px 8px 0 rgba(0,0,0,0.04); padding:14px 16px; display:flex; flex-direction:row; align-items:center; justify-content:space-between; }
+        .lobby-info { display:flex; flex-direction:column; gap:4px; }
+        .lobby-players { display:flex; gap:8px; align-items:center; }
+        .player { display:flex; align-items:center; gap:6px; }
+        .player img { width:24px; height:24px; border-radius:50%; object-fit:cover; }
+        .player.empty { color:#aaa; font-style:italic; }
+        .lobby-status { font-size:0.97rem; color:#1976d2; }
+        .lobby-actions { display:flex; gap:8px; }
+        .lobby-actions .btn { flex:1; }
+        .game-board { background:#fff; border-radius:12px; box-shadow:0 2px 8px 0 rgba(0,0,0,0.04); padding:18px; margin-bottom:18px; }
+        .board-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-width:420px; margin:0 auto 12px auto; }
+        .cell { background:#eaf2ff; border-radius:8px; min-height:64px; font-size:2.1rem; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.15s; }
+        .cell.x { color:#1976d2; }
+        .cell.o { color:#bfa100; }
+        .cell:hover { background:#cfe6ff; }
+        .game-info { display:flex; flex-direction:row; align-items:center; justify-content:space-between; margin-bottom:10px; }
+        .current-player { font-size:1.1rem; font-weight:500; }
+        .status-message { font-size:0.97rem; color:#1976d2; }
         @media (max-width:720px) {
             .container { padding:12px; }
             .header { padding:12px; border-radius:10px; }
