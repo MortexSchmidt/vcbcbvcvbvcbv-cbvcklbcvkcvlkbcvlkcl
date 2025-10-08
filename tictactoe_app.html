@@ -273,6 +273,9 @@
             <button class="btn btn-primary" id="createLobbyBtn">
                 <i class="fas fa-plus"></i> Создать новое лобби
             </button>
+            <button class="btn btn-secondary" id="refreshProfileBtn" style="margin-left:10px;">
+                <i class="fas fa-refresh"></i> Обновить профиль
+            </button>
         </div>
 
         <div class="lobby-list" id="lobbyList">
@@ -340,8 +343,8 @@
         let playerAvatar = '';
     let webUserId = null;
 
-    // Показываем окно выбора ника и аватарки (fallback)
-    function showPlayerDialog(callback) {
+        // Показываем окно выбора ника и аватарки (fallback)
+        function showPlayerDialog(callback, customText = 'Вход в игру') {
             const dialog = document.createElement('div');
             dialog.style.position = 'fixed';
             dialog.style.top = '0';
@@ -354,7 +357,7 @@
             dialog.style.justifyContent = 'center';
             dialog.innerHTML = `
                 <div style="background:#222;padding:32px 24px;border-radius:12px;min-width:280px;max-width:90vw;text-align:center;box-shadow:0 4px 32px #0008;">
-                    <h2 style="color:#fff;margin-bottom:16px;">Вход в игру</h2>
+                    <h2 style="color:#fff;margin-bottom:16px;">${customText}</h2>
                     <div style="margin-bottom:12px;">
                         <input id="playerNameInput" type="text" placeholder="Твой ник" style="padding:8px 12px;border-radius:6px;border:1px solid #444;width:90%;font-size:1em;" maxlength="20">
                     </div>
@@ -371,9 +374,7 @@
                 dialog.remove();
                 callback(name, avatar);
             };
-        }
-
-        // Инициализация
+        }        // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
             setStatus('Загрузка...');
             debugLog('DOMContentLoaded, checking Telegram WebApp');
@@ -409,9 +410,14 @@
                     } else if (attempts < 4) {
                         setTimeout(tryGetUser, 250);
                     } else {
-                        debugLog('no user after 4 attempts, initializing without profile');
-                        // Инициализируем без диалогов — не показываем popup. Оставляем гостя, но будем передавать user_id если он появится позже
-                        initApp();
+                        debugLog('no user after 4 attempts, showing fallback dialog');
+                        setStatus('Не удалось получить профиль из Telegram. Введите вручную.');
+                        // Показываем диалог с объяснением
+                        showPlayerDialog((name, avatar) => {
+                            playerName = name;
+                            playerAvatar = avatar;
+                            initApp();
+                        }, 'Не удалось автоматически получить профиль из Telegram. Введите вручную:');
                     }
                 };
                 tryGetUser();
@@ -536,6 +542,7 @@
 
         function setupEventListeners() {
             document.getElementById('createLobbyBtn').addEventListener('click', createLobby);
+            document.getElementById('refreshProfileBtn').addEventListener('click', refreshProfile);
             document.getElementById('leaveGameBtn').addEventListener('click', leaveLobby);
             document.getElementById('newGameBtn').addEventListener('click', resetGame);
 
@@ -547,6 +554,25 @@
         function createLobby() {
             const name = prompt('Название лобби:', 'Мое лобби') || 'Лобби';
             socket.emit('create_lobby', { name: name, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
+        }
+
+        function refreshProfile() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                const user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
+                if (user && user.id) {
+                    debugLog('refreshProfile: user found, id: ' + user.id + ', name: ' + user.first_name);
+                    webUserId = user.id;
+                    playerName = user.first_name || user.username || 'Гость';
+                    playerAvatar = '';
+                    setStatus('Профиль обновлён: ' + playerName);
+                    socket.emit('identify', { user_id: user.id, name: playerName, avatar: '' });
+                } else {
+                    setStatus('Профиль не найден. Откройте Mini-App из Telegram.');
+                }
+            } else {
+                setStatus('WebApp не найден. Откройте из Telegram.');
+            }
         }
 
         function joinLobby(lobbyId) {
