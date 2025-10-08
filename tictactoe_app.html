@@ -267,8 +267,6 @@
             <p>Движ запущен! Выбирай лобби и заходи в игру</p>
         </div>
 
-        <div id="status" style="text-align:center;padding:10px;background:#2d3748;color:#e2e8f0;border-radius:6px;margin-bottom:20px;display:none;"></div>
-
         <div class="create-lobby">
             <button class="btn btn-primary" id="createLobbyBtn">
                 <i class="fas fa-plus"></i> Создать новое лобби
@@ -315,181 +313,77 @@
         </div>
     </div>
 
-    <!-- Debug panel -->
-    <div id="debug" style="position:fixed;bottom:0;left:0;background:#000;color:#fff;padding:10px;font-size:12px;z-index:9999;max-height:200px;overflow-y:auto;"></div>
-
     <script>
-        // Debug function
-        function debugLog(msg) {
-            console.log(msg);
-            const debugDiv = document.getElementById('debug');
-            if (debugDiv) {
-                debugDiv.innerHTML += new Date().toLocaleTimeString() + ': ' + msg + '<br>';
-            }
-        }
-
-        // Status function
-        function setStatus(msg) {
-            const statusDiv = document.getElementById('status');
-            if (statusDiv) {
-                statusDiv.textContent = msg;
-                statusDiv.style.display = 'block';
-            }
-        }
+        // Глобальные переменные
         let socket;
         let currentLobby = null;
         let currentPlayer = null;
         let playerName = '';
         let playerAvatar = '';
-    let webUserId = null;
+        let webUserId = null;
 
-        // Показываем окно выбора ника и аватарки (fallback)
-        function showPlayerDialog(callback, customText = 'Вход в игру') {
-            const dialog = document.createElement('div');
-            dialog.style.position = 'fixed';
-            dialog.style.top = '0';
-            dialog.style.left = '0';
-            dialog.style.width = '100vw';
-            dialog.style.height = '100vh';
-            dialog.style.background = 'rgba(0,0,0,0.7)';
-            dialog.style.display = 'flex';
-            dialog.style.alignItems = 'center';
-            dialog.style.justifyContent = 'center';
-            dialog.innerHTML = `
-                <div style="background:#222;padding:32px 24px;border-radius:12px;min-width:280px;max-width:90vw;text-align:center;box-shadow:0 4px 32px #0008;">
-                    <h2 style="color:#fff;margin-bottom:16px;">${customText}</h2>
-                    <div style="margin-bottom:12px;">
-                        <input id="playerNameInput" type="text" placeholder="Твой ник" style="padding:8px 12px;border-radius:6px;border:1px solid #444;width:90%;font-size:1em;" maxlength="20">
-                    </div>
-                    <div style="margin-bottom:16px;">
-                        <input id="playerAvatarInput" type="url" placeholder="Ссылка на аватарку (необязательно)" style="padding:8px 12px;border-radius:6px;border:1px solid #444;width:90%;font-size:1em;">
-                    </div>
-                    <button id="playerDialogOk" class="btn btn-primary" style="width:100%;">Войти</button>
-                </div>
-            `;
-            document.body.appendChild(dialog);
-            document.getElementById('playerDialogOk').onclick = function() {
-                const name = document.getElementById('playerNameInput').value.trim() || 'Гость';
-                const avatar = document.getElementById('playerAvatarInput').value.trim();
-                dialog.remove();
-                callback(name, avatar);
-            };
-        }        // Инициализация
+        // Инициализация приложения
         document.addEventListener('DOMContentLoaded', function() {
-            setStatus('Загрузка...');
-            debugLog('DOMContentLoaded, checking Telegram WebApp');
-            // Если запущено внутри Telegram Web App — пробуем получить данные автоматически
-            const initApp = () => {
-                setStatus('Подключение к серверу...');
-                debugLog('initApp called');
-                socket = io();
-                setupSocketListeners();
-                setupEventListeners();
-                getLobbies();
-            };
-
+            // Инициализируем Telegram WebApp если доступно
             if (window.Telegram && window.Telegram.WebApp) {
                 const tg = window.Telegram.WebApp;
-                debugLog('Telegram WebApp detected, initDataUnsafe=' + JSON.stringify(tg.initDataUnsafe) + ', initData=' + tg.initData);
+                tg.ready(); // Сообщаем Telegram, что Mini-App готова
+                tg.expand(); // Расширяем на весь экран если возможно
 
-                // Попробуем несколько раз получить initDataUnsafe.user (некоторые клиенты заполняют с задержкой)
-                let attempts = 0;
-                const tryGetUser = () => {
-                    attempts++;
-                    debugLog('tryGetUser attempt ' + attempts);
-                    const user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
-                    debugLog('user from initDataUnsafe: ' + JSON.stringify(user));
+                // Ждем немного и пытаемся получить профиль
+                setTimeout(() => {
+                    const user = tg.initDataUnsafe?.user;
                     if (user && user.id) {
-                        debugLog('user found, id: ' + user.id + ', name: ' + user.first_name);
                         webUserId = user.id;
-                        playerName = user.first_name || user.username || 'Гость';
-                        playerAvatar = '';
-                        initApp();
-                        // отправляем identify и user_id для create/join
-                        socket.emit('identify', { user_id: user.id, name: playerName, avatar: '' });
-                    } else if (attempts < 4) {
-                        setTimeout(tryGetUser, 250);
+                        playerName = user.first_name || user.username || 'Игрок';
+                        playerAvatar = ''; // Фото получим через backend
+                        startApp();
                     } else {
-                        debugLog('no user after 4 attempts, showing fallback dialog');
-                        setStatus('Не удалось получить профиль из Telegram. Введите вручную.');
-                        // Показываем диалог с объяснением
-                        showPlayerDialog((name, avatar) => {
-                            playerName = name;
-                            playerAvatar = avatar;
-                            initApp();
-                        }, 'Не удалось автоматически получить профиль из Telegram. Введите вручную:');
+                        // Если не удалось, используем дефолт
+                        playerName = 'Гость';
+                        playerAvatar = '';
+                        webUserId = null;
+                        startApp();
                     }
-                };
-                tryGetUser();
+                }, 500);
             } else {
-                debugLog('No Telegram WebApp detected, showing dialog');
-                // Обычный браузер — показываем диалог
-                showPlayerDialog((name, avatar) => {
-                    playerName = name;
-                    playerAvatar = avatar;
-                    initApp();
-                });
+                // Не в Telegram, дефолт
+                playerName = 'Гость';
+                playerAvatar = '';
+                webUserId = null;
+                startApp();
             }
         });
 
-        // Показывает баннер с кнопкой для получения телеграм-профиля (если авто не сработало)
-        function showProfileBanner() {
-            const existing = document.getElementById('tgProfileBanner');
-            if (existing) return;
-            const banner = document.createElement('div');
-            banner.id = 'tgProfileBanner';
-            banner.style.position = 'fixed';
-            banner.style.bottom = '16px';
-            banner.style.left = '50%';
-            banner.style.transform = 'translateX(-50%)';
-            banner.style.background = '#111';
-            banner.style.border = '1px solid #333';
-            banner.style.color = '#fff';
-            banner.style.padding = '10px 14px';
-            banner.style.borderRadius = '8px';
-            banner.style.zIndex = 9999;
-            banner.innerHTML = `
-                <span style="margin-right:12px;">Не получилось подтянуть профиль автоматически.</span>
-                <button id="useTgProfileBtn" class="btn btn-primary">Использовать профиль Telegram</button>
-            `;
-            document.body.appendChild(banner);
-            document.getElementById('useTgProfileBtn').onclick = function() {
-                try {
-                    const tg = window.Telegram.WebApp;
-                    const user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
-                    if (user && user.id) {
-                        playerName = user.first_name || user.username || playerName || 'Гость';
-                        socket.emit('identify', { user_id: user.id, name: playerName, avatar: '' });
-                        banner.remove();
-                    } else {
-                        alert('Не удалось получить профиль. Откройте Mini‑App из Telegram (мобильное приложение) и попробуйте снова.');
-                    }
-                } catch (e) {
-                    alert('Ошибка: ' + e.message);
-                }
-            };
+        function startApp() {
+            // Подключаемся к серверу
+            socket = io();
+
+            // Если есть user_id, отправляем профиль
+            if (webUserId) {
+                socket.emit('identify', { user_id: webUserId, name: playerName, avatar: playerAvatar });
+            }
+
+            // Настраиваем слушатели
+            setupSocketListeners();
+            setupEventListeners();
+            getLobbies();
         }
 
         function setupSocketListeners() {
             socket.on('connect', () => {
-                debugLog('Подключено к серверу');
-                setStatus('Подключено! Загрузка лобби...');
             });
 
             socket.on('disconnect', () => {
-                debugLog('Отключено от сервера');
-                setStatus('Отключено от сервера');
             });
 
             socket.on('lobby_created', (data) => {
-                debugLog('lobby_created: ' + JSON.stringify(data));
                 currentLobby = data.lobby;
                 currentPlayer = data.lobby.players[0];
                 showGameBoard();
             });
 
             socket.on('update_lobby', (lobby) => {
-                debugLog('update_lobby: ' + JSON.stringify(lobby));
                 currentLobby = lobby;
                 // если в списке игроков есть запись с нашим sid — назначим currentPlayer
                 try {
@@ -500,7 +394,6 @@
                         }
                     }
                 } catch (e) {
-                    debugLog('update_lobby player assign failed: ' + e.message);
                 }
                 updateGameDisplay();
                 try {
@@ -511,19 +404,15 @@
                         showGameBoard();
                     }
                 } catch (e) {
-                    debugLog('update_lobby showGameBoard check failed: ' + e.message);
                 }
             });
 
             socket.on('lobbies_list', (lobbies) => {
-                debugLog('lobbies_list received');
-                setStatus('Готово! Выберите лобби.');
                 renderLobbyList(lobbies);
             });
 
             // Когда бек вернул профиль из Telegram (включая ссылку на фото)
             socket.on('telegram_profile', (profile) => {
-                debugLog('telegram_profile: ' + JSON.stringify(profile));
                 try {
                     if (profile && profile.name) playerName = profile.name;
                     if (profile && profile.avatar) playerAvatar = profile.avatar;
@@ -531,11 +420,10 @@
                     if (currentLobby) {
                         socket.emit('get_lobbies');
                     }
-                } catch (e) { debugLog('telegram_profile error: ' + e.message); }
+                } catch (e) { }
             });
 
             socket.on('error', (data) => {
-                debugLog('error: ' + data.message);
                 alert(data.message);
             });
         }
@@ -561,22 +449,15 @@
                 const tg = window.Telegram.WebApp;
                 const user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
                 if (user && user.id) {
-                    debugLog('refreshProfile: user found, id: ' + user.id + ', name: ' + user.first_name);
                     webUserId = user.id;
                     playerName = user.first_name || user.username || 'Гость';
                     playerAvatar = '';
-                    setStatus('Профиль обновлён: ' + playerName);
                     socket.emit('identify', { user_id: user.id, name: playerName, avatar: '' });
-                } else {
-                    setStatus('Профиль не найден. Откройте Mini-App из Telegram.');
                 }
-            } else {
-                setStatus('WebApp не найден. Откройте из Telegram.');
             }
         }
 
         function joinLobby(lobbyId) {
-            debugLog('emit join_lobby: ' + JSON.stringify({ lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId }));
             socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
             // показываем UI сразу — сервер пришлёт update_lobby чтобы синхронизировать
             showGameBoard();
