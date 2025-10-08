@@ -946,7 +946,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Удаляем сообщения, чтобы не было повторного мута
             user_messages[user_id]["messages"] = []
             user_messages[user_id]["timestamps"] = []
-            return # Выходим, чтобы не проверять стикеры и прочее
+            return  # ВАЖНО: сразу выходим, чтобы сообщение о муте гарантированно отправилось
     
     # Проверяем спам виде одинаковых стикеров
     sticker = update.message.sticker
@@ -978,7 +978,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Очищаем список стикеров
                 user_messages[user_id]["stickers"] = []
                 user_messages[user_id]["sticker_timestamps"] = []
-                return
+                return  # ВАЖНО: сразу выходим, чтобы сообщение о муте гарантированно отправилось
 
     # Правила 9.1, 9.2, 9.3: Проверка медиа-контента
     
