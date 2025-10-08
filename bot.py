@@ -47,8 +47,11 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# Токен бота
-token = "8054283598:AAF-gnozvA6aVgZDL-AoBVdJ6hVqzzq26r8"
+# Telegram bot token: load from environment for security
+# Do NOT keep the token hardcoded in source. Set TELEGRAM_BOT_TOKEN or BOT_TOKEN in Railway / environment.
+token = os.environ.get('TELEGRAM_BOT_TOKEN') or os.environ.get('BOT_TOKEN')
+if not token:
+    logger.warning('TELEGRAM_BOT_TOKEN / BOT_TOKEN not set. The bot may fail to authenticate. Rotate any previously leaked token immediately.')
 
 # --- Централизованное хранилище для мутов ---
 MUTED_USERS_FILE = 'muted_users.json'
