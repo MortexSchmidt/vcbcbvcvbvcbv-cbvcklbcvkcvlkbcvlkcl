@@ -1269,8 +1269,9 @@ def setup_application():
     application.add_handler(CommandHandler("tictactoe_app", tictactoe_miniapp_command))
 
     # В группах команда может приходить с упоминанием бота: /tictactoe@BotUsername
-    # Добавляем MessageHandler с regex, чтобы ловить формы с @username
-    bot_username = application.bot.username if application and application.bot else None
+    # Добавляем MessageHandler с regex, чтобы ловить формы с @username.
+    # Важно: не обращаемся к application.bot.username до вызова application.initialize(),
+    # иначе ExtBot ещё не инициализирован и будет RuntimeError.
     # Общая regex: ^/(tictactoe|tictactoe_app|join)(?:@\w+)?(?:\s|$)
     application.add_handler(MessageHandler(filters.Regex(r'^/(tictactoe|tictactoe_app|join)(?:@\w+)?(?:\s|$)'), tictactoe_miniapp_command))
 
