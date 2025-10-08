@@ -317,6 +317,7 @@
         let currentPlayer = null;
         let playerName = '';
         let playerAvatar = '';
+    let webUserId = null;
 
     // Показываем окно выбора ника и аватарки (fallback)
     function showPlayerDialog(callback) {
@@ -371,16 +372,17 @@
                     attempts++;
                     const user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
                     if (user && user.id) {
+                        webUserId = user.id;
                         playerName = user.first_name || user.username || 'Гость';
                         playerAvatar = '';
                         initApp();
+                        // отправляем identify и user_id для create/join
                         socket.emit('identify', { user_id: user.id, name: playerName, avatar: '' });
                     } else if (attempts < 4) {
                         setTimeout(tryGetUser, 250);
                     } else {
-                        // Не удалось получить профиль автоматически — покажем небольшой выбор для пользователя
+                        // Инициализируем без диалогов — не показываем popup. Оставляем гостя, но будем передавать user_id если он появится позже
                         initApp();
-                        showProfileBanner();
                     }
                 };
                 tryGetUser();
@@ -508,12 +510,12 @@
 
         function createLobby() {
             const name = prompt('Название лобби:', 'Мое лобби') || 'Лобби';
-            socket.emit('create_lobby', { name: name, player_name: playerName, player_avatar: playerAvatar });
+            socket.emit('create_lobby', { name: name, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
         }
 
         function joinLobby(lobbyId) {
             console.log('emit join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar });
-            socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar });
+            socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
             // показываем UI сразу — сервер пришлёт update_lobby чтобы синхронизировать
             showGameBoard();
         }

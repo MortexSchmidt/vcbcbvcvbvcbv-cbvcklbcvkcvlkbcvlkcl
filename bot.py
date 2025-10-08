@@ -1500,6 +1500,7 @@ def handle_create_lobby(data):
     name = data.get('name', 'Лобби')
     player_name = data.get('player_name', '')
     player_avatar = data.get('player_avatar', '')
+    user_id = data.get('user_id')
 
     # если клиент представился через Telegram WebApp — используем профиль
     tp = telegram_profiles.get(request.sid)
@@ -1508,6 +1509,25 @@ def handle_create_lobby(data):
             player_name = tp.get('name') or player_name or 'Игрок'
         if not player_avatar:
             player_avatar = tp.get('avatar', '')
+    else:
+        # попытка получить профиль по user_id, если он был передан
+        if not player_name and user_id:
+            try:
+                resp = requests.get(f"https://api.telegram.org/bot{token}/getUserProfilePhotos", params={'user_id': user_id, 'limit': 1}, timeout=5)
+                if resp.status_code == 200:
+                    j = resp.json()
+                    if j.get('ok') and j.get('result') and j['result'].get('photos'):
+                        photos = j['result']['photos']
+                        if len(photos) > 0 and len(photos[0]) > 0:
+                            file_id = photos[0][-1]['file_id']
+                            fresp = requests.get(f"https://api.telegram.org/bot{token}/getFile", params={'file_id': file_id}, timeout=5)
+                            if fresp.status_code == 200:
+                                fj = fresp.json()
+                                if fj.get('ok') and fj.get('result') and fj['result'].get('file_path'):
+                                    file_path = fj['result']['file_path']
+                                    player_avatar = f"https://api.telegram.org/file/bot{token}/{file_path}"
+            except Exception:
+                pass
 
     lobby_id = str(len(lobbies) + 1)
     lobbies[lobby_id] = {
@@ -1527,6 +1547,7 @@ def handle_join_lobby(data):
     lobby_id = data.get('lobby_id')
     player_name = data.get('player_name', '')
     player_avatar = data.get('player_avatar', '')
+    user_id = data.get('user_id')
 
     # если клиент представился через Telegram WebApp — используем профиль
     tp = telegram_profiles.get(request.sid)
@@ -1535,6 +1556,27 @@ def handle_join_lobby(data):
             player_name = tp.get('name') or player_name or 'Игрок'
         if not player_avatar:
             player_avatar = tp.get('avatar', '')
+    else:
+        # попытка получить профиль по user_id
+        if not player_name and user_id:
+            try:
+                user_info = None
+                # Попытка получить фото
+                resp = requests.get(f"https://api.telegram.org/bot{token}/getUserProfilePhotos", params={'user_id': user_id, 'limit': 1}, timeout=5)
+                if resp.status_code == 200:
+                    j = resp.json()
+                    if j.get('ok') and j.get('result') and j['result'].get('photos'):
+                        photos = j['result']['photos']
+                        if len(photos) > 0 and len(photos[0]) > 0:
+                            file_id = photos[0][-1]['file_id']
+                            fresp = requests.get(f"https://api.telegram.org/bot{token}/getFile", params={'file_id': file_id}, timeout=5)
+                            if fresp.status_code == 200:
+                                fj = fresp.json()
+                                if fj.get('ok') and fj.get('result') and fj['result'].get('file_path'):
+                                    file_path = fj['result']['file_path']
+                                    player_avatar = f"https://api.telegram.org/file/bot{token}/{file_path}"
+            except Exception:
+                pass
 
     if lobby_id not in lobbies:
         emit('error', {'message': 'Лобби не найдено'})
