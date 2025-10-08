@@ -1026,47 +1026,27 @@ async def exchange_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
     if rates:
-        # Правильный расчет кросс-курса через USD
-        eur_rub = rates['RUB'] / rates['EUR']
-        eur_uah = rates['UAH'] / rates['EUR']
+        # Правильный расчет кросс-курса через USD (при необходимости)
+        eur_rub = rates.get('RUB', 0) / rates.get('EUR', 1) if rates.get('EUR') else 0
+        eur_uah = rates.get('UAH', 0) / rates.get('EUR', 1) if rates.get('EUR') else 0
 
-        rate_message = f"""💰 <b>курсы валют</b> 💰
+        rate_message = f"""Курсы валют для {user_name}:
 
-👋 {user_name}, актуальные курсы:
+USD: {rates.get('USD', 0):.2f}
+EUR: {rates.get('EUR', 0):.2f}
+RUB: {rates.get('RUB', 0):.2f}
+UAH: {rates.get('UAH', 0):.2f}
 
-🌍 <b>фиат:</b>
-💵 USD: <b>{rates['EUR']:.2f}€</b>
-💶 EUR: <b>{1/rates['EUR']:.2f}$</b>
+Криптовалюты (USD):
+BTC: ${rates.get('BTC', 0):,.0f}
+ETH: ${rates.get('ETH', 0):,.0f}
 
-🇷🇺 <b>рубли:</b>
-• <b>{rates['RUB']:.2f}</b> руб = 1$
-• <b>{eur_rub:.2f}</b> руб = 1€
+Обновление: данные предоставлены внешними сервисами и могут меняться."""
 
-🇺🇦 <b>гривны:</b>
-• <b>{rates['UAH']:.2f}</b> грн = 1$
-• <b>{eur_uah:.2f}</b> грн = 1€
-
-🚀 <b>крипта:</b>
-₿ BTC: <b>${rates['BTC']:,.0f}</b>
-⟠ ETH: <b>${rates['ETH']:,.0f}</b>
-
-⚡ <i>курсы в реальном времени!</i>
-🔄 <i>фиат обновляется каждые 10 мин, крипта постоянно</i>
-
-<i>вызвал: {user_mention}</i>"""
-        
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=rate_message, parse_mode='HTML')
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=rate_message)
     else:
-        error_message = f"""❌ <b>ошибка, все сломалось</b> ❌
-
-😅 сори, {user_name}, не могу чекнуть курсы
-
-🔄 попробуй через минуту
-🌐 мб апишка легла, хз
-
-⏰ <i>го позже</i>"""
-        
-        await update.message.reply_text(error_message, parse_mode='HTML')
+        error_message = f"Произошла ошибка при получении курсов. Попробуйте позже, {user_name}."
+        await update.message.reply_text(error_message)
 
 # Функция для проверки статуса стрима на KICK
 def check_kick_stream():
@@ -1095,34 +1075,11 @@ async def check_stream(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
     if is_live:
-        stream_message = f"""🔴 <b>стрим онлайн!</b> 🔴
-
-👋 {user_name}, хесус в эфире!
-
-🎬 <b>{stream_title}</b>
-
-🚀 <b>заходи скорее:</b>
-🔗 <a href="https://kick.com/jesusavgn">kick.com/jesusavgn</a>
-
-⚡ <i>весь контент там!</i>
-
-<i>вызвал: {user_mention}</i>"""
+        stream_message = f"Стрим в эфире: {stream_title}\nСсылка: https://kick.com/jesusavgn"
     else:
-        stream_message = f"""⚫ <b>стрим оффлайн</b> ⚫
+        stream_message = "Стрим в настоящее время неактивен. Я оповещу, когда начнётся."
 
-😴 {user_name}, хесус отдыхает
-
-📅 ждём следующего стрима
-🔔 уведомлю когда начнётся
-
-📺 <b>канал здесь:</b>
-🔗 <a href="https://kick.com/jesusavgn">kick.com/jesusavgn</a>
-
-💤 <i>увидимся на стриме, брат</i>
-
-<i>вызвал: {user_mention}</i>"""
-    
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=stream_message, parse_mode='HTML')
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=stream_message)
 
 # функция для отправки уведомления о стриме
 async def send_stream_notification(context: ContextTypes.DEFAULT_TYPE):
@@ -1133,19 +1090,7 @@ async def send_stream_notification(context: ContextTypes.DEFAULT_TYPE):
     if is_live:
         if not previous_stream_status.get("live", False):
             # стрим только начался, отправляем уведомление
-            stream_notification = f"""🔴🔴 <b>стрим начался!</b> 🔴🔴🔴
-
-🎉 <b>хесус в эфире!</b> 🎉
-
-🎬 <b>{stream_title}</b>
-
-🚀 <b>заходи быстрей:</b>
-🔗 <a href="https://kick.com/jesusavgn">kick.com/jesusavgn</a>
-
-🔥 <i>контент идёт!</i>
-🍿 <i>не пропусти самое интересное!</i>
-
-@everyone ⚡ иди на стрим!"""
+            stream_notification = f"Стрим начался: {stream_title}\nСсылка: https://kick.com/jesusavgn"
 
             # Отправляем во все известные чаты
             global known_chats
