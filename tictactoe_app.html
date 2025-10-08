@@ -89,10 +89,18 @@
         .status-message { text-align:center; padding:10px; border-radius:8px; color:#cfe6ff; background: rgba(11,112,255,0.06); border:1px solid rgba(11,112,255,0.08); }
 
         @media (max-width:720px) {
-            .container { padding:14px; }
-            .board-grid { width:100%; max-width:320px; grid-auto-rows:100px; }
-            .cell { height:calc((100vw - 60px)/3); font-size:2rem; }
-            .create-lobby { flex-direction:column; align-items:flex-start; }
+            .container { padding:12px; }
+            .header { padding:12px; border-radius:10px; }
+            .create-lobby { flex-direction:column; align-items:stretch; gap:8px; }
+            .create-lobby .btn { width:100%; }
+            .lobby-card { flex-direction:column; align-items:flex-start; gap:10px; }
+            .lobby-info { width:100%; justify-content:space-between; }
+            .lobby-actions { width:100%; display:flex; gap:8px; }
+            .lobby-actions .btn { flex:1; }
+            .board-grid { width:100%; max-width:420px; grid-auto-rows: calc((100vw - 56px) / 3); }
+            .cell { height: auto; min-height: calc((100vw - 56px) / 3); font-size: calc(2rem + (100vw - 320px) / 200); }
+            .game-board { padding:14px; }
+            .status-message { font-size:0.95rem; }
         }
     </style>
 </head>
