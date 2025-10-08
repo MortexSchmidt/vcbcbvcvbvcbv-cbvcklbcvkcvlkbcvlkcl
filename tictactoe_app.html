@@ -354,45 +354,83 @@
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
             // Если запущено внутри Telegram Web App — пробуем получить данные автоматически
+            const initApp = () => {
+                socket = io();
+                setupSocketListeners();
+                setupEventListeners();
+                getLobbies();
+            };
+
             if (window.Telegram && window.Telegram.WebApp) {
-                try {
-                    const tg = window.Telegram.WebApp;
-                    const name = (tg.initDataUnsafe && tg.initDataUnsafe.user && (tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name)) || tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name || 'Гость';
-                    const avatar = ''; // WebApp напрямую не отдаёт ссылку на фото, поставим пусто и попросим бэкенд получить
-                    playerName = name;
-                    playerAvatar = avatar;
-                    socket = io();
-                    setupSocketListeners();
-                    setupEventListeners();
-                    // сообщим бэкенду о телеги-профиле — бэк сможет запросить фото через Bot API по user_id если потребуется
+                const tg = window.Telegram.WebApp;
+                console.log('Telegram WebApp detected, initDataUnsafe=', tg.initDataUnsafe, 'initData=', tg.initData);
+
+                // Попробуем несколько раз получить initDataUnsafe.user (некоторые клиенты заполняют с задержкой)
+                let attempts = 0;
+                const tryGetUser = () => {
+                    attempts++;
                     const user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
-                    if (user) {
-                        socket.emit('identify', { user_id: user.id, name: user.first_name || user.username, avatar: '' });
+                    if (user && user.id) {
+                        playerName = user.first_name || user.username || 'Гость';
+                        playerAvatar = '';
+                        initApp();
+                        socket.emit('identify', { user_id: user.id, name: playerName, avatar: '' });
+                    } else if (attempts < 4) {
+                        setTimeout(tryGetUser, 250);
+                    } else {
+                        // Не удалось получить профиль автоматически — покажем небольшой выбор для пользователя
+                        initApp();
+                        showProfileBanner();
                     }
-                    getLobbies();
-                } catch (e) {
-                    // fallback
-                    showPlayerDialog((name, avatar) => {
-                        playerName = name;
-                        playerAvatar = avatar;
-                        socket = io();
-                        setupSocketListeners();
-                        setupEventListeners();
-                        getLobbies();
-                    });
-                }
+                };
+                tryGetUser();
             } else {
                 // Обычный браузер — показываем диалог
                 showPlayerDialog((name, avatar) => {
                     playerName = name;
                     playerAvatar = avatar;
-                    socket = io();
-                    setupSocketListeners();
-                    setupEventListeners();
-                    getLobbies();
+                    initApp();
                 });
             }
         });
+
+        // Показывает баннер с кнопкой для получения телеграм-профиля (если авто не сработало)
+        function showProfileBanner() {
+            const existing = document.getElementById('tgProfileBanner');
+            if (existing) return;
+            const banner = document.createElement('div');
+            banner.id = 'tgProfileBanner';
+            banner.style.position = 'fixed';
+            banner.style.bottom = '16px';
+            banner.style.left = '50%';
+            banner.style.transform = 'translateX(-50%)';
+            banner.style.background = '#111';
+            banner.style.border = '1px solid #333';
+            banner.style.color = '#fff';
+            banner.style.padding = '10px 14px';
+            banner.style.borderRadius = '8px';
+            banner.style.zIndex = 9999;
+            banner.innerHTML = `
+                <span style="margin-right:12px;">Не получилось подтянуть профиль автоматически.</span>
+                <button id="useTgProfileBtn" class="btn btn-primary">Использовать профиль Telegram</button>
+            `;
+            document.body.appendChild(banner);
+            document.getElementById('useTgProfileBtn').onclick = function() {
+                try {
+                    const tg = window.Telegram.WebApp;
+                    const user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
+                    if (user && user.id) {
+                        playerName = user.first_name || user.username || playerName || 'Гость';
+                        socket.emit('identify', { user_id: user.id, name: playerName, avatar: '' });
+                        banner.remove();
+                    } else {
+                        alert('Не удалось получить профиль. Откройте Mini‑App из Telegram (мобильное приложение) и попробуйте снова.');
+                    }
+                } catch (e) {
+                    alert('Ошибка: ' + e.message);
+                }
+            };
+        }
 
         function setupSocketListeners() {
             socket.on('connect', () => {
