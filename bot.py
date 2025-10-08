@@ -181,15 +181,6 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
         logger.error(f"Не удалось замутить пользователя {user_id}: {e}")
         return False
 
-async def ban_user(user_id: int, chat_id: int, context: ContextTypes.DEFAULT_TYPE):
-    """Банит пользователя"""
-    try:
-        await context.bot.ban_chat_member(chat_id=chat_id, user_id=user_id)
-        # зумерский бан
-        await context.bot.send_message(chat_id=chat_id, text="🔨 ты отлетел в бан, не обижайся, тут свои правила 🚫")
-        return True
-    except:
-        return False
 
 # Функции для крестиков-ноликов (модернизированные)
 def check_winner(board):
@@ -568,28 +559,6 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=chat_id, text="❌ не получилось замутить (мб он админ или у меня лапки)")
 
 
-async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """команда /ban — бан (админам)"""
-    try:
-        await update.message.delete()
-    except:
-        pass
-
-    if update.effective_user.id not in admin_ids:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="❌ сори, бро, команда только для админов")
-        return
-
-    if not update.message.reply_to_message:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="реплай на месседж, чтобы забанить, ну")
-        return
-
-    user_id = update.message.reply_to_message.from_user.id
-    chat_id = update.effective_chat.id
-    success = await ban_user(user_id, chat_id, context)
-    if success:
-        await context.bot.send_message(chat_id=chat_id, text="🔨 чел отлетел в бан. f")
-    else:
-        await context.bot.send_message(chat_id=chat_id, text="❌ не получилось забанить, хз почему")
 
 
 async def warn_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -786,33 +755,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # СИСТЕМА АВТОМАТИЧЕСКОЙ МОДЕРАЦИИ ПО ПРАВИЛАМ ЧАТА
     
-    # авто-бан за скам и рекламу только если это текстовое сообщение (нет медиа)
+    # вместо автобана — пингуем админов если палится скам/личная инфа/реклама
     if update.message.text:
-        # Правило 1: Проверка на личную информацию
         personal_info_patterns = [
-            r'\+?\d{10,15}',  # Телефонные номера
-            r'\b\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\b',  # Номера карт
-            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Email
-            r'(?:паспорт|снилс|инн)\s*:?\s*\d+',  # Документы
-            r'(?:живет|адрес|проживает)\s+(?:по|на)\s+[А-Яа-я\s\d,.-]+',  # Адреса
+            r'\+?\d{10,15}',
+            r'\b\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\b',
+            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+            r'(?:паспорт|снилс|инн)\s*:?\s*\d+',
+            r'(?:живет|адрес|проживает)\s+(?:по|на)\s+[А-Яа-я\s\d,.-]+',
         ]
-        for pattern in personal_info_patterns:
-            if re.search(pattern, message_text, re.IGNORECASE):
-                if user_id not in admin_ids:
-                    # Правило 1: Пермач за личную информацию
-                    await ban_user(user_id, chat_id, context)
-                    ban_msg = f"""🔨 <b>ПЕРМАЧ</b> 🔨
-
-{update.effective_user.mention_html()} отлетел в бан навсегда
-
-🚫 <b>Правило 1:</b> слив личной инфы
-🔒 <b>Вердикт:</b> пермач
-
-📋 <i>апелляции? пиши в предложку тг-канала, мб помогут</i>"""
-                    await update.message.reply_text(ban_msg, parse_mode='HTML')
-                    await update.message.delete()
-                    return
-        # Правило 2: Расширенная проверка на рекламу
         ad_indicators = [
             'подписывайтесь', 'переходи', 'регистрация', 'скидка', 'акция',
             'продаю', 'купить', 'заработок', 'инвестиции', 'криптовалюта',
@@ -820,21 +771,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         has_link = any(x in message_text.lower() for x in ['http', 't.me/', '@', 'www.'])
         has_ad_words = any(word in message_text.lower() for word in ad_indicators)
-        if has_link and has_ad_words and user_id not in admin_ids:
-            # Проверяем исключение: пересылка из собственного ТГ-канала
-            if not (message_text.startswith('Forwarded from') or update.message.forward_from_chat):
-                await ban_user(user_id, chat_id, context)
-                ban_msg = f"""🔨 <b>ПЕРМАЧ</b> 🔨
-
-{update.effective_user.mention_html()} отлетел в бан навсегда
-
-🚫 <b>Правило 2:</b> реклама без апрува
-🔒 <b>Вердикт:</b> пермач
-
-💡 <i>исключение: репосты из своего тг-канала (не скам)</i>"""
-                await update.message.reply_text(ban_msg, parse_mode='HTML')
-                await update.message.delete()
-                return
+        is_sus = False
+        for pattern in personal_info_patterns:
+            if re.search(pattern, message_text, re.IGNORECASE):
+                is_sus = True
+        if has_link and has_ad_words:
+            is_sus = True
+        if is_sus:
+            admin_pings = ' '.join([f'<a href="tg://user?id={admin_id}">@admin</a>' for admin_id in admin_ids])
+            sus_msg = f"� <b>подозрительный движ!</b> �\n\nчел: {update.effective_user.mention_html()}\n\nтут что-то подозрительное (личная инфа/реклама/скам)\n\n{admin_pings} чекните, бро!"
+            await context.bot.send_message(chat_id=chat_id, text=sus_msg, parse_mode='HTML')
     
     # Правило 3: Агрессивное поведение - ОТКЛЮЧЕНО
     # aggression_words = [
@@ -862,7 +808,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     #             await update.message.reply_text(mute_msg, parse_mode='HTML')
     #     elif warnings >= 3:
     #         # Третье нарушение - пермач
-    #         await ban_user(user_id, chat_id, context)
     #         ban_msg = f"""🔨 <b>ПЕРМАЧ</b> 🔨
     #
     # {update.effective_user.mention_html()} забанен навсегда
@@ -874,55 +819,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     #         await update.message.reply_text(ban_msg, parse_mode='HTML')
     #         return
 
+
     # Правило 5: Дискриминация
     discrimination_words = [
         'хохол', 'москаль', 'жид', 'черномазый', 'чурка', 'узкоглазый',
         'педик', 'пидор', 'лесбиянка', 'трансвестит', 'извращенец',
         'негр', 'ниггер', 'чернокожий ублюдок', 'азиат', 'кавказец'
     ]
-    
     if any(word in message_text.lower() for word in discrimination_words):
-        # дискриминация — сразу мутим, причина на зумерском
         await add_warning(user_id, "дискриминация", context)
-    await mute_user(user_id, chat_id, 0.166, "дискриминация, токсик вайб", context, update)
+        await mute_user(user_id, chat_id, 0.166, "дискриминация, токсик вайб", context, update)
+        admin_pings = ' '.join([f'<a href="tg://user?id={admin_id}">@admin</a>' for admin_id in admin_ids])
+        sus_msg = f"🚨 <b>подозрительный движ!</b> 🚨\n\nчел: {update.effective_user.mention_html()}\n\nзамечена дискриминация, мут выдан\n\n{admin_pings} чекните, бро!"
+        await context.bot.send_message(chat_id=chat_id, text=sus_msg, parse_mode='HTML')
+        return
     
     # Правило 7: Мошенничество
-    fraud_words = [
-        'обман', 'кинул', 'кидалово', 'мошенник', 'развод', 'лохотрон',
-        'дай в долг', 'одолжи', 'переведи', 'скинь деньги', 'помоги деньгами'
-    ]
-    
-    if any(word in message_text.lower() for word in fraud_words):
-        await ban_user(user_id, chat_id, context)
-        ban_msg = f"""🔨 <b>СКАМЕР ОТЛЕТЕЛ В БАН</b> 🔨
-
-{update.effective_user.mention_html()} заскамлен и забанен
-
-🚫 <b>Правило 7:</b> попытка скама
-🔒 <b>Вердикт:</b> пермач без права на камбэк
-"""
-        
-        await update.message.reply_text(ban_msg, parse_mode='HTML')
-        return
     
     # Правило 8: Шантаж
-    blackmail_words = [
-        'шантаж', 'угрожаю', 'расскажу всем', 'опубликую', 'разоблачу',
-        'если не', 'иначе я', 'компромат', 'угроза'
-    ]
-    
-    if any(word in message_text.lower() for word in blackmail_words):
-        await ban_user(user_id, chat_id, context)
-        ban_msg = f"""🔨 <b>ШАНТАЖИСТ ОТЛЕТЕЛ В БАН</b> 🔨
-
-{update.effective_user.mention_html()} забанен без шансов
-
-🚫 <b>Правило 8:</b> шантаж и угрозы
-🔒 <b>Вердикт:</b> пермач без права на камбэк
-"""
-        
-        await update.message.reply_text(ban_msg, parse_mode='HTML')
-        return
     
     # Проверяем спам (правило 6 уже реализовано ниже)
     
@@ -1348,7 +1262,6 @@ def setup_application():
 
     # административные команды
     application.add_handler(CommandHandler("mute", mute_command))
-    application.add_handler(CommandHandler("ban", ban_command))
     application.add_handler(CommandHandler("warn", warn_command))
     application.add_handler(CommandHandler("userinfo", user_info_command))
     application.add_handler(CommandHandler("unmute", unmute_command))
@@ -1392,7 +1305,6 @@ def setup_application():
             BotCommand("join", "Присоединиться к игре"),
             BotCommand("legend", "Легенда чата"),
             BotCommand("mute", "Замутить (админы)"),
-            BotCommand("ban", "Забанить (админы)"),
             BotCommand("warn", "Предупредить (админам)"),
             BotCommand("userinfo", "Инфо о пользователе (админам)"),
             BotCommand("unmute", "Размутить (админам)"),
