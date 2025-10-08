@@ -1019,33 +1019,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Функция для получения курса валют
 def get_exchange_rate():
     try:
-        # Получаем курсы валют в реальном времени с Fixer API
-        response = requests.get("https://api.fixer.io/latest?base=USD&symbols=EUR,RUB,UAH")
-        
-        # Если Fixer не работает, используем альтернативный API
-        if response.status_code != 200:
-            # Альтернативный API с обновлениями каждые 10 минут
-            response = requests.get("https://api.currencyapi.com/v3/latest?apikey=cur_live_demo&base_currency=USD&currencies=EUR,RUB,UAH")
-            
-        # Если и это не работает, используем бесплатный API с частыми обновлениями
-        if response.status_code != 200:
-            # FreeCurrencyAPI - обновления каждый час
-            response = requests.get("https://api.freecurrencyapi.com/v1/latest?apikey=fca_live_demo&base_currency=USD&currencies=EUR,RUB,UAH")
-        
-        # В крайнем случае используем старый API
-        if response.status_code != 200:
-            response = requests.get("https://api.exchangerate-api.com/v4/latest/USD")
-            
-        data = response.json()
-        
-        # Обрабатываем разные форматы ответов
-        if "rates" in data:
-            rates_data = data["rates"]
-        elif "data" in data:
-            rates_data = data["data"]
+        # 1. Open-Exchange-Rates API (надежный, бесплатный)
+        response = requests.get("https://open.er-api.com/v6/latest/USD")
+        if response.status_code == 200:
+            data = response.json()
+            rates_data = data.get("rates", {})
         else:
-            rates_data = data
-        
+            # 2. Fallback на exchangerate-api
+            response = requests.get("https://api.exchangerate-api.com/v4/latest/USD")
+            data = response.json()
+            rates_data = data.get("rates", {})
+
         rates = {
             "USD": 1.0,
             "EUR": rates_data.get("EUR", 0.92),
@@ -1062,7 +1046,8 @@ def get_exchange_rate():
         rates["ETH"] = crypto_data["ethereum"]["usd"]
         
         return rates
-    except:
+    except Exception as e:
+        logger.error(f"Ошибка получения курсов валют: {e}")
         # Возвращаем примерные курсы если все API недоступны
         return {
             "USD": 1.0,
@@ -1085,6 +1070,10 @@ async def exchange_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
     if rates:
+        # Правильный расчет кросс-курса через USD
+        eur_rub = rates['RUB'] / rates['EUR']
+        eur_uah = rates['UAH'] / rates['EUR']
+
         rate_message = f"""💰 <b>курсы валют</b> 💰
 
 👋 {user_name}, актуальные курсы:
@@ -1094,12 +1083,12 @@ async def exchange_rate(update: Update, context: ContextTypes.DEFAULT_TYPE):
 💶 EUR: <b>{1/rates['EUR']:.2f}$</b>
 
 🇷🇺 <b>рубли:</b>
-• <b>{rates['RUB']:.0f}</b> руб = 1$
-• <b>{rates['RUB']*rates['EUR']:.0f}</b> руб = 1€
+• <b>{rates['RUB']:.2f}</b> руб = 1$
+• <b>{eur_rub:.2f}</b> руб = 1€
 
 🇺🇦 <b>гривны:</b>
-• <b>{rates['UAH']:.0f}</b> грн = 1$
-• <b>{rates['UAH']*rates['EUR']:.0f}</b> грн = 1€
+• <b>{rates['UAH']:.2f}</b> грн = 1$
+• <b>{eur_uah:.2f}</b> грн = 1€
 
 🚀 <b>крипта:</b>
 ₿ BTC: <b>${rates['BTC']:,.0f}</b>
