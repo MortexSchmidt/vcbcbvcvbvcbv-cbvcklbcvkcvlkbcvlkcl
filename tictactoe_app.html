@@ -73,6 +73,15 @@
             </div>
         </div>
     </div>
+    <!-- Оверлей авторизации — блокирует доступ пока не придёт профиль из бота -->
+    <div id="authOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;color:#fff;">
+        <div style="max-width:420px;width:90%;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));padding:20px;border-radius:12px;text-align:center;">
+            <h2 style="margin-top:0;margin-bottom:8px;color:#fff;">Требуется авторизация</h2>
+            <p style="margin:0 0 12px;color:#ddd;">Чтобы продолжить и играть в мини‑приложении, подтвердите себя через бот в Telegram.</p>
+            <button id="authActionBtn" class="btn btn-primary" style="font-size:1.05rem;padding:10px 16px;">Авторизоваться в боте</button>
+            <div id="authStatus" style="margin-top:10px;color:#ccc;font-size:0.95rem;">Ожидание авторизации...</div>
+        </div>
+    </div>
 
     <script>
         // Глобальные переменные
@@ -123,6 +132,11 @@
             // Если есть user_id, отправляем профиль
             if (webUserId) {
                 socket.emit('identify', { user_id: webUserId, name: playerName, avatar: playerAvatar });
+            }
+
+            // Если нет профиля — показываем обязательный оверлей авторизации
+            if (!webUserId) {
+                showAuthOverlay();
             }
 
             // Настраиваем слушатели
@@ -181,6 +195,8 @@
                     if (currentLobby) {
                         socket.emit('get_lobbies');
                     }
+                    // Убираем оверлей авторизации
+                    hideAuthOverlay();
                 } catch (e) { }
             });
 
@@ -204,7 +220,8 @@
         async function authorizeWithBot() {
             // Запрашиваем у бекенда уникальный код для авторизации
             try {
-                const resp = await fetch('/auth_code', { method: 'POST' });
+                const body = { sid: socket.id };
+                const resp = await fetch('/auth_code', { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
                 const data = await resp.json();
                 if (data && data.code) {
                     const code = data.code;
@@ -216,10 +233,9 @@
                     const link = `https://t.me/${botUsername}?start=auth:${encodeURIComponent(code)}`;
 
                     // Открываем deeplink в новом окне (Telegram должен обработать и отправить /start)
+                    // Открываем deeplink — Telegram клиент должен обработать и отправить /start
                     window.open(link, '_blank');
-
-                    // Показываем пользователю подсказку
-                    alert('Откроется Telegram. Нажмите кнопку "Start", если потребуется. После успешной авторизации профиль обновится автоматически.');
+                    document.getElementById('authStatus').textContent = 'Открылся Telegram. Завершите авторизацию в нём.';
                 } else {
                     alert('Не удалось получить код авторизации. Попробуйте позже.');
                 }
@@ -227,6 +243,18 @@
                 console.error('auth error', e);
                 alert('Ошибка запроса к серверу.');
             }
+        }
+
+        function showAuthOverlay() {
+            const ov = document.getElementById('authOverlay');
+            ov.style.display = 'flex';
+            // bind default action
+            document.getElementById('authActionBtn').onclick = authorizeWithBot;
+        }
+
+        function hideAuthOverlay() {
+            const ov = document.getElementById('authOverlay');
+            ov.style.display = 'none';
         }
 
         function createLobby() {
