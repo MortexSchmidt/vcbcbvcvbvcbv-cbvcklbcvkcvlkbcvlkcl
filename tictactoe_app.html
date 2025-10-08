@@ -189,15 +189,16 @@
                 <button class="menu-btn" id="refreshProfileBtn"><i class="fas fa-sync-alt"></i>Обновить профиль</button>
                 <button class="menu-btn" id="authorizeBtn"><i class="fab fa-telegram-plane"></i>Авторизоваться</button>
             </div>
+            <!-- moved: 'Доступные игры' section below the menu buttons so it appears after auth buttons -->
+            <div class="section" id="lobbySection">
+                <h3 class="section-title"><i class="fas fa-list"></i>Доступные игры</h3>
+                <div class="lobby-grid" id="lobbyList" style="max-height:260px; overflow:auto;"> <!-- Лобби динамически --> </div>
+            </div>
 
             <div class="section muted" style="margin-top:auto;font-size:0.92rem">Игра локальная · Поддержка Telegram</div>
         </aside>
 
         <main class="app-main">
-            <div class="section" id="lobbySection">
-                <h3 class="section-title"><i class="fas fa-list"></i>Доступные игры</h3>
-                <div class="lobby-grid" id="lobbyList"> <!-- Лобби динамически --> </div>
-            </div>
 
         <div class="section" id="lobbyRoom" style="display:none;">
                 <h3 class="section-title"><i class="fas fa-users"></i>Комната ожидания</h3>
