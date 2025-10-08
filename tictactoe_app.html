@@ -48,6 +48,8 @@
             display:grid;
             grid-template-columns: 320px 1fr;
             gap:22px;
+            /* Make the container fill most of the viewport so inner sections can stretch */
+            height:calc(100vh - 44px);
         }
 
         /* Sidebar */
@@ -58,6 +60,7 @@
             display:flex;
             flex-direction:column;
             gap:12px;
+            height:100%;
         }
 
     .app-header{display:flex;align-items:center;gap:12px}
@@ -88,7 +91,7 @@
     .menu-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,0.55)}
 
     /* Main area */
-    .app-main{padding:22px;display:flex;flex-direction:column;gap:18px;background:transparent}
+    .app-main{padding:22px;display:flex;flex-direction:column;gap:18px;background:transparent;height:100%}
     /* Sections keep the card background to ensure consistent dark surfaces */
     .section{background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--glass)}
     .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
