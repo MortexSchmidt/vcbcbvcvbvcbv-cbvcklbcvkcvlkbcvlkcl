@@ -1271,7 +1271,8 @@ def check_kick_stream():
     try:
         # Используем никнейм jesusavgn с Kick.com
         username = "jesusavgn"
-        response = requests.get(f"https://kick.com/api/v1/channels/{username}")
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; Bot/1.0; +https://t.me/hesusinsidemegabot)"}
+        response = requests.get(f"https://kick.com/api/v1/channels/{username}", headers=headers)
         data = response.json()
         # DEBUG: логируем ответ
         print("[kick.com] API response:", data)
