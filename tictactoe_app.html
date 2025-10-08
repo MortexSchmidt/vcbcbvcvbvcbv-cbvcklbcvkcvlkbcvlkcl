@@ -1094,8 +1094,7 @@
         let webUserId = null;
 
         // Инициализация приложения
-        document.addEventListener('DOMContentLoaded', function() {
-            alert('DOMContentLoaded сработал');
+    document.addEventListener('DOMContentLoaded', function() {
             // Проверяем localStorage на наличие сохранённого профиля
             let savedProfile = null;
             try {
@@ -1141,19 +1140,18 @@
             }
         });
 
-        function startApp() {
-            alert('startApp вызвана');
+    function startApp() {
             // Подключаемся к серверу
             socket = io();
 
             socket.on('connect', () => {
-              alert('✅ Socket.IO: соединение установлено');
+              // connection established
             });
             socket.on('connect_error', (err) => {
-              alert('⛔ Socket.IO: ошибка соединения — ' + (err && err.message ? err.message : err));
+              // connection error
             });
             socket.on('disconnect', () => {
-              alert('⛔ Socket.IO: соединение потеряно');
+              // disconnected
             });
 
             // Если есть user_id, отправляем профиль
@@ -1216,8 +1214,7 @@
                 }
             });
         // Показать экран ожидания лобби
-        function showLobbyRoom() {
-            alert('showLobbyRoom вызвана');
+    function showLobbyRoom() {
             // Плавный переход к комнате лобби
             document.getElementById('gameBoard').style.display = 'none';
             document.getElementById('lobbySection').style.display = 'none';
@@ -1258,8 +1255,7 @@
             }
         }
 
-        function renderLobbyRoom() {
-            alert('renderLobbyRoom вызвана');
+    function renderLobbyRoom() {
             if (!currentLobby) return;
 
             // Список игроков
@@ -1307,13 +1303,10 @@
         const btn = e.target.closest('button');
         if (!btn) return;
         if (btn.dataset.action === 'start') {
-          alert('Кнопка Начать игру нажата');
           startGame();
         } else if (btn.dataset.action === 'dissolve') {
-          alert('Кнопка Закрыть лобби нажата');
           dissolveLobby();
         } else if (btn.dataset.action === 'leave') {
-          alert('Кнопка Покинуть лобби нажата');
           leaveLobby();
         }
       });
@@ -1346,29 +1339,26 @@
             }
         }
 
-        function dissolveLobby() {
-            alert('Функция dissolveLobby вызвана');
-            if (currentLobby && socket) {
-                alert('Отправка dissolve_lobby для лобби: ' + currentLobby.id);
-                socket.emit('dissolve_lobby', { lobby_id: currentLobby.id });
+    function dissolveLobby() {
+      if (currentLobby && socket) {
+        socket.emit('dissolve_lobby', { lobby_id: currentLobby.id });
 
-                currentLobby = null;
-                currentPlayer = null;
+        currentLobby = null;
+        currentPlayer = null;
 
-                showLobbyList();
-            } else {
-                alert('Не удалось распустить лобби: currentLobby или socket отсутствует');
-            }
-        }
+        showLobbyList();
+      } else {
+        // unable to dissolve lobby: missing state or connection
+      }
+    }
 
-        // Обработчик ответа сервера на dissolve_lobby
-        socket.on('lobby_dissolved', (data) => {
-            alert('Лобби распущено сервером: ' + JSON.stringify(data));
-            // Сбрасываем состояние для всех игроков
-            currentLobby = null;
-            currentPlayer = null;
-            showLobbyList();
-        });
+    // Обработчик ответа сервера на dissolve_lobby
+    socket.on('lobby_dissolved', (data) => {
+      // Сбрасываем состояние для всех игроков
+      currentLobby = null;
+      currentPlayer = null;
+      showLobbyList();
+    });
 
         function startGame() {
             if (currentLobby && socket) {
@@ -1397,18 +1387,17 @@
                 } catch (e) { }
             });
 
-            socket.on('error', (data) => {
-                alert(data.message);
-            });
+      socket.on('error', (data) => {
+        // server error
+      });
         }
 
-        function setupEventListeners() {
-            alert('setupEventListeners вызвана');
+    function setupEventListeners() {
             // Основные кнопки меню
             document.getElementById('createLobbyBtn').addEventListener('click', createLobby);
             document.getElementById('refreshProfileBtn').addEventListener('click', refreshProfile);
             document.getElementById('authorizeBtn').addEventListener('click', authorizeWithBot);
-      // Кнопка авторизации в оверле — на всякий случай привяжем обработчик
+            // Кнопка авторизации в оверле — на всякий случай привяжем обработчик
       try {
         const authBtnOverlay = document.getElementById('authActionBtn');
         if (authBtnOverlay) {
@@ -1447,14 +1436,13 @@
         }
 
         async function authorizeWithBot() {
-      alert('authorizeWithBot вызвана');
       // Проверяем socket
       if (!socket) {
-        alert('Socket не инициализирован. Подождите и попробуйте снова.');
+        document.getElementById('authStatus').textContent = 'Socket не инициализирован. Подождите и попробуйте снова.';
         return;
       }
       if (!socket.id) {
-        alert('Socket не имеет ID (ещё не подключён). Подождите и попробуйте снова.');
+        document.getElementById('authStatus').textContent = 'Socket не имеет ID (ещё не подключён). Подождите и попробуйте снова.';
         return;
       }
       // Запрашиваем у бекенда уникальный код для авторизации
@@ -1465,7 +1453,7 @@
                 if (data && data.code) {
                     const code = data.code;
                     // Сохраняем временно код (для отладки)
-          alert('Код авторизации получен: ' + code);
+                    // Код авторизации получен
 
                     // Формируем deeplink на бота с payload auth:<code>
                     const botUsername = 'hesusinsidemegabot';
@@ -1505,22 +1493,22 @@
                             };
                         }
                     }, 100);
-                } else {
-                    alert('Не удалось получить код авторизации. Попробуйте позже.');
-                }
+        } else {
+          document.getElementById('authStatus').textContent = 'Не удалось получить код авторизации. Попробуйте позже.';
+        }
             } catch (e) {
-                console.error('auth error', e);
-                alert('Ошибка запроса к серверу.');
+        document.getElementById('authStatus').textContent = 'Ошибка запроса к серверу.';
             }
         }
 
-        function showAuthOverlay() {
-            const ov = document.getElementById('authOverlay');
-            ov.style.display = 'flex';
-            document.getElementById('mainContainer').style.display = 'none';
-            // bind default action
-            document.getElementById('authActionBtn').onclick = authorizeWithBot;
-        }
+    function showAuthOverlay() {
+      const ov = document.getElementById('authOverlay');
+      ov.style.display = 'flex';
+      document.getElementById('mainContainer').style.display = 'none';
+      // bind default action
+      const authBtn = document.getElementById('authActionBtn');
+      if (authBtn) authBtn.onclick = authorizeWithBot;
+    }
 
         function hideAuthOverlay() {
             const ov = document.getElementById('authOverlay');
@@ -1528,15 +1516,14 @@
             document.getElementById('mainContainer').style.display = 'block';
         }
 
-        function createLobby() {
-            if (socket) {
-                const name = 'Лобби';
-                alert('Создание лобби');
-                socket.emit('create_lobby', { name: name, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
-            } else {
-                alert('Socket не подключен, невозможно создать лобби');
-            }
-        }
+    function createLobby() {
+      if (socket) {
+        const name = 'Лобби';
+        socket.emit('create_lobby', { name: name, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
+      } else {
+        // socket not connected
+      }
+    }
 
         function refreshProfile() {
             if (window.Telegram && window.Telegram.WebApp && socket) {
@@ -1551,16 +1538,15 @@
             }
         }
 
-        function joinLobby(lobbyId) {
-            if (socket) {
-                alert('Присоединение к лобби: ' + lobbyId);
-                socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
-                // показываем UI сразу — сервер пришлёт update_lobby чтобы синхронизировать
-                showGameBoard();
-            } else {
-                alert('Socket не подключен, невозможно присоединиться к лобби');
-            }
-        }
+    function joinLobby(lobbyId) {
+      if (socket) {
+        socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName, player_avatar: playerAvatar, user_id: webUserId });
+        // показываем UI сразу — сервер пришлёт update_lobby чтобы синхронизировать
+        showGameBoard();
+      } else {
+        // socket not connected
+      }
+    }
 
         function leaveLobby() {
             if (currentLobby && socket) {
@@ -1858,16 +1844,15 @@
             showWinModal(winnerName, isDraw, icon);
         }
 
-        // Улучшенная обработка кликов по клеткам
-        function makeMove(position) {
-            alert('makeMove вызвана с позицией: ' + position);
-            if (currentLobby && currentPlayer && currentLobby.current_player === currentPlayer.symbol && socket) {
-                alert('Ход в позицию: ' + position);
-                socket.emit('make_move', { lobby_id: currentLobby.id, position: position });
-            } else {
-                alert('Невозможно сделать ход: условия не выполнены');
-            }
-        }
+    // Улучшенная обработка кликов по клеткам
+    // (реализация выше в файле используется; здесь оставляем корректное поведение без debug)
+    function makeMove(position) {
+      if (currentLobby && currentPlayer && currentLobby.current_player === currentPlayer.symbol && socket) {
+        socket.emit('make_move', { lobby_id: currentLobby.id, position: position });
+      } else {
+        // cannot make move
+      }
+    }
         // Улучшенное модальное окно победы
         function showWinModal(winnerText, isDraw, icon = '🎉') {
             const modal = document.getElementById('winModal');
