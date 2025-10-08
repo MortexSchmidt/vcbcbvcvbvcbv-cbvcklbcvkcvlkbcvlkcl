@@ -786,21 +786,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # СИСТЕМА АВТОМАТИЧЕСКОЙ МОДЕРАЦИИ ПО ПРАВИЛАМ ЧАТА
     
-    # Правило 1: Проверка на личную информацию
-    personal_info_patterns = [
-        r'\+?\d{10,15}',  # Телефонные номера
-        r'\b\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\b',  # Номера карт
-        r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Email
-        r'(?:паспорт|снилс|инн)\s*:?\s*\d+',  # Документы
-        r'(?:живет|адрес|проживает)\s+(?:по|на)\s+[А-Яа-я\s\d,.-]+',  # Адреса
-    ]
-    
-    for pattern in personal_info_patterns:
-        if re.search(pattern, message_text, re.IGNORECASE):
-            if user_id not in admin_ids:
-                # Правило 1: Пермач за личную информацию
-                await ban_user(user_id, chat_id, context)
-                ban_msg = f"""🔨 <b>ПЕРМАЧ</b> 🔨
+    # авто-бан за скам и рекламу только если это текстовое сообщение (нет медиа)
+    if update.message.text:
+        # Правило 1: Проверка на личную информацию
+        personal_info_patterns = [
+            r'\+?\d{10,15}',  # Телефонные номера
+            r'\b\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\b',  # Номера карт
+            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Email
+            r'(?:паспорт|снилс|инн)\s*:?\s*\d+',  # Документы
+            r'(?:живет|адрес|проживает)\s+(?:по|на)\s+[А-Яа-я\s\d,.-]+',  # Адреса
+        ]
+        for pattern in personal_info_patterns:
+            if re.search(pattern, message_text, re.IGNORECASE):
+                if user_id not in admin_ids:
+                    # Правило 1: Пермач за личную информацию
+                    await ban_user(user_id, chat_id, context)
+                    ban_msg = f"""🔨 <b>ПЕРМАЧ</b> 🔨
 
 {update.effective_user.mention_html()} отлетел в бан навсегда
 
@@ -808,26 +809,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🔒 <b>Вердикт:</b> пермач
 
 📋 <i>апелляции? пиши в предложку тг-канала, мб помогут</i>"""
-                
-                await update.message.reply_text(ban_msg, parse_mode='HTML')
-                await update.message.delete()
-                return
-    
-    # Правило 2: Расширенная проверка на рекламу
-    ad_indicators = [
-        'подписывайтесь', 'переходи', 'регистрация', 'скидка', 'акция',
-        'продаю', 'купить', 'заработок', 'инвестиции', 'криптовалюта',
-        'канал', 'группа', 'чат', 'бот', 'реклама', 'промокод'
-    ]
-    
-    has_link = any(x in message_text.lower() for x in ['http', 't.me/', '@', 'www.'])
-    has_ad_words = any(word in message_text.lower() for word in ad_indicators)
-    
-    if has_link and has_ad_words and user_id not in admin_ids:
-        # Проверяем исключение: пересылка из собственного ТГ-канала
-        if not (message_text.startswith('Forwarded from') or update.message.forward_from_chat):
-            await ban_user(user_id, chat_id, context)
-            ban_msg = f"""🔨 <b>ПЕРМАЧ</b> 🔨
+                    await update.message.reply_text(ban_msg, parse_mode='HTML')
+                    await update.message.delete()
+                    return
+        # Правило 2: Расширенная проверка на рекламу
+        ad_indicators = [
+            'подписывайтесь', 'переходи', 'регистрация', 'скидка', 'акция',
+            'продаю', 'купить', 'заработок', 'инвестиции', 'криптовалюта',
+            'канал', 'группа', 'чат', 'бот', 'реклама', 'промокод'
+        ]
+        has_link = any(x in message_text.lower() for x in ['http', 't.me/', '@', 'www.'])
+        has_ad_words = any(word in message_text.lower() for word in ad_indicators)
+        if has_link and has_ad_words and user_id not in admin_ids:
+            # Проверяем исключение: пересылка из собственного ТГ-канала
+            if not (message_text.startswith('Forwarded from') or update.message.forward_from_chat):
+                await ban_user(user_id, chat_id, context)
+                ban_msg = f"""🔨 <b>ПЕРМАЧ</b> 🔨
 
 {update.effective_user.mention_html()} отлетел в бан навсегда
 
@@ -835,10 +832,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🔒 <b>Вердикт:</b> пермач
 
 💡 <i>исключение: репосты из своего тг-канала (не скам)</i>"""
-            
-            await update.message.reply_text(ban_msg, parse_mode='HTML')
-            await update.message.delete()
-            return
+                await update.message.reply_text(ban_msg, parse_mode='HTML')
+                await update.message.delete()
+                return
     
     # Правило 3: Агрессивное поведение - ОТКЛЮЧЕНО
     # aggression_words = [
