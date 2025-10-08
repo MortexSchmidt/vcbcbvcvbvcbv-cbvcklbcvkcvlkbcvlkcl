@@ -44,6 +44,9 @@
             justify-content: center;
             gap: 18px;
             margin-bottom: 6px;
+            max-width: 100%;
+            flex-wrap: wrap;
+            overflow-x: hidden;
         }
         .player-small {
             display: flex;
@@ -54,7 +57,8 @@
             padding: 4px 10px 4px 4px;
             box-shadow: 0 1px 4px 0 rgba(0,0,0,0.03);
             min-width: 0;
-            max-width: 180px;
+            max-width: 140px;
+            overflow: hidden;
         }
         .player-small img {
             width: 28px;
@@ -109,6 +113,21 @@
 </head>
 <body>
     <div class="container" id="mainContainer" style="display:none;">
+    <!-- Модальное окно победы -->
+    <div id="winModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(30,40,60,0.32);align-items:center;justify-content:center;">
+        <div id="winModalBox" style="background:#fff;max-width:340px;width:92%;border-radius:16px;box-shadow:0 6px 32px 0 #0002;padding:32px 18px 24px 18px;text-align:center;animation:popWin .5s cubic-bezier(.23,1.12,.62,1.01);position:relative;">
+            <div id="winModalAnim" style="font-size:2.5rem;margin-bottom:12px;">🎉</div>
+            <div id="winModalText" style="font-size:1.25rem;font-weight:600;margin-bottom:18px;">Победа!</div>
+            <div id="winModalBtns" style="display:flex;gap:12px;justify-content:center;"></div>
+        </div>
+        <style>
+        @keyframes popWin {
+            0% { transform: scale(0.7); opacity: 0; }
+            60% { transform: scale(1.08); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        </style>
+    </div>
         <div class="header">
             <h1>Крестики-нолики</h1>
         </div>
@@ -589,6 +608,7 @@
             getLobbies();
         }
 
+
         function updateGameDisplay() {
             if (!currentLobby) return;
 
@@ -602,32 +622,7 @@
                 }
             });
 
-            // Показываем игроков с аватарками и символами
-            let playersInfo = '';
-            if (currentLobby.players && currentLobby.players.length > 0) {
-                playersInfo = currentLobby.players.map(p => `
-                    <span style="display:inline-flex;align-items:center;gap:6px;margin:0 8px;">
-                        <img src="${p.avatar ? p.avatar : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" alt="avatar" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;">
-                        <b>${p.name}</b> <span style="font-size:1.1em;">(${p.symbol})</span>
-                    </span>
-                `).join('vs');
-            }
-
-            // Обновить статус
-            let statusText = getStatusText(currentLobby.status);
-            if (currentLobby.status === 'playing') {
-                statusText += ` | Ход ${currentLobby.current_player}`;
-            } else if (currentLobby.status === 'finished') {
-                if (currentLobby.winner === 'draw') {
-                    statusText += ' | Ничья!';
-                } else {
-                    // Найти победителя по символу
-                    const winner = currentLobby.players.find(p => p.symbol === currentLobby.winner);
-                    statusText += winner ? ` | Победил ${winner.name}!` : ` | Победил ${currentLobby.winner}!`;
-                }
-            }
-
-            // Рендерим игроков и статус через отдельную функцию (безопасный HTML)
+            // Рендерим игроков и статус
             renderStatusAndPlayers(currentLobby);
             document.getElementById('statusMessage').className = `status-message status-${currentLobby.status === 'finished' ? 'win' : currentLobby.status === 'playing' ? 'playing' : 'waiting'}`;
 
@@ -637,6 +632,51 @@
                 document.getElementById('currentPlayer').textContent = isMyTurn ? `Ваш ход (${currentPlayer.symbol})` : `Ход соперника`;
                 document.getElementById('currentPlayer').className = isMyTurn ? 'player-turn' : 'player-wait';
             }
+
+            // Модалка победы
+            if (currentLobby.status === 'finished') {
+                let winnerName = '';
+                let isDraw = false;
+                if (currentLobby.winner === 'draw') {
+                    winnerName = 'Ничья!';
+                    isDraw = true;
+                } else {
+                    const winner = currentLobby.players.find(p => p.symbol === currentLobby.winner);
+                    winnerName = winner ? `Победил ${winner.name}!` : `Победил ${currentLobby.winner}!`;
+                }
+                showWinModal(winnerName, isDraw);
+            } else {
+                hideWinModal();
+            }
+        }
+        // Модальное окно победы
+        function showWinModal(winnerText, isDraw) {
+            const modal = document.getElementById('winModal');
+            const anim = document.getElementById('winModalAnim');
+            const text = document.getElementById('winModalText');
+            const btns = document.getElementById('winModalBtns');
+            modal.style.display = 'flex';
+            anim.textContent = isDraw ? '🤝' : '🎉';
+            text.textContent = winnerText;
+            btns.innerHTML = '';
+            // Определяем, кто создатель лобби
+            let isOwner = false;
+            if (currentLobby && currentPlayer && currentLobby.players && currentLobby.players.length > 0) {
+                isOwner = currentLobby.players[0].user_id === currentPlayer.user_id;
+            }
+            if (isOwner) {
+                btns.innerHTML = `
+                    <button class="btn btn-secondary" onclick="hideWinModal();showLobbyList();">Завершить игру</button>
+                    <button class="btn btn-primary" onclick="hideWinModal();resetGame();">Начать заново</button>
+                `;
+            } else {
+                btns.innerHTML = `<button class="btn btn-secondary" onclick="hideWinModal();leaveLobby();">Покинуть игру</button>`;
+            }
+        }
+
+        function hideWinModal() {
+            const modal = document.getElementById('winModal');
+            modal.style.display = 'none';
         }
 
             // Безопасная вставка текста в HTML
