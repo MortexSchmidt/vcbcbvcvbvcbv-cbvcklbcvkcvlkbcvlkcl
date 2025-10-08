@@ -380,9 +380,37 @@
                     // Показываем код и инструкцию для ручной авторизации
                     document.getElementById('authStatus').innerHTML =
                         `<b>1.</b> <a href="${link}" target="_blank">Откройте бота в Telegram</a><br>` +
-                        `<b>2.</b> Если бот не авторизует автоматически, <b>скопируйте и отправьте</b> эту команду боту:<br>` +
-                        `<div style="margin:8px 0;padding:6px 10px;background:#fffbe6;border-radius:8px;font-size:1.08em;word-break:break-all;">/start auth:${code}</div>` +
-                        `<span style="color:#b00;font-size:0.98em;">После этого вернитесь в Mini‑App — авторизация завершится автоматически.</span>`;
+                        `<b>2.</b> Если бот не авторизует автоматически, <b>нажмите на команду ниже</b> чтобы скопировать её, и отправьте боту:<br>` +
+                        `<div id="copyAuthCode" style="margin:8px 0;padding:6px 10px;background:#fffbe6;border-radius:8px;font-size:1.08em;word-break:break-all;cursor:pointer;user-select:all;transition:background 0.2s;">/start auth:${code}</div>` +
+                        `<span id="copyHint" style="display:none;color:#1976d2;font-size:0.97em;">Скопировано!</span>` +
+                        `<span style="color:#b00;font-size:0.98em;display:block;margin-top:4px;">После этого вернитесь в Mini‑App — авторизация завершится автоматически.</span>`;
+                    // Добавляем обработчик для копирования
+                    setTimeout(() => {
+                        const copyDiv = document.getElementById('copyAuthCode');
+                        if (copyDiv) {
+                            copyDiv.onclick = function() {
+                                const text = copyDiv.textContent;
+                                if (navigator.clipboard) {
+                                    navigator.clipboard.writeText(text);
+                                } else {
+                                    // fallback для старых браузеров
+                                    const textarea = document.createElement('textarea');
+                                    textarea.value = text;
+                                    document.body.appendChild(textarea);
+                                    textarea.select();
+                                    document.execCommand('copy');
+                                    document.body.removeChild(textarea);
+                                }
+                                const hint = document.getElementById('copyHint');
+                                if (hint) {
+                                    hint.style.display = 'inline';
+                                    setTimeout(()=>{hint.style.display='none';}, 1200);
+                                }
+                                copyDiv.style.background = '#e3eaff';
+                                setTimeout(()=>{copyDiv.style.background='#fffbe6';}, 600);
+                            };
+                        }
+                    }, 100);
                 } else {
                     alert('Не удалось получить код авторизации. Попробуйте позже.');
                 }
