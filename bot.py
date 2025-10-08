@@ -103,8 +103,10 @@ async def add_warning(user_id: int, violation_type: str, context: ContextTypes.D
         "timestamp": datetime.now()
     })
 
-async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, context: ContextTypes.DEFAULT_TYPE):
-    """Мутит пользователя на указанное количество часов (поддерживает дробные значения для минут)"""
+async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, context: ContextTypes.DEFAULT_TYPE, update: Update = None):
+    """
+    Мутит пользователя, сохраняет в файл и отправляет уведомление в чат.
+    """
     mute_until = datetime.now() + timedelta(hours=hours)
     
     muted = load_muted_users()
@@ -126,8 +128,46 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
                 can_pin_messages=False
             )
         )
+
+        # Формируем строку времени
+        days = int(hours // 24)
+        remaining_hours = int(hours % 24)
+        minutes = int((hours * 60) % 60)
+        
+        time_parts = []
+        if days > 0:
+            time_parts.append(f"{days}д")
+        if remaining_hours > 0:
+            time_parts.append(f"{remaining_hours}ч")
+        if minutes > 0:
+            time_parts.append(f"{minutes}м")
+        
+        time_str = " ".join(time_parts) if time_parts else "меньше минуты"
+
+        # Отправляем уведомление
+        user_to_mute = None
+        admin_mention = ""
+
+        if update:
+            user_to_mute = update.message.reply_to_message.from_user if update.message.reply_to_message else update.effective_user
+            admin_mention = update.effective_user.mention_html()
+
+        user_mention = user_to_mute.mention_html() if user_to_mute else f"Пользователь с ID {user_id}"
+
+        mute_msg = f"""🔇 <b>СЛОВИЛ МУТ</b> 🔇
+
+🚫 {user_mention} отлетает в мут
+⏰ <b>Срок:</b> {time_str}
+📝 <b>Причина:</b> {reason}
+"""
+        if update and update.effective_user.id in admin_ids:
+             mute_msg += f"👨‍💼 <b>Админ:</b> {admin_mention}"
+
+        await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML')
+        
         return True
-    except:
+    except Exception as e:
+        logger.error(f"Не удалось замутить пользователя {user_id}: {e}")
         return False
 
 async def ban_user(user_id: int, chat_id: int, context: ContextTypes.DEFAULT_TYPE):
@@ -509,16 +549,9 @@ async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
     total_hours = hours + (minutes / 60.0)
-    success = await mute_user(user_id, chat_id, total_hours, reason, context)
-    if success:
-        time_str = f"{hours}ч " if hours else ""
-        if minutes:
-            time_str += f"{minutes}м"
-        if not time_str:
-            time_str = "1ч"
-        mute_msg = f"🔇 чел в муте: {update.message.reply_to_message.from_user.mention_html()}\n⏰ срок: {time_str.strip()}\n📝 причина: {reason}\n👨‍💼 админ: {update.effective_user.mention_html()}"
-        await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML')
-    else:
+    # Передаем `update` в функцию `mute_user`
+    success = await mute_user(user_id, chat_id, total_hours, reason, context, update)
+    if not success:
         await context.bot.send_message(chat_id=chat_id, text="❌ не получилось замутить (мб он админ или у меня лапки)")
 
 
@@ -843,19 +876,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Проверяем контекст - если это шутка между друзьями, можем пропустить
         # Пока что применяем наказание
         await add_warning(user_id, "Дискриминация", context)
-        success = await mute_user(user_id, chat_id, 12, "Дискриминация", context)
-        
-        if success:
-            mute_msg = f"""🔇 <b>МУТ НА 12 ЧАСОВ</b> 🔇
-
-{update.effective_user.mention_html()} словил мут
-
-🚫 <b>Правило 5:</b> дискриминация и токсичность
-⏰ <b>Срок:</b> 12 часов
-
-⚠️ <i>повторишь - отлетишь в пермач, бро</i>"""
-            
-            await update.message.reply_text(mute_msg, parse_mode='HTML')
+        await mute_user(user_id, chat_id, 12, "Правило 5: дискриминация и токсичность", context, update)
     
     # Правило 7: Мошенничество
     fraud_words = [
@@ -920,41 +941,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(user_msg_list) >= 3:
         last_3_messages = user_msg_list[-3:]
         if len(set(last_3_messages)) == 1:  # Все 3 сообщения одинаковые
-            # Мутим пользователя на 10 минут
-            mute_until = datetime.now() + timedelta(minutes=10)
-            muted = load_muted_users()
-            muted[user_id] = mute_until
-            save_muted_users(muted)
-            
-            try:
-                # Устанавливаем ограничения на отправку сообщений
-                await context.bot.restrict_chat_member(
-                    chat_id=chat_id,
-                    user_id=user_id,
-                    permissions=ChatPermissions(
-                        can_send_messages=False,
-                        can_send_media_messages=False,
-                        can_send_polls=False,
-                        can_send_other_messages=False,
-                        can_add_web_page_previews=False,
-                        can_change_info=False,
-                        can_invite_users=False,
-                        can_pin_messages=False
-                    )
-                )
-                
-                mute_message = f"""🔇 <b>СЛОВИЛ МУТ ЗА СПАМ</b> 🔇
-
-🚫 {update.effective_user.mention_html()} отлетает в мут на <b>10 минут</b>
-
-⚡ Причина: спам одинаковыми месседжами
-⏰ Время: 10 минут
-
-🤐 <i>посиди, подумай над своим поведением</i>"""
-                
-                await update.message.reply_text(mute_message, parse_mode='HTML')
-            except:
-                pass  # Нет прав для мута
+            await mute_user(user_id, chat_id, 0.166, "Спам одинаковыми сообщениями", context, update)
+            # Удаляем сообщения, чтобы не было повторного мута
+            user_messages[user_id]["messages"] = []
+            user_messages[user_id]["timestamps"] = []
+            return # Выходим, чтобы не проверять стикеры и прочее
     
     # Проверяем спам виде одинаковых стикеров
     sticker = update.message.sticker
@@ -982,41 +973,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(user_sticker_list) >= 3:
             last_3_stickers = user_sticker_list[-3:]
             if len(set(last_3_stickers)) == 1:  # Все 3 стикера одинаковые
-                # Мутим пользователя на 10 минут
-                mute_until = datetime.now() + timedelta(minutes=10)
-                muted = load_muted_users()
-                muted[user_id] = mute_until
-                save_muted_users(muted)
-                
-                try:
-                    # Устанавливаем ограничения на отправку сообщений
-                    await context.bot.restrict_chat_member(
-                        chat_id=chat_id,
-                        user_id=user_id,
-                        permissions=ChatPermissions(
-                            can_send_messages=False,
-                            can_send_media_messages=False,
-                            can_send_polls=False,
-                            can_send_other_messages=False,
-                            can_add_web_page_previews=False,
-                            can_change_info=False,
-                            can_invite_users=False,
-                            can_pin_messages=False
-                        )
-                    )
-                    
-                    sticker_mute_message = f"""🔇 <b>СЛОВИЛ МУТ ЗА СТИКЕРЫ</b> 🔇
-
-🚫 {update.effective_user.mention_html()} отлетает в мут на <b>10 минут</b>
-
-⚡ Причина: спам стикерами
-⏰ Время: 10 минут
-
-🤐 <i>хватит флудить, бро</i>"""
-                    
-                    await update.message.reply_text(sticker_mute_message, parse_mode='HTML')
-                except:
-                    pass  # Нет прав для мута
+                await mute_user(user_id, chat_id, 0.166, "Спам стикерами", context, update)
+                # Очищаем список стикеров
+                user_messages[user_id]["stickers"] = []
+                user_messages[user_id]["sticker_timestamps"] = []
+                return
 
     # Правила 9.1, 9.2, 9.3: Проверка медиа-контента
     
@@ -1044,17 +1005,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         loud_indicators = ['крик', 'орет', 'громко', 'звук', 'bass', 'loud', 'scream']
         
         if any(word in caption + filename for word in loud_indicators):
-            success = await mute_user(user_id, chat_id, 12, "Громкий контент", context)
-            if success:
-                loud_msg = f"""🔇 <b>МУТ НА 12 ЧАСОВ</b> 🔇
-
-{update.effective_user.mention_html()} словил мут
-
-🚫 <b>Правило 9.3:</b> громкий контент, уши вянут
-⏰ <b>Срок:</b> 12 часов
-"""
-                
-                await update.message.reply_text(loud_msg, parse_mode='HTML')
+            await mute_user(user_id, chat_id, 12, "Правило 9.3: громкий контент", context, update)
 
 # Функция для получения курса валют
 def get_exchange_rate():
