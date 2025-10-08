@@ -886,10 +886,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     
     if any(word in message_text.lower() for word in discrimination_words):
-        # Проверяем контекст - если это шутка между друзьями, можем пропустить
-        # Пока что применяем наказание
-        await add_warning(user_id, "Дискриминация", context)
-        await mute_user(user_id, chat_id, 12, "Правило 5: дискриминация и токсичность", context, update)
+        # дискриминация — сразу мутим, причина на зумерском
+        await add_warning(user_id, "дискриминация", context)
+        await mute_user(user_id, chat_id, 12, "дискриминация, токсик вайб", context, update)
     
     # Правило 7: Мошенничество
     fraud_words = [
@@ -949,16 +948,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if current_time - ts < timedelta(minutes=1)
     ]
     
-    # Проверяем, не отправлял ли пользователь 3 одинаковых сообщения подряд за последнюю минуту
+    # Проверяем, не отправлял ли пользователь 3 сообщения подряд за последнюю минуту (спам)
     user_msg_list = user_messages[user_id]["messages"]
     if len(user_msg_list) >= 3:
         last_3_messages = user_msg_list[-3:]
-        if len(set(last_3_messages)) == 1:  # Все 3 сообщения одинаковые
-            await mute_user(user_id, chat_id, 0.166, "Спам одинаковыми сообщениями", context, update)
-            # Удаляем сообщения, чтобы не было повторного мута
+        if len(set(last_3_messages)) == 1:
+            await mute_user(user_id, chat_id, 0.166, "спам", context, update)
             user_messages[user_id]["messages"] = []
             user_messages[user_id]["timestamps"] = []
-            return  # ВАЖНО: сразу выходим, чтобы сообщение о муте гарантированно отправилось
+            return
     
     # Проверяем спам виде одинаковых стикеров
     sticker = update.message.sticker
@@ -981,16 +979,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if current_time - ts < timedelta(minutes=1)
         ]
         
-        # Проверяем, не отправлял ли пользователь 3 одинаковых стикера подряд за последнюю минуту
+        # Проверяем, не отправлял ли пользователь 3 стикера подряд за последнюю минуту (спам)
         user_sticker_list = user_messages[user_id]["stickers"]
         if len(user_sticker_list) >= 3:
             last_3_stickers = user_sticker_list[-3:]
-            if len(set(last_3_stickers)) == 1:  # Все 3 стикера одинаковые
-                await mute_user(user_id, chat_id, 0.166, "Спам стикерами", context, update)
-                # Очищаем список стикеров
+            if len(set(last_3_stickers)) == 1:
+                await mute_user(user_id, chat_id, 0.166, "спам", context, update)
                 user_messages[user_id]["stickers"] = []
                 user_messages[user_id]["sticker_timestamps"] = []
-                return  # ВАЖНО: сразу выходим, чтобы сообщение о муте гарантированно отправилось
+                return
 
     # Правила 9.1, 9.2, 9.3: Проверка медиа-контента
     
@@ -1006,19 +1003,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Правило 9.3: Громкие аудио/видео (мут на 12 часов)
     if update.message.video or update.message.audio or update.message.voice:
-        # Проверяем описание или название файла на предмет громких звуков
+        # мут за громкий контент — причина мемная
         caption = (update.message.caption or "").lower()
         filename = ""
-        
         if update.message.video and update.message.video.file_name:
             filename = update.message.video.file_name.lower()
         elif update.message.audio and update.message.audio.file_name:
             filename = update.message.audio.file_name.lower()
-            
         loud_indicators = ['крик', 'орет', 'громко', 'звук', 'bass', 'loud', 'scream']
-        
         if any(word in caption + filename for word in loud_indicators):
-            await mute_user(user_id, chat_id, 12, "Правило 9.3: громкий контент", context, update)
+            await mute_user(user_id, chat_id, 12, "громкий контент, уши минус", context, update)
 
 # Функция для получения курса валют
 def get_exchange_rate():
