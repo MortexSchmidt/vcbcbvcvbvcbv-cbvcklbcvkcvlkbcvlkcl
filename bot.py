@@ -153,9 +153,9 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
             elif hasattr(update, "effective_user") and update.effective_user:
                 user_mention = update.effective_user.mention_html()
             admin_mention = update.effective_user.mention_html() if hasattr(update, "effective_user") and update.effective_user else ""
+        # Fallback если ничего не найдено
         if not user_mention:
-            # fallback: просто id
-            user_mention = f"Пользователь с ID {user_id}"
+            user_mention = f"<code>{user_id}</code>"
 
         mute_msg = f"""🔇 <b>СЛОВИЛ МУТ</b> 🔇\n\n🚫 {user_mention} отлетает в мут\n⏰ <b>Срок:</b> {time_str}\n📝 <b>Причина:</b> {reason}\n"""
         if update and hasattr(update, "effective_user") and update.effective_user and update.effective_user.id in admin_ids:
