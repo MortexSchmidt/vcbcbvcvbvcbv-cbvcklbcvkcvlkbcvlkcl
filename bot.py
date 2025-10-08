@@ -1439,16 +1439,20 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     logger.info(f"Клиент отключился: {request.sid}")
-    # Удаляем игрока из лобби
-    for lobby_id, lobby in lobbies.items():
-        for player in lobby['players']:
+    to_delete = []
+    for lobby_id, lobby in list(lobbies.items()):
+        for player in list(lobby['players']):
             if player['sid'] == request.sid:
-                lobby['players'].remove(player)
-                if len(lobby['players']) == 0:
-                    del lobbies[lobby_id]
-                else:
-                    emit('update_lobby', lobby, room=lobby_id)
+                # Если второй игрок есть — уведомить его
+                other_players = [p for p in lobby['players'] if p['sid'] != request.sid]
+                if other_players:
+                    emit('error', {'message': 'Противник покинул игру, лобби закрыто.'}, room=lobby_id)
+                to_delete.append(lobby_id)
                 break
+    # Удаляем лобби после обхода (чтобы не ломать итерацию)
+    for lobby_id in to_delete:
+        if lobby_id in lobbies:
+            del lobbies[lobby_id]
 
 @socketio.on('create_lobby')
 def handle_create_lobby(data):
