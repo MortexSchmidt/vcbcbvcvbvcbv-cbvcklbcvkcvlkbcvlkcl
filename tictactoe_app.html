@@ -4,57 +4,564 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-    /* Discord-style theme */
+    /* Modern Discord-style theme */
+    :root {
+      --discord-dark: #313338;
+      --discord-darker: #2b2d31;
+      --discord-darkest: #1e1f22;
+      --discord-light: #dbdee1;
+      --discord-accent: #5865f2;
+      --discord-green: #23a559;
+      --discord-yellow: #fee75c;
+      --discord-red: #f23f43;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #36393f;
-      color: #dcddde;
+      font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+      background: var(--discord-darkest);
+      color: var(--discord-light);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
+      padding: 20px;
     }
-    .container { width:100%; max-width:420px; margin:0 auto; padding:0 16px 28px; }
-    .header { text-align:center; padding:22px 0 12px 0; }
-    .header h1 { margin:0; font-size:1.9rem; color:#5865f2; }
-    .create-lobby { display:flex; gap:10px; margin-bottom:18px; justify-content:center; flex-wrap:wrap; }
-    .btn { border:none; border-radius:8px; padding:10px 16px; font-size:1.03rem; cursor:pointer; transition:background 0.18s, transform 0.12s; font-weight:600; color:#fff; }
-    .btn:active{ transform: translateY(1px); }
-    .btn-primary { background:#5865f2; }
-    .btn-primary:hover{ background:#4752c4; }
-    .btn-secondary { background:#4f545c; color:#dcddde; }
-    .btn-secondary:hover{ background:#5d6269; }
-    .btn-accent { background:#faa61a; color:#fff; }
-    .btn-accent:hover{ background:#e69516; }
-    .lobby-list { display:grid; gap:12px; margin-bottom:16px; }
-    .lobby-card { background:#2f3136; border:1px solid #202225; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.3); padding:12px 14px; display:flex; align-items:center; justify-content:space-between; color:#dcddde; }
-    .lobby-info { display:flex; flex-direction:column; gap:6px; }
-    .lobby-players { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .player { display:flex; align-items:center; gap:8px; }
-    .player img { width:36px; height:36px; border-radius:50%; object-fit:cover; }
-    .player.empty { color:#72767d; font-style:italic; }
-    .lobby-status { font-size:0.95rem; color:#72767d; }
-    .lobby-actions { display:flex; gap:8px; flex-wrap:wrap; }
-    .lobby-actions .btn { min-width:120px; }
-    .game-board { background:#2f3136; border:1px solid #202225; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.3); padding:16px; margin-bottom:18px; }
-    .board-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:360px; margin:0 auto 12px auto; }
-    .cell { background:#36393f; border:1px solid #202225; border-radius:8px; min-height:64px; font-size:2.2rem; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.12s; color:#dcddde; }
-    .cell.x { color:#5865f2; }
-    .cell.o { color:#faa61a; }
-    .cell:hover { background:#40444b; }
-    .game-info { display:flex; flex-direction:column; align-items:center; gap:8px; margin-bottom:12px; }
-    .current-player { font-size:1.08rem; font-weight:600; color:#dcddde; }
-    .status-message { font-size:0.98rem; color:#5865f2; }
-    .players-row { display:flex; gap:16px; align-items:center; justify-content:center; flex-wrap:wrap; margin-bottom:8px; overflow-x:hidden; }
-    .player-small { display:flex; align-items:center; gap:8px; background:#2f3136; border:1px solid #202225; border-radius:8px; padding:6px 10px; box-shadow:0 2px 8px rgba(0,0,0,0.3); min-width:0; max-width:160px; overflow:hidden; }
-    .player-small img{ width:36px; height:36px; border-radius:50%; object-fit:cover; }
-    .player-small .name{ font-weight:600; font-size:1.02em; color:#dcddde; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100px; }
-    .player-small .symbol{ color:#5865f2; font-weight:600; margin-left:6px; }
-    .vs-sep{ color:#faa61a; font-size:1.1em; margin:0 6px; }
-    .game-actions { display:flex; gap:12px; justify-content:center; }
-    @media (max-width:720px){ .container{ padding:0 12px 20px;} .board-grid{ max-width:92vw; gap:8px;} .cell{ min-height:calc((92vw - 32px)/3);} }
+
+    .discord-container {
+      width: 100%;
+      max-width: 480px;
+      background: var(--discord-darker);
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .discord-header {
+      background: var(--discord-dark);
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--discord-darkest);
+    }
+
+    .discord-header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--discord-light);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .discord-header h1::before {
+      content: '\f1e7';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      color: var(--discord-accent);
+    }
+
+    .discord-content {
+      padding: 20px;
+    }
+
+    /* Game Status */
+    .status-message {
+      font-size: 0.95rem;
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 12px;
+      background: var(--discord-dark);
+      border-radius: 6px;
+      color: var(--discord-light);
+    }
+
+    .status-message.status-playing {
+      background: var(--discord-accent);
+      color: white;
+    }
+
+    .status-message.status-win {
+      background: var(--discord-green);
+      color: white;
+    }
+
+    .status-message.status-waiting {
+      background: var(--discord-yellow);
+      color: #000;
+    }
+
+    /* Game Board */
+    .game-board {
+      background: var(--discord-dark);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 20px;
+    }
+
+    .board-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    .cell {
+      background: var(--discord-darker);
+      border-radius: 6px;
+      min-height: calc((100vw - 48px) / 3);
+      height: auto;
+      font-size: calc(1.6rem + (100vw - 320px) / 300);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+      border: 2px solid transparent;
+      color: var(--discord-light);
+      font-weight: 600;
+    }
+
+    .cell:hover {
+      background: var(--discord-accent);
+      border-color: var(--discord-light);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(88, 101, 242, 0.3);
+    }
+
+    .cell.x {
+      color: var(--discord-green);
+      background: rgba(35, 165, 89, 0.1);
+    }
+
+    .cell.o {
+      color: var(--discord-yellow);
+      background: rgba(254, 231, 92, 0.1);
+    }
+
+    .cell.taken {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .cell.taken:hover {
+      background: var(--discord-darker);
+      border-color: transparent;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Current Player Indicator */
+    .current-player {
+      font-size: 1.08rem;
+      font-weight: 600;
+      color: var(--discord-light);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .player-turn {
+      color: var(--discord-accent);
+    }
+
+    .player-wait {
+      color: var(--discord-light);
+      opacity: 0.7;
+    }
+
+    /* Players Row */
+    .players-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      overflow-x: hidden;
+    }
+
+    .player-small {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--discord-dark);
+      border: 1px solid var(--discord-darkest);
+      border-radius: 8px;
+      padding: 8px 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      min-width: 0;
+      max-width: 160px;
+      overflow: hidden;
+    }
+
+    .player-small img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .player-small .name {
+      font-weight: 600;
+      font-size: 0.95em;
+      color: var(--discord-light);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100px;
+    }
+
+    .player-small .symbol {
+      color: var(--discord-accent);
+      font-weight: 600;
+      margin-left: 4px;
+    }
+
+    .vs-sep {
+      color: var(--discord-yellow);
+      font-size: 1.1em;
+      margin: 0 6px;
+    }
+
+    /* Game Actions */
+    .game-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 16px;
+    }
+
+    /* Buttons */
+    .discord-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .discord-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-width: 120px;
+    }
+
+    .discord-btn.primary {
+      background: var(--discord-accent);
+      color: white;
+    }
+
+    .discord-btn.primary:hover {
+      background: #4752c4;
+      transform: translateY(-1px);
+    }
+
+    .discord-btn.secondary {
+      background: var(--discord-darkest);
+      color: var(--discord-light);
+      border: 1px solid var(--discord-light);
+    }
+
+    .discord-btn.secondary:hover {
+      background: var(--discord-light);
+      color: var(--discord-darkest);
+    }
+
+    .discord-btn.accent {
+      background: var(--discord-yellow);
+      color: #000;
+    }
+
+    .discord-btn.accent:hover {
+      background: #e6d847;
+      transform: translateY(-1px);
+    }
+
+    .discord-btn:active {
+      transform: translateY(1px);
+    }
+
+    /* Lobby Section */
+    .lobby-section {
+      background: var(--discord-dark);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .lobby-list {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .lobby-card {
+      background: var(--discord-darker);
+      border: 1px solid var(--discord-darkest);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--discord-light);
+    }
+
+    .lobby-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .lobby-players {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .player {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .player img {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .player.empty {
+      color: #72767d;
+      font-style: italic;
+    }
+
+    .lobby-status {
+      font-size: 0.9rem;
+      color: #72767d;
+    }
+
+    .lobby-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .lobby-actions .discord-btn {
+      min-width: 100px;
+      font-size: 0.85rem;
+    }
+
+    /* Lobby Room */
+    .lobby-room {
+      background: var(--discord-dark);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .lobby-room h2 {
+      margin: 0 0 16px 0;
+      color: var(--discord-light);
+      font-size: 1.2rem;
+    }
+
+    .lobby-players-list {
+      margin-bottom: 18px;
+    }
+
+    .lobby-player-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: var(--discord-light);
+    }
+
+    .lobby-player-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--discord-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      color: white;
+    }
+
+    .lobby-player-info {
+      flex: 1;
+    }
+
+    .lobby-player-name {
+      font-weight: 600;
+    }
+
+    .lobby-player-symbol {
+      color: var(--discord-accent);
+    }
+
+    .lobby-room-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    /* Win Modal */
+    .win-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .win-modal-content {
+      background: var(--discord-darker);
+      border: 1px solid var(--discord-darkest);
+      border-radius: 8px;
+      max-width: 340px;
+      width: 92%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      padding: 32px 20px 24px 20px;
+      text-align: center;
+      color: var(--discord-light);
+      animation: popWin 0.5s cubic-bezier(0.23, 1.12, 0.62, 1.01);
+    }
+
+    .win-modal-emoji {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .win-modal-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      color: var(--discord-light);
+    }
+
+    .win-modal-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    @keyframes popWin {
+      0% { transform: scale(0.7); opacity: 0; }
+      60% { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+
+    /* Auth Overlay */
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(49, 51, 56, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .auth-content {
+      background: var(--discord-darker);
+      border: 1px solid var(--discord-accent);
+      border-radius: 8px;
+      max-width: 340px;
+      width: 92%;
+      padding: 24px 20px;
+      text-align: center;
+      color: var(--discord-light);
+      backdrop-filter: blur(2px);
+      animation: fadeIn 0.3s;
+    }
+
+    .auth-title {
+      margin: 0 0 8px 0;
+      font-size: 1.25rem;
+      color: var(--discord-light);
+      font-weight: 700;
+    }
+
+    .auth-description {
+      margin: 0 0 16px 0;
+      color: #b9bbbe;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .auth-status {
+      margin-top: 12px;
+      color: #b9bbbe;
+      font-size: 0.9rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .discord-container {
+        max-width: 100%;
+        border-radius: 0;
+      }
+
+      body {
+        padding: 0;
+      }
+
+      .discord-content {
+        padding: 16px;
+      }
+
+      .board-grid {
+        gap: 6px;
+      }
+
+      .cell {
+        font-size: calc(1.4rem + (100vw - 320px) / 400);
+      }
+
+      .discord-buttons {
+        gap: 8px;
+      }
+
+      .discord-btn {
+        min-width: 90px;
+        font-size: 0.85rem;
+      }
+    }
+
+    /* Animation for winning cells */
+    .cell.win {
+      animation: winPulse 0.6s ease-in-out;
+    }
+
+    @keyframes winPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
     </style>
             .board-grid { width:100%; max-width:420px; grid-auto-rows: calc((100vw - 48px) / 3); }
             .cell { height: auto; min-height: calc((100vw - 48px) / 3); font-size: calc(1.6rem + (100vw - 320px) / 300); }
@@ -64,107 +571,90 @@
     </style>
 </head>
 <body>
-    <div class="container" id="mainContainer" style="display:none;">
-        <!-- Экран ожидания лобби -->
-        <div id="lobbyRoom" style="display:none;">
-            <div class="header"><h2>Лобби</h2></div>
-            <div id="lobbyPlayersList" style="margin-bottom:18px;"></div>
-            <div id="lobbyRoomBtns" style="display:flex;gap:12px;justify-content:center;"></div>
-        </div>
-    <!-- Модальное окно победы -->
-    <div id="winModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
-        <div id="winModalBox" style="background:#2f3136;border:1px solid #202225;border-radius:8px;max-width:340px;width:92%;box-shadow:0 4px 20px rgba(0,0,0,0.5);padding:32px 18px 24px 18px;text-align:center;color:#dcddde;animation:popWin .5s cubic-bezier(.23,1.12,.62,1.01);position:relative;">
-            <div id="winModalAnim" style="font-size:2.5rem;margin-bottom:12px;">🎉</div>
-            <div id="winModalText" style="font-size:1.25rem;font-weight:600;margin-bottom:18px;color:#dcddde;">Победа!</div>
-            <div id="winModalBtns" style="display:flex;gap:12px;justify-content:center;"></div>
-        </div>
-        <style>
-        @keyframes popWin {
-            0% { transform: scale(0.7); opacity: 0; }
-            60% { transform: scale(1.08); opacity: 1; }
-            100% { transform: scale(1); }
-        }
-        </style>
-    </div>
-        <div class="header">
+    <div class="discord-container">
+        <div class="discord-header">
             <h1>Крестики-нолики</h1>
         </div>
 
-        <div class="create-lobby">
-            <button class="btn btn-primary" id="createLobbyBtn">
-                <i class="fas fa-plus" aria-hidden="true"></i>
-                <span>Создать лобби</span>
-            </button>
-            <button class="btn btn-secondary" id="refreshProfileBtn">
-                <i class="fas fa-sync-alt" aria-hidden="true"></i>
-                <span>Обновить профиль</span>
-            </button>
-            <button class="btn btn-accent" id="authorizeBtn">
-                <i class="fas fa-user-check" aria-hidden="true"></i>
-                <span>Авторизоваться в боте</span>
-            </button>
-        </div>
+        <div class="discord-content">
+            <!-- Экран ожидания лобби -->
+            <div id="lobbyRoom" class="lobby-room" style="display:none;">
+                <h2>Лобби</h2>
+                <div id="lobbyPlayersList" class="lobby-players-list"></div>
+                <div id="lobbyRoomBtns" class="lobby-room-buttons"></div>
+            </div>
+            <!-- Модальное окно победы -->
+            <div id="winModal" class="win-modal" style="display:none;">
+                <div class="win-modal-content">
+                    <div id="winModalAnim" class="win-modal-emoji">🎉</div>
+                    <div id="winModalText" class="win-modal-text">Победа!</div>
+                    <div id="winModalBtns" class="win-modal-buttons"></div>
+                </div>
+            </div>
+            <!-- Кнопки действий -->
+            <div class="discord-buttons">
+                <button class="discord-btn primary" id="createLobbyBtn">
+                    <i class="fas fa-plus" aria-hidden="true"></i>
+                    Создать лобби
+                </button>
+                <button class="discord-btn secondary" id="refreshProfileBtn">
+                    <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                    Обновить профиль
+                </button>
+                <button class="discord-btn accent" id="authorizeBtn">
+                    <i class="fas fa-user-check" aria-hidden="true"></i>
+                    Авторизоваться
+                </button>
+            </div>
 
-        <div class="lobby-list" id="lobbyList">
-            <!-- Лобби будут добавляться сюда динамически -->
-        </div>
+            <!-- Список лобби -->
+            <div class="lobby-list" id="lobbyList">
+                <!-- Лобби будут добавляться сюда динамически -->
+            </div>
 
-        <div class="game-board" id="gameBoard">
-            <div class="game-info">
+            <!-- Игровое поле -->
+            <div class="game-board" id="gameBoard" style="display:none;">
                 <div class="current-player">
                     <span id="currentPlayer" class="player-turn">Твой ход!</span>
                 </div>
+
                 <div class="status-message status-playing" id="statusMessage">
                     Игра в процессе...
                 </div>
-            </div>
-            
-            <div class="board-grid" id="boardGrid">
-                <div class="cell" data-index="0"></div>
-                <div class="cell" data-index="1"></div>
-                <div class="cell" data-index="2"></div>
-                <div class="cell" data-index="3"></div>
-                <div class="cell" data-index="4"></div>
-                <div class="cell" data-index="5"></div>
-                <div class="cell" data-index="6"></div>
-                <div class="cell" data-index="7"></div>
-                <div class="cell" data-index="8"></div>
-            </div>
-            
-            <div class="game-actions">
-                <button class="btn btn-secondary" id="leaveGameBtn">
-                    Покинуть
-                </button>
-                <button class="btn btn-primary" id="newGameBtn">
-                    Новая
-                </button>
+
+                <div class="board-grid" id="boardGrid">
+                    <div class="cell" data-index="0"></div>
+                    <div class="cell" data-index="1"></div>
+                    <div class="cell" data-index="2"></div>
+                    <div class="cell" data-index="3"></div>
+                    <div class="cell" data-index="4"></div>
+                    <div class="cell" data-index="5"></div>
+                    <div class="cell" data-index="6"></div>
+                    <div class="cell" data-index="7"></div>
+                    <div class="cell" data-index="8"></div>
+                </div>
+
+                <div class="game-actions">
+                    <button class="discord-btn secondary" id="leaveGameBtn">
+                        Покинуть
+                    </button>
+                    <button class="discord-btn primary" id="newGameBtn">
+                        Новая игра
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-    <!-- Оверлей авторизации — блокирует доступ пока не придёт профиль из бота -->
-    <div id="authOverlay" style="display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;pointer-events:auto;">
-        <div style="max-width:340px;width:92%;background:#2f3136;border:1px solid #202225;box-shadow:0 4px 20px rgba(0,0,0,0.5);padding:22px 18px 18px 18px;border-radius:8px;text-align:center;color:#dcddde;backdrop-filter:blur(2px);border:1.5px solid #5865f2;animation:fadeIn .3s;">
-            <h2 style="margin:0 0 8px 0;font-size:1.25rem;color:#dcddde;font-weight:700;letter-spacing:0.01em;">Авторизация</h2>
-            <p style="margin:0 0 14px 0;color:#b9bbbe;font-size:1.01rem;">Для игры требуется подтверждение через Telegram-бота.<br>Это займёт 5 секунд.</p>
-            <button id="authActionBtn" class="btn btn-primary" style="font-size:1.07rem;padding:10px 18px;margin-bottom:8px;">Войти через бота</button>
-            <div id="authStatus" style="margin-top:8px;color:#b9bbbe;font-size:0.97rem;">Ожидание авторизации…</div>
-        </div>
-        <style>
-        #authOverlay {
-            background: rgba(54,57,63,0.9);
-            position: fixed;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.25s;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        </style>
     </div>
+            <!-- Оверлей авторизации — блокирует доступ пока не придёт профиль из бота -->
+            <div id="authOverlay" class="auth-overlay" style="display:none;">
+                <div class="auth-content">
+                    <h2 class="auth-title">Авторизация</h2>
+                    <p class="auth-description">Для игры требуется подтверждение через Telegram-бота.<br>Это займёт 5 секунд.</p>
+                    <button id="authActionBtn" class="discord-btn primary">Войти через бота</button>
+                    <div id="authStatus" class="auth-status">Ожидание авторизации…</div>
+                </div>
+            </div>
 
     <div id="debugStatus" style="display:none;padding:10px 0 0 0;text-align:center;color:#ff6b6b;font-size:1.05rem;"></div>
 
@@ -327,8 +817,8 @@
         // Показать экран ожидания лобби
         function showLobbyRoom() {
             document.getElementById('gameBoard').style.display = 'none';
-            document.querySelector('.lobby-list').style.display = 'none';
-            document.querySelector('.create-lobby').style.display = 'none';
+            document.getElementById('lobbyList').style.display = 'none';
+            document.querySelector('.discord-buttons').style.display = 'none';
             document.getElementById('lobbyRoom').style.display = 'block';
             renderLobbyRoom();
         }
@@ -340,15 +830,28 @@
             list.innerHTML = '';
             currentLobby.players.forEach((p, idx) => {
                 const div = document.createElement('div');
-                div.style = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;color:#dcddde;';
-                div.innerHTML = `<img src="${p.avatar ? p.avatar : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" alt="avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;"> <b>${p.name}</b> <span style="color:#72767d;">(${p.symbol})</span> ${idx === 0 ? '<span style="color:#5865f2;font-size:0.98em;">создатель</span>' : ''}`;
+                div.className = 'lobby-player-item';
+                const avatarUrl = p.avatar ? p.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}`;
+                div.innerHTML = `
+                    <div class="lobby-player-avatar">${p.name.charAt(0).toUpperCase()}</div>
+                    <div class="lobby-player-info">
+                        <div class="lobby-player-name">${p.name}</div>
+                        <div class="lobby-player-symbol">(${p.symbol})</div>
+                    </div>
+                    ${idx === 0 ? '<span style="color: var(--discord-accent); font-size: 0.9em;">создатель</span>' : ''}
+                `;
                 list.appendChild(div);
             });
             // Пустые места
             for (let i = currentLobby.players.length; i < 2; i++) {
                 const div = document.createElement('div');
-                div.style = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;color:#72767d;';
-                div.innerHTML = `<span style="width:32px;height:32px;display:inline-block;background:#40444b;border-radius:50%;"></span> <i>Свободно</i>`;
+                div.className = 'lobby-player-item';
+                div.innerHTML = `
+                    <div class="lobby-player-avatar" style="background: #4f545c;">?</div>
+                    <div class="lobby-player-info">
+                        <div class="lobby-player-name" style="color: #72767d; font-style: italic;">Свободно</div>
+                    </div>
+                `;
                 list.appendChild(div);
             }
             // Кнопки
@@ -362,11 +865,11 @@
             if (isOwner) {
                 // Кнопка "Играть" только если 2 игрока
                 if (currentLobby.players.length === 2) {
-                    btns.innerHTML += `<button class="btn btn-primary" onclick="startGame()">Играть</button>`;
+                    btns.innerHTML += `<button class="discord-btn primary" onclick="startGame()">Играть</button>`;
                 }
-                btns.innerHTML += `<button class="btn btn-secondary" onclick="dissolveLobby()">Распустить лобби</button>`;
+                btns.innerHTML += `<button class="discord-btn secondary" onclick="dissolveLobby()">Распустить лобби</button>`;
             } else {
-                btns.innerHTML += `<button class="btn btn-secondary" onclick="leaveLobby()">Покинуть лобби</button>`;
+                btns.innerHTML += `<button class="discord-btn secondary" onclick="leaveLobby()">Покинуть лобби</button>`;
             }
         }
 
@@ -540,6 +1043,10 @@
                 currentLobby.board = ['', '', '', '', '', '', '', '', ''];
                 currentLobby.status = 'playing';
                 currentLobby.current_player = 'X';
+                // Убираем анимацию победы со всех клеток
+                document.querySelectorAll('.cell').forEach(cell => {
+                    cell.classList.remove('win');
+                });
                 updateGameDisplay();
             }
         }
@@ -556,13 +1063,13 @@
                 const lobbyCard = document.createElement('div');
                 lobbyCard.className = 'lobby-card';
                 lobbyCard.innerHTML = `
-                    <h3 style="margin:0 0 8px 0;color:#dcddde;">${lobby.name}</h3>
                     <div class="lobby-info">
+                        <h3 style="margin:0 0 8px 0;color:var(--discord-light);font-size:1rem;">${lobby.name}</h3>
                         <div class="lobby-players">
                             ${lobby.players.map(p => `
-                                <div class="player" style="display:flex;align-items:center;gap:6px;">
-                                    <img src="${p.avatar ? p.avatar : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" alt="avatar" style="width:24px;height:24px;border-radius:50%;object-fit:cover;">
-                                    <span style="color:#dcddde;">${p.name} <b style="color:#5865f2;">(${p.symbol})</b></span>
+                                <div class="player">
+                                    <img src="${p.avatar ? p.avatar : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name)}" alt="avatar">
+                                    <span>${p.name} <b style="color:var(--discord-accent);">(${p.symbol})</b></span>
                                 </div>
                             `).join('')}
                             ${lobby.players.length < 2 ? '<div class="player empty">Свободно</div>' : ''}
@@ -570,10 +1077,10 @@
                         <div class="lobby-status">${getStatusText(lobby.status)}</div>
                     </div>
                     <div class="lobby-actions">
-                        <button class="btn btn-primary join-btn" data-id="${lobby.id}">
+                        <button class="discord-btn primary join-btn" data-id="${lobby.id}">
                             <i class="fas fa-sign-in-alt"></i> Присоединиться
                         </button>
-                        <button class="btn btn-secondary info-btn" data-id="${lobby.id}">
+                        <button class="discord-btn secondary info-btn" data-id="${lobby.id}">
                             <i class="fas fa-info-circle"></i> Инфо
                         </button>
                     </div>
@@ -611,16 +1118,16 @@
         }
 
         function showGameBoard() {
-            document.querySelector('.lobby-list').style.display = 'none';
-            document.querySelector('.create-lobby').style.display = 'none';
+            document.getElementById('lobbyList').style.display = 'none';
+            document.querySelector('.discord-buttons').style.display = 'none';
             document.getElementById('gameBoard').style.display = 'block';
             updateGameDisplay();
         }
 
         function showLobbyList() {
             document.getElementById('gameBoard').style.display = 'none';
-            document.querySelector('.lobby-list').style.display = 'grid';
-            document.querySelector('.create-lobby').style.display = 'block';
+            document.getElementById('lobbyList').style.display = 'grid';
+            document.querySelector('.discord-buttons').style.display = 'flex';
             getLobbies();
         }
 
@@ -640,7 +1147,8 @@
 
             // Рендерим игроков и статус
             renderStatusAndPlayers(currentLobby);
-            document.getElementById('statusMessage').className = `status-message status-${currentLobby.status === 'finished' ? 'win' : currentLobby.status === 'playing' ? 'playing' : 'waiting'}`;
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.className = `status-message ${currentLobby.status === 'playing' ? 'status-playing' : currentLobby.status === 'finished' ? 'status-win' : 'status-waiting'}`;
 
             // Обновить текущего игрока
             if (currentPlayer) {
@@ -651,6 +1159,9 @@
 
             // Модалка победы
             if (currentLobby.status === 'finished') {
+                // Выделяем победные клетки перед показом модалки
+                setTimeout(() => highlightWinningCells(), 100);
+
                 let winnerName = '';
                 let isDraw = false;
                 if (currentLobby.winner === 'draw') {
@@ -682,17 +1193,44 @@
             }
             if (isOwner) {
                 btns.innerHTML = `
-                    <button class="btn btn-secondary" onclick="hideWinModal();showLobbyList();">Завершить игру</button>
-                    <button class="btn btn-primary" onclick="hideWinModal();resetGame();">Начать заново</button>
+                    <button class="discord-btn secondary" onclick="hideWinModal();showLobbyList();">Завершить игру</button>
+                    <button class="discord-btn primary" onclick="hideWinModal();resetGame();">Начать заново</button>
                 `;
             } else {
-                btns.innerHTML = `<button class="btn btn-secondary" onclick="hideWinModal();leaveLobby();">Покинуть игру</button>`;
+                btns.innerHTML = `<button class="discord-btn secondary" onclick="hideWinModal();leaveLobby();">Покинуть игру</button>`;
             }
         }
 
         function hideWinModal() {
             const modal = document.getElementById('winModal');
             modal.style.display = 'none';
+        }
+
+        // Функция для выделения победных клеток
+        function highlightWinningCells() {
+            // Найти победную комбинацию для текущего игрока
+            if (!currentLobby || currentLobby.status !== 'finished') return;
+
+            // Определяем победные клетки (упрощённая логика для демонстрации)
+            const board = currentLobby.board;
+            const currentSymbol = currentLobby.winner;
+
+            // Проверяем возможные победные комбинации
+            const winningConditions = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+                [0, 4, 8], [2, 4, 6] // Diagonals
+            ];
+
+            winningConditions.forEach(condition => {
+                const [a, b, c] = condition;
+                if (board[a] === currentSymbol && board[b] === currentSymbol && board[c] === currentSymbol) {
+                    // Выделяем победные клетки
+                    document.querySelector(`[data-index="${a}"]`).classList.add('win');
+                    document.querySelector(`[data-index="${b}"]`).classList.add('win');
+                    document.querySelector(`[data-index="${c}"]`).classList.add('win');
+                }
+            });
         }
 
             // Безопасная вставка текста в HTML
