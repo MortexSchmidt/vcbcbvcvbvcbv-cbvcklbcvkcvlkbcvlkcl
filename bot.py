@@ -25,6 +25,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from datetime import datetime, timedelta
 import json
 import uuid
+import time
 
 # Применяем nest_asyncio для поддержки вложенных event loops
 nest_asyncio.apply()
@@ -96,6 +97,50 @@ user_messages = {}
 previous_stream_status = {}
 # Множество известных чатов для уведомлений о стримах
 known_chats = set()
+
+# --- Автоуведомления о стриме jesusavgn (Kick.com) ---
+stream_status_lock = threading.Lock()
+stream_status = {"live": None}
+
+def notify_stream_status_change(new_status: bool):
+    """Отправляет уведомление во все известные чаты о начале/окончании стрима."""
+    global application
+    if not known_chats or application is None:
+        return
+    text = (
+        '🟢 jesusavgn НАЧАЛ стрим на Kick!\nhttps://kick.com/jesusavgn'
+        if new_status else
+        '🔴 jesusavgn завершил стрим на Kick.'
+    )
+    for chat_id in list(known_chats):
+        try:
+            asyncio.run(application.bot.send_message(chat_id=chat_id, text=text))
+        except Exception as e:
+            logger.error(f"Ошибка отправки уведомления в чат {chat_id}: {e}")
+
+def stream_status_watcher():
+    """Фоновый поток: периодически проверяет статус стрима и уведомляет о смене."""
+    global stream_status
+    while True:
+        try:
+            resp = requests.get('http://localhost:8080/api/kick_stream_status', timeout=10)
+            is_live = False
+            if resp.status_code == 200:
+                data = resp.json()
+                is_live = bool(data.get('live', False))
+            with stream_status_lock:
+                prev = stream_status["live"]
+                if prev is not None and prev != is_live:
+                    notify_stream_status_change(is_live)
+                stream_status["live"] = is_live
+        except Exception as e:
+            logger.error(f"Ошибка проверки статуса стрима: {e}")
+        time.sleep(60)  # Проверять раз в минуту
+
+# Запускать watcher только если это основной процесс
+def start_stream_status_thread():
+    t = threading.Thread(target=stream_status_watcher, daemon=True)
+    t.start()
 
 # Система предупреждений и нарушений
 user_warnings = {}  # {user_id: {"warnings": count, "violations": [{"type": str, "timestamp": datetime}]}}
@@ -1990,5 +2035,20 @@ def health():
         return "Bot not initialized", 503
     return "Bot is running", 200
 
+
+# --- API: Kick stream status ---
+@app.route('/api/kick_stream_status', methods=['GET'])
+def api_kick_stream_status():
+    """Проверяет, идет ли стрим jesusavgn на kick.com. Возвращает JSON: {"live": true/false} """
+    try:
+        resp = requests.get('https://kick.com/jesusavgn', headers={'User-Agent': 'Mozilla/5.0'}, timeout=7)
+        if resp.status_code == 200:
+            is_live = 'livestream' in resp.text
+            return {"live": is_live}, 200
+        return {"live": False, "error": f"status {resp.status_code}"}, 200
+    except Exception as e:
+        return {"live": False, "error": str(e)}, 200
+
 if __name__ == '__main__':
+    start_stream_status_thread()
     socketio.run(app, host='0.0.0.0', port=PORT, allow_unsafe_werkzeug=True)
