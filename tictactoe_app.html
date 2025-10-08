@@ -130,6 +130,16 @@
     .muted{color:var(--muted);font-size:0.95rem}
     .center{display:flex;align-items:center;justify-content:center}
     </style>
+    <style>
+    /* Toasts */
+    .toast-wrap{position:fixed;right:18px;top:18px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+    .toast{min-width:220px;padding:10px 14px;border-radius:10px;color:#fff;font-weight:600;box-shadow:0 8px 22px rgba(8,12,20,0.12);transform-origin:right top;transition:transform 200ms ease,opacity 200ms ease}
+    .toast.info{background:var(--accent)}
+    .toast.success{background:var(--success)}
+    .toast.warn{background:#ff8c00}
+    .toast.error{background:var(--danger)}
+    .toast.hide{opacity:0;transform:translateX(12px) scale(.98)}
+    </style>
 </head>
 <body>
     <div id="mainContainer" class="app-container">
@@ -148,6 +158,7 @@
                     <div class="profile-sub muted" id="profileSub">Не авторизован</div>
                 </div>
             </div>
+                <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
 
             <div class="menu-buttons">
                 <button class="menu-btn primary" id="createLobbyBtn"><i class="fas fa-plus-circle"></i>Создать лобби</button>
@@ -316,9 +327,9 @@
                 // Fallback: если профиль не придёт за 10 секунд — показать ошибку
                 setTimeout(() => {
                     if (document.getElementById('mainContainer').style.display === 'none') {
-                        document.getElementById('authStatus').textContent = '⛔ Не удалось получить профиль. Проверьте Telegram и попробуйте ещё раз.';
-                        document.getElementById('authActionBtn').textContent = 'Повторить авторизацию';
-                    }
+                            showToast('error','Не удалось получить профиль. Проверьте Telegram и попробуйте ещё раз.');
+                            document.getElementById('authActionBtn').textContent = 'Повторить авторизацию';
+                        }
                 }, 10000);
             } else {
                 hideAuthOverlay();
@@ -588,12 +599,12 @@
 
         async function authorizeWithBot() {
       // Проверяем socket
-      if (!socket) {
-        document.getElementById('authStatus').textContent = 'Socket не инициализирован. Подождите и попробуйте снова.';
+            if (!socket) {
+                showToast('error','Socket не инициализирован. Подождите и попробуйте снова.');
         return;
       }
-      if (!socket.id) {
-        document.getElementById('authStatus').textContent = 'Socket не имеет ID (ещё не подключён). Подождите и попробуйте снова.';
+            if (!socket.id) {
+                showToast('warn','Socket не имеет ID (ещё не подключён). Подождите и попробуйте снова.');
         return;
       }
       // Запрашиваем у бекенда уникальный код для авторизации
@@ -644,11 +655,11 @@
                             };
                         }
                     }, 100);
-        } else {
-          document.getElementById('authStatus').textContent = 'Не удалось получить код авторизации. Попробуйте позже.';
-        }
+                } else {
+                    showToast('error','Не удалось получить код авторизации. Попробуйте позже.');
+                }
             } catch (e) {
-        document.getElementById('authStatus').textContent = 'Ошибка запроса к серверу.';
+        showToast('error','Ошибка запроса к серверу.');
             }
         }
 
@@ -1160,6 +1171,28 @@
                 else if (lobby.status === 'finished') statusText = lobby.winner === 'draw' ? 'Ничья' : `Победил ${escapeHTML(lobby.winner)}`;
 
                 statusEl.innerHTML = `<div class="players-row">${playersHtml}</div><div class="status-line">${statusText}</div>`;
+            }
+
+            // Toast helper
+            function showToast(type, message, timeout = 4200) {
+                try {
+                    const wrap = document.getElementById('toastWrap');
+                    if (!wrap) return;
+                    const t = document.createElement('div');
+                    t.className = `toast ${type || 'info'}`;
+                    t.textContent = message;
+                    wrap.appendChild(t);
+                    // appear
+                    requestAnimationFrame(()=>{ t.classList.remove('hide'); });
+                    if (timeout > 0) setTimeout(()=>{ hideToast(t); }, timeout);
+                } catch (e) { console.warn('toast', e); }
+            }
+
+            function hideToast(el) {
+                try {
+                    el.classList.add('hide');
+                    setTimeout(()=>{ el.remove(); }, 260);
+                } catch(e){}
             }
     </script>
 </body>
