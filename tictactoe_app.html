@@ -189,7 +189,16 @@
             // Если нет профиля — показываем обязательный оверлей авторизации
             if (!webUserId) {
                 showAuthOverlay();
-            } else { hideAuthOverlay(); }
+                // Fallback: если профиль не придёт за 10 секунд — показать ошибку
+                setTimeout(() => {
+                    if (document.getElementById('mainContainer').style.display === 'none') {
+                        document.getElementById('authStatus').textContent = '⛔ Не удалось получить профиль. Проверьте Telegram и попробуйте ещё раз.';
+                        document.getElementById('authActionBtn').textContent = 'Повторить авторизацию';
+                    }
+                }, 10000);
+            } else {
+                hideAuthOverlay();
+            }
 
             // Настраиваем слушатели
             setupSocketListeners();
