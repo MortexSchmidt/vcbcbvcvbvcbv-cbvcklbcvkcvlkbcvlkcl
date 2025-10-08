@@ -1,1 +1,1 @@
-web: python bot.py
+web: gunicorn --worker-class eventlet -w 1 bot:app
