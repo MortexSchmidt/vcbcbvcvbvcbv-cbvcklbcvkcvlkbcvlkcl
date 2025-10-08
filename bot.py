@@ -20,6 +20,7 @@ import requests
 import nest_asyncio
 import threading
 from flask import Flask, request
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from telegram import Update, ChatPermissions, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from datetime import datetime, timedelta
@@ -33,6 +34,9 @@ PORT = int(os.environ.get('PORT', 8080))
 
 # Flask app для webhook
 app = Flask(__name__, static_folder='.')
+
+# SocketIO для реального времени
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # Включаем логирование
 logging.basicConfig(
@@ -97,15 +101,8 @@ known_chats = set()
 user_warnings = {}  # {user_id: {"warnings": count, "violations": [{"type": str, "timestamp": datetime}]}}
 admin_ids = [1648720935]  # Список ID администраторов
 
-# Крестики-нолики
-tictactoe_game = {
-    "active": False,
-    "board": [" "] * 9,
-    "players": [],
-    "current_player": 0,
-    "message_id": None,
-    "chat_id": None
-}
+# Словарь для хранения лобби крестиков-ноликов
+lobbies = {}
 
 # Функции модерации
 async def add_warning(user_id: int, violation_type: str, context: ContextTypes.DEFAULT_TYPE):
@@ -1434,6 +1431,143 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
 # Запускаем настройку при импорте модуля
 setup_application()
 
+# SocketIO обработчики для крестиков-ноликов
+@socketio.on('connect')
+def handle_connect():
+    logger.info(f"Клиент подключился: {request.sid}")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    logger.info(f"Клиент отключился: {request.sid}")
+    # Удаляем игрока из лобби
+    for lobby_id, lobby in lobbies.items():
+        for player in lobby['players']:
+            if player['sid'] == request.sid:
+                lobby['players'].remove(player)
+                if len(lobby['players']) == 0:
+                    del lobbies[lobby_id]
+                else:
+                    emit('update_lobby', lobby, room=lobby_id)
+                break
+
+@socketio.on('create_lobby')
+def handle_create_lobby(data):
+    name = data.get('name', 'Лобби')
+    player_name = data.get('player_name', 'Игрок')
+    
+    lobby_id = str(len(lobbies) + 1)
+    lobbies[lobby_id] = {
+        'id': lobby_id,
+        'name': name,
+        'players': [{'sid': request.sid, 'name': player_name, 'symbol': 'X'}],
+        'status': 'waiting',
+        'board': ['', '', '', '', '', '', '', '', ''],
+        'current_player': 'X'
+    }
+    
+    join_room(lobby_id)
+    emit('lobby_created', {'lobby_id': lobby_id, 'lobby': lobbies[lobby_id]})
+
+@socketio.on('join_lobby')
+def handle_join_lobby(data):
+    lobby_id = data.get('lobby_id')
+    player_name = data.get('player_name', 'Игрок')
+    
+    if lobby_id not in lobbies:
+        emit('error', {'message': 'Лобби не найдено'})
+        return
+    
+    lobby = lobbies[lobby_id]
+    if len(lobby['players']) >= 2:
+        emit('error', {'message': 'Лобби полное'})
+        return
+    
+    symbol = 'O' if len(lobby['players']) == 1 else 'X'
+    lobby['players'].append({'sid': request.sid, 'name': player_name, 'symbol': symbol})
+    
+    if len(lobby['players']) == 2:
+        lobby['status'] = 'playing'
+    
+    join_room(lobby_id)
+    emit('update_lobby', lobby, room=lobby_id)
+
+@socketio.on('make_move')
+def handle_make_move(data):
+    lobby_id = data.get('lobby_id')
+    position = data.get('position')
+    
+    if lobby_id not in lobbies:
+        emit('error', {'message': 'Лобби не найдено'})
+        return
+    
+    lobby = lobbies[lobby_id]
+    if lobby['status'] != 'playing':
+        emit('error', {'message': 'Игра не активна'})
+        return
+    
+    # Найти текущего игрока
+    current_player = None
+    for player in lobby['players']:
+        if player['sid'] == request.sid:
+            current_player = player
+            break
+    
+    if not current_player or current_player['symbol'] != lobby['current_player']:
+        emit('error', {'message': 'Не ваш ход'})
+        return
+    
+    if lobby['board'][position] != '':
+        emit('error', {'message': 'Клетка занята'})
+        return
+    
+    lobby['board'][position] = current_player['symbol']
+    
+    # Проверить победу
+    winner = check_winner(lobby['board'])
+    if winner:
+        lobby['status'] = 'finished'
+        lobby['winner'] = winner
+    elif '' not in lobby['board']:
+        lobby['status'] = 'finished'
+        lobby['winner'] = 'draw'
+    else:
+        # Сменить ход
+        lobby['current_player'] = 'O' if lobby['current_player'] == 'X' else 'X'
+    
+    emit('update_lobby', lobby, room=lobby_id)
+
+@socketio.on('leave_lobby')
+def handle_leave_lobby(data):
+    lobby_id = data.get('lobby_id')
+    
+    if lobby_id in lobbies:
+        lobby = lobbies[lobby_id]
+        lobby['players'] = [p for p in lobby['players'] if p['sid'] != request.sid]
+        if len(lobby['players']) == 0:
+            del lobbies[lobby_id]
+        else:
+            lobby['status'] = 'waiting'
+            emit('update_lobby', lobby, room=lobby_id)
+    
+    leave_room(lobby_id)
+
+@socketio.on('get_lobbies')
+def handle_get_lobbies():
+    emit('lobbies_list', list(lobbies.values()))
+
+def check_winner(board):
+    win_patterns = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],  # горизонтали
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],  # вертикали
+        [0, 4, 8], [2, 4, 6]  # диагонали
+    ]
+    
+    for pattern in win_patterns:
+        if board[pattern[0]] == board[pattern[1]] == board[pattern[2]] != '':
+            return board[pattern[0]]
+    
+    return None
+
 @app.route('/tictactoe_app.html')
 def serve_tictactoe_app():
     return app.send_static_file('tictactoe_app.html')
@@ -1498,3 +1632,6 @@ def health():
     if application is None:
         return "Bot not initialized", 503
     return "Bot is running", 200
+
+if __name__ == '__main__':
+    socketio.run(app, host='0.0.0.0', port=PORT)

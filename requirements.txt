@@ -3,3 +3,6 @@ requests==2.31.0
 nest-asyncio==1.6.0
 flask==3.0.0
 gunicorn==22.0.0
+flask-socketio==5.3.6
+python-socketio==5.10.0
+eventlet==0.33.3

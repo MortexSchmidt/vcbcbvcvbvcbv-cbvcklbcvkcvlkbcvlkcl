@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Крестики-нолики | Хесус Инсайд</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -310,58 +311,101 @@
     </div>
 
     <script>
-        // Глобальные переменные для игры
+        // Глобальные переменные
+        let socket;
         let currentLobby = null;
-        let currentGame = null;
-        let isMyTurn = false;
-        let mySymbol = null;
-        
-        // Мок данные для лобби (в реальном приложении это будет от API)
-        let lobbies = [
-            {
-                id: 1,
-                name: "🔥 Горячая игра",
-                players: ["Игрок1", "Игрок2"],
-                status: "Игра идет",
-                maxPlayers: 2
-            },
-            {
-                id: 2,
-                name: " chill сессия",
-                players: ["Игрок1", ""],
-                status: "Ожидание игрока",
-                maxPlayers: 2
-            },
-            {
-                id: 3,
-                name: "🔥 Турнир",
-                players: ["Игрок1", "Игрок2"],
-                status: "Игра идет",
-                maxPlayers: 2
-            }
-        ];
+        let currentPlayer = null;
+        let playerName = 'Игрок'; // Можно сделать ввод имени
 
-        // Инициализация приложения
+        // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
-            renderLobbyList();
+            socket = io();
+            setupSocketListeners();
             setupEventListeners();
+            getLobbies();
         });
 
-        function setupEventListeners() {
-            document.getElementById('createLobbyBtn').addEventListener('click', createNewLobby);
-            document.getElementById('leaveGameBtn').addEventListener('click', leaveGame);
-            document.getElementById('newGameBtn').addEventListener('click', startNewGame);
-            
-            // Добавляем обработчики для ячеек доски
-            document.querySelectorAll('.cell').forEach(cell => {
-                cell.addEventListener('click', handleCellClick);
+        function setupSocketListeners() {
+            socket.on('connect', () => {
+                console.log('Подключено к серверу');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Отключено от сервера');
+            });
+
+            socket.on('lobby_created', (data) => {
+                currentLobby = data.lobby;
+                currentPlayer = data.lobby.players[0];
+                showGameBoard();
+            });
+
+            socket.on('update_lobby', (lobby) => {
+                currentLobby = lobby;
+                updateGameDisplay();
+            });
+
+            socket.on('lobbies_list', (lobbies) => {
+                renderLobbyList(lobbies);
+            });
+
+            socket.on('error', (data) => {
+                alert(data.message);
             });
         }
 
-        function renderLobbyList() {
+        function setupEventListeners() {
+            document.getElementById('createLobbyBtn').addEventListener('click', createLobby);
+            document.getElementById('leaveGameBtn').addEventListener('click', leaveLobby);
+            document.getElementById('newGameBtn').addEventListener('click', resetGame);
+
+            document.querySelectorAll('.cell').forEach((cell, index) => {
+                cell.addEventListener('click', () => makeMove(index));
+            });
+        }
+
+        function createLobby() {
+            const name = prompt('Название лобби:', 'Мое лобби') || 'Лобби';
+            socket.emit('create_lobby', { name: name, player_name: playerName });
+        }
+
+        function joinLobby(lobbyId) {
+            socket.emit('join_lobby', { lobby_id: lobbyId, player_name: playerName });
+        }
+
+        function leaveLobby() {
+            if (currentLobby) {
+                socket.emit('leave_lobby', { lobby_id: currentLobby.id });
+                currentLobby = null;
+                currentPlayer = null;
+                showLobbyList();
+            }
+        }
+
+        function makeMove(position) {
+            if (currentLobby && currentPlayer && currentLobby.current_player === currentPlayer.symbol) {
+                socket.emit('make_move', { lobby_id: currentLobby.id, position: position });
+            }
+        }
+
+        function resetGame() {
+            // Сброс игры - можно добавить логику
+            if (currentLobby) {
+                currentLobby.board = ['', '', '', '', '', '', '', '', ''];
+                currentLobby.status = 'playing';
+                currentLobby.current_player = 'X';
+                updateGameDisplay();
+            }
+        }
+
+        function getLobbies() {
+            socket.emit('get_lobbies');
+        }
+
+        function renderLobbyList(lobbies) {
             const lobbyList = document.getElementById('lobbyList');
             lobbyList.innerHTML = '';
-            
+
             lobbies.forEach(lobby => {
                 const lobbyCard = document.createElement('div');
                 lobbyCard.className = 'lobby-card';
@@ -369,10 +413,10 @@
                     <h3>${lobby.name}</h3>
                     <div class="lobby-info">
                         <div class="lobby-players">
-                            <div class="player ${lobby.players[0] ? '' : 'empty'}">${lobby.players[0] || 'Свободно'}</div>
-                            <div class="player ${lobby.players[1] ? '' : 'empty'}">${lobby.players[1] || 'Свободно'}</div>
+                            ${lobby.players.map(p => `<div class="player">${p.name} (${p.symbol})</div>`).join('')}
+                            ${lobby.players.length < 2 ? '<div class="player empty">Свободно</div>' : ''}
                         </div>
-                        <div class="lobby-status">${lobby.status}</div>
+                        <div class="lobby-status">${getStatusText(lobby.status)}</div>
                     </div>
                     <div class="lobby-actions">
                         <button class="btn btn-primary join-btn" data-id="${lobby.id}">
@@ -383,182 +427,86 @@
                         </button>
                     </div>
                 `;
-                
+
                 lobbyList.appendChild(lobbyCard);
             });
-            
-            // Добавляем обработчики для кнопок присоединения
+
+            // Обработчики
             document.querySelectorAll('.join-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    const lobbyId = parseInt(this.getAttribute('data-id'));
+                    const lobbyId = this.getAttribute('data-id');
                     joinLobby(lobbyId);
                 });
             });
-            
-            // Добавляем обработчики для кнопок информации
+
             document.querySelectorAll('.info-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    const lobbyId = parseInt(this.getAttribute('data-id'));
-                    showLobbyInfo(lobbyId);
+                    const lobbyId = this.getAttribute('data-id');
+                    const lobby = lobbies.find(l => l.id === lobbyId);
+                    if (lobby) {
+                        alert(`Лобби: ${lobby.name}\nИгроки: ${lobby.players.map(p => p.name).join(', ')}\nСтатус: ${getStatusText(lobby.status)}`);
+                    }
                 });
             });
         }
 
-        function createNewLobby() {
-            // В реальном приложении это будет запрос к API
-            const newLobby = {
-                id: lobbies.length + 1,
-                name: `Лобби #${lobbies.length + 1}`,
-                players: [getCurrentPlayerName(), ""],
-                status: "Ожидание игрока",
-                maxPlayers: 2
-            };
-            
-            lobbies.push(newLobby);
-            renderLobbyList();
-            joinLobby(newLobby.id);
-        }
-
-        function joinLobby(lobbyId) {
-            const lobby = lobbies.find(l => l.id === lobbyId);
-            if (!lobby) return;
-            
-            // Проверяем, есть ли свободное место
-            const emptySlotIndex = lobby.players.findIndex(p => p === "");
-            if (emptySlotIndex === -1) {
-                alert('Лобби полное!');
-                return;
+        function getStatusText(status) {
+            switch(status) {
+                case 'waiting': return 'Ожидание игрока';
+                case 'playing': return 'Игра идет';
+                case 'finished': return 'Игра окончена';
+                default: return status;
             }
-            
-            // Занимаем место
-            lobby.players[emptySlotIndex] = getCurrentPlayerName();
-            if (lobby.players.filter(p => p !== "").length === 2) {
-                lobby.status = "Игра идет";
-            }
-            
-            currentLobby = lobby;
-            mySymbol = emptySlotIndex === 0 ? 'X' : 'O';
-            
-            showGameBoard();
-        }
-
-        function showLobbyInfo(lobbyId) {
-            const lobby = lobbies.find(l => l.id === lobbyId);
-            if (!lobby) return;
-            
-            let info = `Информация о лобби "${lobby.name}":\n`;
-            info += `Статус: ${lobby.status}\n`;
-            info += `Игроки: ${lobby.players[0] || 'Пусто'} vs ${lobby.players[1] || 'Пусто'}`;
-            
-            alert(info);
         }
 
         function showGameBoard() {
-            document.querySelector('.lobby-list').style.display = 'grid';
-            document.querySelector('.create-lobby').style.display = 'block';
+            document.querySelector('.lobby-list').style.display = 'none';
+            document.querySelector('.create-lobby').style.display = 'none';
             document.getElementById('gameBoard').style.display = 'block';
-            
             updateGameDisplay();
         }
 
-        function updateGameDisplay() {
-            // Обновляем информацию о текущем игроке
-            document.getElementById('currentPlayer').textContent = 
-                isMyTurn ? `Твой ход (${mySymbol})` : `Ждем хода соперника`;
-            document.getElementById('currentPlayer').className = 
-                isMyTurn ? 'player-turn' : 'player-wait';
-            
-            // Обновляем статус
-            document.getElementById('statusMessage').textContent = 
-                currentLobby.status;
-            document.getElementById('statusMessage').className = 
-                currentLobby.status.includes('Игра') ? 'status-message status-playing' : 'status-message status-waiting';
-        }
-
-        function handleCellClick(event) {
-            if (!isMyTurn || currentGame) return;
-            
-            const cell = event.target;
-            const index = parseInt(cell.getAttribute('data-index'));
-            
-            if (cell.textContent !== '') return; // Ячейка уже занята
-            
-            // В реальном приложении здесь будет отправка хода на сервер
-            cell.textContent = mySymbol;
-            cell.classList.add(mySymbol.toLowerCase());
-            
-            // Передаем ход другому игроку
-            isMyTurn = false;
-            updateGameDisplay();
-            
-            // Проверяем победу (в реальном приложении это будет на сервере)
-            checkGameEnd();
-        }
-
-        function checkGameEnd() {
-            // Простая проверка победы (в реальном приложении это будет на сервере)
-            const cells = document.querySelectorAll('.cell');
-            const board = Array.from(cells).map(cell => cell.textContent);
-            
-            // Проверяем выигрышные комбинации
-            const winPatterns = [
-                [0, 1, 2], [3, 4, 5], [6, 7, 8], // горизонтали
-                [0, 3, 6], [1, 4, 7], [2, 5, 8], // вертикали
-                [0, 4, 8], [2, 4, 6] // диагонали
-            ];
-            
-            for (const pattern of winPatterns) {
-                const [a, b, c] = pattern;
-                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-                    document.getElementById('statusMessage').textContent = `Победа! ${board[a]} выиграл!`;
-                    document.getElementById('statusMessage').className = 'status-message status-win';
-                    return;
-                }
-            }
-            
-            // Проверяем ничью
-            if (board.every(cell => cell !== '')) {
-                document.getElementById('statusMessage').textContent = 'Ничья!';
-                document.getElementById('statusMessage').className = 'status-message status-win';
-            }
-        }
-
-        function leaveGame() {
+        function showLobbyList() {
             document.getElementById('gameBoard').style.display = 'none';
             document.querySelector('.lobby-list').style.display = 'grid';
             document.querySelector('.create-lobby').style.display = 'block';
-            
-            // Сбрасываем состояние игры
-            currentLobby = null;
-            currentGame = null;
-            isMyTurn = false;
-            mySymbol = null;
-            
-            // Очищаем доску
-            document.querySelectorAll('.cell').forEach(cell => {
-                cell.textContent = '';
-                cell.className = 'cell';
-            });
+            getLobbies();
         }
 
-        function startNewGame() {
-            // Очищаем доску
-            document.querySelectorAll('.cell').forEach(cell => {
-                cell.textContent = '';
-                cell.className = 'cell';
-            });
-            
-            // В реальном приложении это будет запрос к API для начала новой игры
-            isMyTurn = mySymbol === 'X'; // X всегда начинает
-            updateGameDisplay();
-            
-            document.getElementById('statusMessage').textContent = 'Новая игра началась!';
-            document.getElementById('statusMessage').className = 'status-message status-playing';
-        }
+        function updateGameDisplay() {
+            if (!currentLobby) return;
 
-        function getCurrentPlayerName() {
-            // В реальном приложении имя игрока будет получаться из Telegram Web App
-            return 'Ты'; // Заглушка
+            // Обновить доску
+            currentLobby.board.forEach((cell, index) => {
+                const cellElement = document.querySelector(`[data-index="${index}"]`);
+                cellElement.textContent = cell;
+                cellElement.className = 'cell';
+                if (cell) {
+                    cellElement.classList.add(cell.toLowerCase());
+                }
+            });
+
+            // Обновить статус
+            let statusText = getStatusText(currentLobby.status);
+            if (currentLobby.status === 'playing') {
+                statusText += ` | Ход ${currentLobby.current_player}`;
+            } else if (currentLobby.status === 'finished') {
+                if (currentLobby.winner === 'draw') {
+                    statusText += ' | Ничья!';
+                } else {
+                    statusText += ` | Победил ${currentLobby.winner}!`;
+                }
+            }
+
+            document.getElementById('statusMessage').textContent = statusText;
+            document.getElementById('statusMessage').className = `status-message status-${currentLobby.status === 'finished' ? 'win' : currentLobby.status === 'playing' ? 'playing' : 'waiting'}`;
+
+            // Обновить текущего игрока
+            if (currentPlayer) {
+                const isMyTurn = currentLobby.status === 'playing' && currentLobby.current_player === currentPlayer.symbol;
+                document.getElementById('currentPlayer').textContent = isMyTurn ? `Ваш ход (${currentPlayer.symbol})` : `Ход соперника`;
+                document.getElementById('currentPlayer').className = isMyTurn ? 'player-turn' : 'player-wait';
+            }
         }
     </script>
 </body>
