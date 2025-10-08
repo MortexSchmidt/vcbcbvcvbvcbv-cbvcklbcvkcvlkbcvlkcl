@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Крестики-нолики | Хесус Инсайд</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #00dbde, #fc00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(252, 0, 255, 0.3);
+        }
+
+        .header p {
+            color: #a0a0c0;
+            font-size: 1.1em;
+        }
+
+        .lobby-list {
+            display: grid;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .lobby-card {
+            background: rgba(30, 30, 46, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .lobby-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(25, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .lobby-card h3 {
+            color: #00dbde;
+            margin-bottom: 10px;
+            font-size: 1.4em;
+        }
+
+        .lobby-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .lobby-players {
+            display: flex;
+            gap: 10px;
+        }
+
+        .player {
+            background: rgba(0, 219, 222, 0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .player.empty {
+            background: rgba(255, 255, 255, 0.1);
+            color: #a0a0c0;
+        }
+
+        .lobby-status {
+            background: rgba(252, 0, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .lobby-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #00dbde, #fc00ff);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(252, 0, 255, 0.5);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .create-lobby {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .game-board {
+            display: none;
+            background: rgba(30, 30, 46, 0.8);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .cell:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .cell.x {
+            color: #00dbde;
+        }
+
+        .cell.o {
+            color: #fc00ff;
+        }
+
+        .game-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .current-player {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .player-turn {
+            color: #00dbde;
+        }
+
+        .player-wait {
+            color: #a0a0c0;
+        }
+
+        .game-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .status-waiting {
+            background: rgba(252, 0, 255, 0.2);
+        }
+
+        .status-playing {
+            background: rgba(0, 219, 222, 0.2);
+        }
+
+        .status-win {
+            background: rgba(0, 255, 100, 0.2);
+            color: #00ff64;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            .lobby-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .lobby-actions {
+                flex-direction: column;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .cell {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Крестики-нолики</h1>
+            <p>Движ запущен! Выбирай лобби и заходи в игру</p>
+        </div>
+
+        <div class="create-lobby">
+            <button class="btn btn-primary" id="createLobbyBtn">
+                <i class="fas fa-plus"></i> Создать новое лобби
+            </button>
+        </div>
+
+        <div class="lobby-list" id="lobbyList">
+            <!-- Лобби будут добавляться сюда динамически -->
+        </div>
+
+        <div class="game-board" id="gameBoard">
+            <div class="game-info">
+                <div class="current-player">
+                    <span id="currentPlayer" class="player-turn">Твой ход!</span>
+                </div>
+                <div class="status-message status-playing" id="statusMessage">
+                    Игра в процессе...
+                </div>
+            </div>
+            
+            <div class="board-grid" id="boardGrid">
+                <div class="cell" data-index="0"></div>
+                <div class="cell" data-index="1"></div>
+                <div class="cell" data-index="2"></div>
+                <div class="cell" data-index="3"></div>
+                <div class="cell" data-index="4"></div>
+                <div class="cell" data-index="5"></div>
+                <div class="cell" data-index="6"></div>
+                <div class="cell" data-index="7"></div>
+                <div class="cell" data-index="8"></div>
+            </div>
+            
+            <div class="game-actions">
+                <button class="btn btn-secondary" id="leaveGameBtn">
+                    <i class="fas fa-sign-out-alt"></i> Покинуть игру
+                </button>
+                <button class="btn btn-primary" id="newGameBtn">
+                    <i class="fas fa-redo"></i> Новая игра
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Глобальные переменные для игры
+        let currentLobby = null;
+        let currentGame = null;
+        let isMyTurn = false;
+        let mySymbol = null;
+        
+        // Мок данные для лобби (в реальном приложении это будет от API)
+        let lobbies = [
+            {
+                id: 1,
+                name: "🔥 Горячая игра",
+                players: ["Игрок1", "Игрок2"],
+                status: "Игра идет",
+                maxPlayers: 2
+            },
+            {
+                id: 2,
+                name: " chill сессия",
+                players: ["Игрок1", ""],
+                status: "Ожидание игрока",
+                maxPlayers: 2
+            },
+            {
+                id: 3,
+                name: "🔥 Турнир",
+                players: ["Игрок1", "Игрок2"],
+                status: "Игра идет",
+                maxPlayers: 2
+            }
+        ];
+
+        // Инициализация приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            renderLobbyList();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('createLobbyBtn').addEventListener('click', createNewLobby);
+            document.getElementById('leaveGameBtn').addEventListener('click', leaveGame);
+            document.getElementById('newGameBtn').addEventListener('click', startNewGame);
+            
+            // Добавляем обработчики для ячеек доски
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.addEventListener('click', handleCellClick);
+            });
+        }
+
+        function renderLobbyList() {
+            const lobbyList = document.getElementById('lobbyList');
+            lobbyList.innerHTML = '';
+            
+            lobbies.forEach(lobby => {
+                const lobbyCard = document.createElement('div');
+                lobbyCard.className = 'lobby-card';
+                lobbyCard.innerHTML = `
+                    <h3>${lobby.name}</h3>
+                    <div class="lobby-info">
+                        <div class="lobby-players">
+                            <div class="player ${lobby.players[0] ? '' : 'empty'}">${lobby.players[0] || 'Свободно'}</div>
+                            <div class="player ${lobby.players[1] ? '' : 'empty'}">${lobby.players[1] || 'Свободно'}</div>
+                        </div>
+                        <div class="lobby-status">${lobby.status}</div>
+                    </div>
+                    <div class="lobby-actions">
+                        <button class="btn btn-primary join-btn" data-id="${lobby.id}">
+                            <i class="fas fa-sign-in-alt"></i> Присоединиться
+                        </button>
+                        <button class="btn btn-secondary info-btn" data-id="${lobby.id}">
+                            <i class="fas fa-info-circle"></i> Инфо
+                        </button>
+                    </div>
+                `;
+                
+                lobbyList.appendChild(lobbyCard);
+            });
+            
+            // Добавляем обработчики для кнопок присоединения
+            document.querySelectorAll('.join-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lobbyId = parseInt(this.getAttribute('data-id'));
+                    joinLobby(lobbyId);
+                });
+            });
+            
+            // Добавляем обработчики для кнопок информации
+            document.querySelectorAll('.info-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lobbyId = parseInt(this.getAttribute('data-id'));
+                    showLobbyInfo(lobbyId);
+                });
+            });
+        }
+
+        function createNewLobby() {
+            // В реальном приложении это будет запрос к API
+            const newLobby = {
+                id: lobbies.length + 1,
+                name: `Лобби #${lobbies.length + 1}`,
+                players: [getCurrentPlayerName(), ""],
+                status: "Ожидание игрока",
+                maxPlayers: 2
+            };
+            
+            lobbies.push(newLobby);
+            renderLobbyList();
+            joinLobby(newLobby.id);
+        }
+
+        function joinLobby(lobbyId) {
+            const lobby = lobbies.find(l => l.id === lobbyId);
+            if (!lobby) return;
+            
+            // Проверяем, есть ли свободное место
+            const emptySlotIndex = lobby.players.findIndex(p => p === "");
+            if (emptySlotIndex === -1) {
+                alert('Лобби полное!');
+                return;
+            }
+            
+            // Занимаем место
+            lobby.players[emptySlotIndex] = getCurrentPlayerName();
+            if (lobby.players.filter(p => p !== "").length === 2) {
+                lobby.status = "Игра идет";
+            }
+            
+            currentLobby = lobby;
+            mySymbol = emptySlotIndex === 0 ? 'X' : 'O';
+            
+            showGameBoard();
+        }
+
+        function showLobbyInfo(lobbyId) {
+            const lobby = lobbies.find(l => l.id === lobbyId);
+            if (!lobby) return;
+            
+            let info = `Информация о лобби "${lobby.name}":\n`;
+            info += `Статус: ${lobby.status}\n`;
+            info += `Игроки: ${lobby.players[0] || 'Пусто'} vs ${lobby.players[1] || 'Пусто'}`;
+            
+            alert(info);
+        }
+
+        function showGameBoard() {
+            document.querySelector('.lobby-list').style.display = 'none';
+            document.querySelector('.create-lobby').style.display = 'none';
+            document.getElementById('gameBoard').style.display = 'block';
+            
+            updateGameDisplay();
+        }
+
+        function updateGameDisplay() {
+            // Обновляем информацию о текущем игроке
+            document.getElementById('currentPlayer').textContent = 
+                isMyTurn ? `Твой ход (${mySymbol})` : `Ждем хода соперника`;
+            document.getElementById('currentPlayer').className = 
+                isMyTurn ? 'player-turn' : 'player-wait';
+            
+            // Обновляем статус
+            document.getElementById('statusMessage').textContent = 
+                currentLobby.status;
+            document.getElementById('statusMessage').className = 
+                currentLobby.status.includes('Игра') ? 'status-message status-playing' : 'status-message status-waiting';
+        }
+
+        function handleCellClick(event) {
+            if (!isMyTurn || currentGame) return;
+            
+            const cell = event.target;
+            const index = parseInt(cell.getAttribute('data-index'));
+            
+            if (cell.textContent !== '') return; // Ячейка уже занята
+            
+            // В реальном приложении здесь будет отправка хода на сервер
+            cell.textContent = mySymbol;
+            cell.classList.add(mySymbol.toLowerCase());
+            
+            // Передаем ход другому игроку
+            isMyTurn = false;
+            updateGameDisplay();
+            
+            // Проверяем победу (в реальном приложении это будет на сервере)
+            checkGameEnd();
+        }
+
+        function checkGameEnd() {
+            // Простая проверка победы (в реальном приложении это будет на сервере)
+            const cells = document.querySelectorAll('.cell');
+            const board = Array.from(cells).map(cell => cell.textContent);
+            
+            // Проверяем выигрышные комбинации
+            const winPatterns = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // горизонтали
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // вертикали
+                [0, 4, 8], [2, 4, 6] // диагонали
+            ];
+            
+            for (const pattern of winPatterns) {
+                const [a, b, c] = pattern;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    document.getElementById('statusMessage').textContent = `Победа! ${board[a]} выиграл!`;
+                    document.getElementById('statusMessage').className = 'status-message status-win';
+                    return;
+                }
+            }
+            
+            // Проверяем ничью
+            if (board.every(cell => cell !== '')) {
+                document.getElementById('statusMessage').textContent = 'Ничья!';
+                document.getElementById('statusMessage').className = 'status-message status-win';
+            }
+        }
+
+        function leaveGame() {
+            document.getElementById('gameBoard').style.display = 'none';
+            document.querySelector('.lobby-list').style.display = 'grid';
+            document.querySelector('.create-lobby').style.display = 'block';
+            
+            // Сбрасываем состояние игры
+            currentLobby = null;
+            currentGame = null;
+            isMyTurn = false;
+            mySymbol = null;
+            
+            // Очищаем доску
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.textContent = '';
+                cell.className = 'cell';
+            });
+        }
+
+        function startNewGame() {
+            // Очищаем доску
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.textContent = '';
+                cell.className = 'cell';
+            });
+            
+            // В реальном приложении это будет запрос к API для начала новой игры
+            isMyTurn = mySymbol === 'X'; // X всегда начинает
+            updateGameDisplay();
+            
+            document.getElementById('statusMessage').textContent = 'Новая игра началась!';
+            document.getElementById('statusMessage').className = 'status-message status-playing';
+        }
+
+        function getCurrentPlayerName() {
+            // В реальном приложении имя игрока будет получаться из Telegram Web App
+            return 'Ты'; // Заглушка
+        }
+    </script>
+</body>
+</html>

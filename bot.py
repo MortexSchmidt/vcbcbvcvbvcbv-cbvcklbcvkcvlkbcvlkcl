@@ -1330,6 +1330,9 @@ def setup_application():
     application.add_handler(CommandHandler("myid", get_my_id))
     application.add_handler(CommandHandler("stream", check_stream))
     application.add_handler(CommandHandler("legend", legend_command))
+    
+    # обработчик команды для открытия Mini-App
+    application.add_handler(CommandHandler("tictactoe_app", tictactoe_miniapp_command))
 
     # административные команды
     application.add_handler(CommandHandler("mute", mute_command))
@@ -1375,6 +1378,7 @@ def setup_application():
             BotCommand("tictactoe", "Крестики-нолики"),
             BotCommand("join", "Присоединиться к игре"),
             BotCommand("legend", "Легенда чата"),
+            BotCommand("tictactoe_app", "Крестики-нолики Mini-App"),
             BotCommand("mute", "Замутить (админы)"),
             BotCommand("warn", "Предупредить (админам)"),
             BotCommand("userinfo", "Инфо о пользователе (админам)"),
@@ -1402,6 +1406,30 @@ def setup_application():
 
 # Запускаем настройку при импорте модуля
 setup_application()
+
+async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда для открытия Mini-App с крестиками-ноликами"""
+    try:
+        await update.message.delete()
+    except:
+        pass  # если нет прав на удаление, просто пропускаем
+    
+    user_name = update.effective_user.first_name
+    user_mention = f"@{update.effective_user.username}" if update.effective_user.username else user_name
+    
+    # Создаем кнопку для открытия Mini-App
+    keyboard = [[InlineKeyboardButton("🎮 Играть в крестики-нолики", web_app={"url": "https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/tictactoe_app.html"})]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"🎮 <b>крестики-нолики Mini-App</b>\n\n"
+             f"йоу, {user_name}! открывай Mini-App и заходи в игру\n\n"
+             f"чат с движем: <a href='https://t.me/hesusinsajd'>@hesusinsajd</a>\n\n"
+             f"<i>вызвал: {user_mention}</i>",
+        parse_mode='HTML',
+        reply_markup=reply_markup
+    )
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
