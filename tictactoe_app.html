@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pzw+XrVhK1iKq6V+6mZrY1lFQYVq6nXj3Zc1g1k6s6b6Q9K1y1q1Z1y1+Y1Z1y1Z1y1Z1y1Z1y1Z1y1Z1y1Z1y1Z1w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         /* Dark, human-made flat UI — no gradients, readable, comfortable */
@@ -142,6 +142,10 @@
     /* Small helpers */
     .muted{color:var(--muted);font-size:0.95rem}
     .center{display:flex;align-items:center;justify-content:center}
+    /* Lobby layout helpers: place control buttons at bottom of lobby room */
+    #lobbyRoom{display:flex;flex-direction:column;gap:12px;min-height:220px}
+    #lobbyPlayersList{flex:1;overflow:auto}
+    #lobbyRoomBtns{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap}
     </style>
     <style>
     /* Toasts */
