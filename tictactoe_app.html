@@ -354,8 +354,10 @@
 
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded, checking Telegram WebApp');
             // Если запущено внутри Telegram Web App — пробуем получить данные автоматически
             const initApp = () => {
+                console.log('initApp called');
                 socket = io();
                 setupSocketListeners();
                 setupEventListeners();
@@ -370,8 +372,11 @@
                 let attempts = 0;
                 const tryGetUser = () => {
                     attempts++;
+                    console.log(`tryGetUser attempt ${attempts}`);
                     const user = (tg.initDataUnsafe && tg.initDataUnsafe.user) || null;
+                    console.log('user from initDataUnsafe:', user);
                     if (user && user.id) {
+                        console.log('user found, id:', user.id, 'name:', user.first_name);
                         webUserId = user.id;
                         playerName = user.first_name || user.username || 'Гость';
                         playerAvatar = '';
@@ -381,12 +386,14 @@
                     } else if (attempts < 4) {
                         setTimeout(tryGetUser, 250);
                     } else {
+                        console.log('no user after 4 attempts, initializing without profile');
                         // Инициализируем без диалогов — не показываем popup. Оставляем гостя, но будем передавать user_id если он появится позже
                         initApp();
                     }
                 };
                 tryGetUser();
             } else {
+                console.log('No Telegram WebApp detected, showing dialog');
                 // Обычный браузер — показываем диалог
                 showPlayerDialog((name, avatar) => {
                     playerName = name;

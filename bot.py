@@ -1444,6 +1444,7 @@ def handle_connect():
 @socketio.on('identify')
 def handle_identify(data):
     """Клиент шлёт telegram_webapp профиль: {user_id, name, avatar} """
+    logger.info(f"identify received: {data}")
     try:
         user_id = data.get('user_id')
         name = data.get('name')
@@ -1497,10 +1498,12 @@ def handle_disconnect():
 
 @socketio.on('create_lobby')
 def handle_create_lobby(data):
+    logger.info(f"create_lobby received: {data}")
     name = data.get('name', 'Лобби')
     player_name = data.get('player_name', '')
     player_avatar = data.get('player_avatar', '')
     user_id = data.get('user_id')
+    logger.info(f"create_lobby: name={name}, player_name={player_name}, user_id={user_id}")
 
     # если клиент представился через Telegram WebApp — используем профиль
     tp = telegram_profiles.get(request.sid)
@@ -1544,10 +1547,12 @@ def handle_create_lobby(data):
 
 @socketio.on('join_lobby')
 def handle_join_lobby(data):
+    logger.info(f"join_lobby received: {data}")
     lobby_id = data.get('lobby_id')
     player_name = data.get('player_name', '')
     player_avatar = data.get('player_avatar', '')
     user_id = data.get('user_id')
+    logger.info(f"join_lobby: lobby_id={lobby_id}, player_name={player_name}, user_id={user_id}")
 
     # если клиент представился через Telegram WebApp — используем профиль
     tp = telegram_profiles.get(request.sid)
