@@ -37,6 +37,50 @@
         .game-info { display:flex; flex-direction:row; align-items:center; justify-content:space-between; margin-bottom:10px; }
         .current-player { font-size:1.1rem; font-weight:500; }
         .status-message { font-size:0.97rem; color:#1976d2; }
+        .players-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            margin-bottom: 6px;
+        }
+        .player-small {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f7faff;
+            border-radius: 8px;
+            padding: 4px 10px 4px 4px;
+            box-shadow: 0 1px 4px 0 rgba(0,0,0,0.03);
+            min-width: 0;
+            max-width: 180px;
+        }
+        .player-small img {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .player-small .name {
+            font-weight: 500;
+            font-size: 1.01em;
+            color: #1a2a3a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 90px;
+        }
+        .player-small .symbol {
+            color: #1976d2;
+            font-size: 1em;
+            margin-left: 2px;
+        }
+        .vs-sep {
+            color: #bfa100;
+            font-size: 1.2em;
+            margin: 0 8px;
+        }
         @media (max-width:720px) {
             .container { padding:12px; }
             .header { padding:12px; border-radius:10px; }
