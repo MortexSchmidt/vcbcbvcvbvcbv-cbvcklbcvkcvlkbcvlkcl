@@ -1269,29 +1269,23 @@ ETH: ${rates.get('ETH', 0):,.0f}
 # Функция для проверки статуса стрима на KICK
 def check_kick_stream():
     try:
-        # Используем никнейм jesusavgn с Kick.com
-        username = "jesusavgn"
-        headers = {"User-Agent": "Mozilla/5.0 (compatible; Bot/1.0; +https://t.me/hesusinsidemegabot)"}
-        response = requests.get(f"https://kick.com/api/v1/channels/{username}", headers=headers, timeout=15)
-        try:
-            data = response.json()
-        except Exception:
-            data = {}
-        # DEBUG: логируем ответ
-        print(f"[kick.com] API status: {response.status_code}")
-        print(f"[kick.com] API text: {response.text[:500]}")
-        print("[kick.com] API response:", data)
-        debug_info = {
-            'status_code': response.status_code,
-            'text': response.text[:500],
-            'json': data
+        url = "https://kick-com-api.p.rapidapi.com/v2/kick/user/info"
+        querystring = {"query": "jesusavgn"}
+        headers = {
+            "x-rapidapi-key": "5dd07a17b9msh805b9d459ca87d8p104d72jsn3cff215df826",
+            "x-rapidapi-host": "kick-com-api.p.rapidapi.com"
         }
-        if "livestream" in data and data["livestream"] is not None:
-            return True, data["livestream"].get("title", "Стрим в эфире!"), debug_info
+        response = requests.get(url, headers=headers, params=querystring, timeout=15)
+        data = response.json()
+        print(f"[kick-rapidapi] status: {response.status_code}")
+        print(f"[kick-rapidapi] data: {data}")
+        if data.get("livestream"):
+            title = data["livestream"].get("session_title") or data["livestream"].get("title") or "Стрим в эфире!"
+            return True, title, data
         else:
-            return False, "", debug_info
+            return False, "", data
     except Exception as e:
-        print(f"[kick.com] API error: {e}")
+        print(f"[kick-rapidapi] error: {e}")
         return False, f"Ошибка запроса: {e}", {}
 
 # команда для проверки статуса стрима
