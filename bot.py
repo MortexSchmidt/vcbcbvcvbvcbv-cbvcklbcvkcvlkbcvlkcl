@@ -147,10 +147,20 @@ async def mute_user(user_id: int, chat_id: int, hours: float, reason: str, conte
         mute_msg = f"🔇 {user_mention} в муте, чилишь {time_str} 😎\nпричина: {reason}"
         if update and hasattr(update, "effective_user") and update.effective_user and update.effective_user.id in admin_ids:
             mute_msg += f"\nадмин: {admin_mention}"
+        # всегда кидаем сообщение о муте, даже если это стикер без текста
+        sent = False
         try:
-            await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML')
+            # если есть reply_to_message, пробуем reply
+            if update and hasattr(update, "message") and update.message and update.message.reply_to_message:
+                await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML', reply_to_message_id=update.message.message_id)
+                sent = True
         except Exception as send_err:
-            logger.error(f"Ошибка отправки сообщения о муте: {send_err}")
+            logger.error(f"ошибка reply-мут msg: {send_err}")
+        if not sent:
+            try:
+                await context.bot.send_message(chat_id=chat_id, text=mute_msg, parse_mode='HTML')
+            except Exception as send_err:
+                logger.error(f"ошибка обычного мут msg: {send_err}")
 
         await context.bot.restrict_chat_member(
             chat_id=chat_id,
