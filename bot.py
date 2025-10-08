@@ -266,32 +266,28 @@ def build_board_keyboard(board, players):
     return InlineKeyboardMarkup(keyboard)
 
 def create_board_text(board, players, current_player):
-    """Красивый текст доски с инфой по игрокам"""
-    symbols = ["❌", "⭕"]
-    text = "🎮 <b>крестики-нолики — движ запущен</b> 🎮\n\n"
+    """Подготовить текст сообщения с доской и информацией по игрокам"""
+    symbols = ["X", "O"]
+    text = "<b>Крестики‑нолики</b>\n\n"
 
     if len(players) == 2:
         p0 = players[0].first_name
         p1 = players[1].first_name
-        text += f"❌ <b>{p0}</b>  —  ⭕ <b>{p1}</b>\n"
-        text += f"👑 сейчас ходит: {symbols[current_player]} <b>{players[current_player].first_name}</b>\n\n"
+        text += f"<b>{p0}</b>  —  <b>{p1}</b>\n"
+        text += f"Сейчас ход: {symbols[current_player]} — <b>{players[current_player].first_name}</b>\n\n"
     else:
         p0 = players[0].first_name if players else "—"
-        text += f"📌 бронь: <b>{p0}</b>\n"
-        text += "⏳ ждём второго игрока, залетаем!\n\n"
+        text += f"Ожидается второй игрок. Бронь: <b>{p0}</b>\n\n"
 
     # Доска (строки)
     for r in range(3):
         row_cells = []
         for c in range(3):
             val = board[r * 3 + c]
-            if val == " ":
-                row_cells.append("▫️")
-            else:
-                row_cells.append(val)
+            row_cells.append(val if val.strip() else "·")
         text += " ".join(row_cells) + "\n"
 
-    text += "\n💡 жми на клетку — делай ход. хочешь зайти в игру? жми '➕ я в' или пиши /join"
+    text += "\nИнструкция: нажмите кнопку клетки для хода. Для присоединения используйте кнопку 'Я в' или команду /join."
     return text
 
 async def update_board_message(context, edit_text=True):
