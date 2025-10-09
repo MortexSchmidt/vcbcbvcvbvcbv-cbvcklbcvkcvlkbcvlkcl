@@ -236,6 +236,8 @@
             .card-play-btn { display: block !important; width: 100%; box-sizing: border-box; }
             .game-card { cursor: pointer; }
         }
+        /* Ensure per-card play buttons are always clickable and above overlays */
+        .card-play-btn { pointer-events: auto !important; position: relative !important; z-index: 2000 !important; }
     </style>
 </head>
 <body>
@@ -486,6 +488,8 @@
         if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
             currentUser = { user_id: tg.initDataUnsafe.user.id, name: tg.initDataUnsafe.user.first_name || tg.initDataUnsafe.user.username || 'Игрок', avatar: '' };
             // notify server when connected
+            updateProfile(currentUser);
+            socket.emit('identify', currentUser);
         }
 
         // update sidebar/profile UI
@@ -507,7 +511,7 @@
         function createDebugPanel(){
             if (document.getElementById('debug-panel')) return;
             const dp = document.createElement('div'); dp.id = 'debug-panel'; dp.className = 'allow-select';
-            dp.style.position='fixed'; dp.style.right='12px'; dp.style.bottom='120px'; dp.style.width='320px'; dp.style.maxHeight='360px'; dp.style.background='rgba(0,0,0,0.6)'; dp.style.color='#e6eef8'; dp.style.border='1px solid rgba(255,255,255,0.06)'; dp.style.borderRadius='10px'; dp.style.zIndex='1600'; dp.style.display='none'; dp.style.flexDirection='column'; dp.style.overflow='hidden'; dp.style.fontSize='12px';
+        dp.style.position='fixed'; dp.style.right='12px'; dp.style.bottom='120px'; dp.style.width='320px'; dp.style.maxHeight='360px'; dp.style.background='rgba(0,0,0,0.6)'; dp.style.color='#e6eef8'; dp.style.border='1px solid rgba(255,255,255,0.06)'; dp.style.borderRadius='10px'; dp.style.zIndex='1600'; dp.style.display='flex'; dp.style.flexDirection='column'; dp.style.overflow='hidden'; dp.style.fontSize='12px';
             const header = document.createElement('div'); header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center'; header.style.padding='8px'; header.style.borderBottom='1px solid rgba(255,255,255,0.03)'; header.style.background='linear-gradient(180deg, rgba(255,255,255,0.02), transparent)';
             const title = document.createElement('div'); title.textContent='Logs'; title.style.fontWeight='700'; title.style.color='var(--text)';
             const controls = document.createElement('div'); controls.style.display='flex'; controls.style.gap='6px';
@@ -1800,21 +1804,47 @@
                 let pbtn = card.querySelector('.card-play-btn');
                 if (!pbtn){
                     pbtn = document.createElement('button');
+                    // ensure this is a real button so it receives focus/click properly
+                    pbtn.type = 'button';
                     pbtn.className = 'menu-btn card-play-btn primary';
                     pbtn.textContent = 'Играть';
                     pbtn.style.alignSelf = 'stretch'; pbtn.style.marginTop = '6px';
+                    // make sure pointer events are enabled and button is on top of overlays if needed
+                    pbtn.style.pointerEvents = 'auto';
+                    pbtn.style.zIndex = '2000';
                     pbtn.dataset.searching = '0';
+
+                    // defensive: ensure not disabled
+                    pbtn.disabled = false;
+
+                    // pointerdown logging helps diagnose platforms where click doesn't fire
+                    pbtn.addEventListener('pointerdown', function(ev){
+                        // don't let parent card selection steal the event
+                        ev.stopPropagation();
+                        try{ if (typeof appendDebugLine === 'function') appendDebugLine('pointerdown on card play'); }catch(e){}
+                    }, { passive: true });
+
                     // unified click handler: start or cancel depending on state
                     pbtn.addEventListener('click', function(ev){
                         ev.stopPropagation();
                         try{
+                            // defensive reset in case some flow left this disabled
+                            pbtn.disabled = false;
+                            pbtn.style.pointerEvents = 'auto';
+
                             const isSearching = pbtn.dataset.searching === '1';
                             const gameName = card.dataset.game || card.querySelector('h3')?.textContent || '';
+                            try{ if (typeof appendDebugLine === 'function') appendDebugLine('card play click: ' + gameName + ' searching=' + isSearching); }catch(e){}
+
                             if (!currentUser || !currentUser.user_id){ openAuthModal(); return; }
                             if (!isSearching){
                                 // start
                                 lastSearchStart = Date.now(); lastSearchGame = gameName;
-                                socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id, game: gameName });
+                                // prefer create_lobby for reliability; keep quick_match for backward compat
+                                try{
+                                    socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id, game: gameName });
+                                }catch(e){ console.warn('emit quick_match failed', e); }
+
                                 pbtn.dataset.searching = '1'; pbtn.textContent = 'Отменить'; pbtn.classList.remove('primary'); pbtn.classList.add('danger');
                                 showSearchIndicator({ game: gameName, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: 1, originCard: card });
                             } else {
