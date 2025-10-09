@@ -236,7 +236,6 @@
                 to   { transform: translateY(0%); opacity: 1 }
             }
 
-            .search-bar.long-search #search-title { opacity: 0; transform: translateY(-100%); }
             .search-bar.long-search #search-alt-title { opacity: 1; transform: translateY(0%); }
             .search-bar.long-search { background: linear-gradient(90deg,#ffd166,#ffd166); color: #07102a !important; }
 
@@ -1259,9 +1258,6 @@
                     const lt = root.querySelector('#search-long-text'); if (lt){ lt.style.display='block'; lt.style.opacity='1'; lt.style.transform='translateY(0)'; }
                     try{ const titleEl = root.querySelector('#search-title'); if (titleEl) titleEl.textContent = 'Долгий поиск'; }catch(e){}
                     try{ const altEl = root.querySelector('#search-alt-title'); if (altEl) altEl.style.display = 'none'; }catch(e){}
-                    // change button text to 'Долгий поиск'
-                    try{ playButton.textContent = 'Долгий поиск'; }catch(e){}
-                    try{ document.querySelectorAll('.card-play-btn').forEach(b=>{ if (b.dataset.searching === '1') b.textContent = 'Долгий поиск'; }); }catch(e){}
                     // on mobile, expand the search indicator to show the long search text
                     if (root.dataset.desktop !== '1') { _toggleSearchExpanded(root, true); }
                 }catch(e){} }, 15000);
