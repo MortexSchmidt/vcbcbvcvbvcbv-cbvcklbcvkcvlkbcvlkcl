@@ -632,10 +632,14 @@
                 try{ SoundEngine.lobbyCreated(); }catch(e){}
             }catch(e){ console.error(e); }
         });
-        // inline search indicator and play button toggle state
-        let searching = false;
-        let searchStart = 0;
-        let searchTimer = null;
+    // inline search indicator and play button toggle state
+    let searching = false;
+    let searchStart = 0;
+    let searchTimer = null;
+    // pre-search (delayed emit) state
+    let _preSearchTimer = null; // interval id for countdown
+    let _preSearchRemaining = 0;
+    let _searchEmitted = false; // whether quick_match was actually emitted to server
 
         function showSearchIndicator(){
             searching = true; searchStart = Date.now();
@@ -673,6 +677,8 @@
             try{ clearTimeout(window._searchWarningTimer); }catch(e){}
             try{ document.getElementById('search-warning').style.display = 'none'; }catch(e){}
             if (searchTimer) { clearInterval(searchTimer); searchTimer = null; }
+            if (_preSearchTimer){ try{ clearInterval(_preSearchTimer); }catch(e){} _preSearchTimer = null; }
+            _searchEmitted = false;
             playButton.textContent = 'Играть';
             playButton.classList.remove('visible');
             playButton.setAttribute('aria-hidden','true');
@@ -1114,14 +1120,19 @@
                 if (!selected && !searching) return;
                 if (!currentUser || !currentUser.user_id) { openAuthModal(); return; }
                 if (searching) {
-                    // cancel search
-                    try{ socket.emit('cancel_quick_match', {}); }catch(e){}
+                    // if actual search was emitted to server, cancel it there
+                    if (_searchEmitted) {
+                        try{ socket.emit('cancel_quick_match', {}); }catch(e){}
+                    }
+                    // cancel any pending pre-search countdown
+                    if (_preSearchTimer){ clearInterval(_preSearchTimer); _preSearchTimer = null; }
+                    _searchEmitted = false;
                     hideSearchIndicator();
                     return;
                 }
-                // start quick match: emit 'quick_match' to server (hidden lobby) and show indicator immediately
-                socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id });
-                try{ showSearchIndicator(); }catch(e){}
+
+                // Start pre-search countdown (7s). During this time we show a counter and allow the user to cancel.
+                beginPreSearchCountdown({ player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id });
                 try{ SoundEngine.modalOpen(); }catch(e){}
             });
 
@@ -1175,6 +1186,35 @@
                     const closeNow = box.querySelector('.menu-btn');
                     closeNow.addEventListener('click', ()=>{ overlay.remove(); });
                 });
+            }
+
+            function beginPreSearchCountdown(payload){
+                // mark searching UI but not yet emitted
+                searching = true;
+                _searchEmitted = false;
+                _preSearchRemaining = 7;
+                // show indicator and display countdown
+                document.getElementById('search-indicator').style.display = 'block';
+                document.getElementById('search-indicator').textContent = `Старт поиска через ${_preSearchRemaining}s`;
+                playButton.textContent = 'Отменить';
+                playButton.classList.add('visible');
+                playButton.setAttribute('aria-hidden','false');
+                disableNavigation();
+
+                // start interval countdown
+                try{ if (_preSearchTimer) clearInterval(_preSearchTimer); }catch(e){}
+                _preSearchTimer = setInterval(()=>{
+                    _preSearchRemaining -= 1;
+                    if (_preSearchRemaining > 0){
+                        try{ document.getElementById('search-indicator').textContent = `Старт поиска через ${_preSearchRemaining}s`; }catch(e){}
+                        return;
+                    }
+                    // time to emit real quick_match
+                    try{ clearInterval(_preSearchTimer); _preSearchTimer = null; }catch(e){}
+                    try{ socket.emit('quick_match', payload); _searchEmitted = true; }catch(e){ console.warn('emit quick_match failed', e); }
+                    // start the real search UI (elapsed timer etc)
+                    try{ showSearchIndicator(); }catch(e){}
+                }, 1000);
             }
         })();
 
