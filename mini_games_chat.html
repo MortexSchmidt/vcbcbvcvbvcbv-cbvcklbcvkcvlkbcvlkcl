@@ -198,6 +198,27 @@
             border: none;
             pointer-events: none;
         }
+        /* Ensure search indicator can render expanded content above the pill without shifting the pill itself */
+        #search-indicator { overflow: visible; }
+        #search-indicator .search-bar { position: relative; z-index: 2; }
+        #search-indicator .search-expanded {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: calc(100% + 10px); /* place above the pill */
+            background: transparent;
+            transform: translateY(8px);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 240ms cubic-bezier(.2,.9,.2,1), opacity 200ms ease;
+            z-index: 1;
+            display: block; /* kept in flow but hidden via opacity/transform */
+        }
+        #search-indicator .search-expanded.expanded {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
     /* End-game modal styles */
     .end-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2,6,23,0.8); z-index: 1300 }
     .end-card { width: 92%; max-width: 520px; background: linear-gradient(180deg, rgba(20,30,60,0.9), rgba(10,14,26,0.95)); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 18px 60px rgba(2,6,23,0.8); transform: translateY(12px) scale(.98); opacity: 0; animation: popIn 420ms cubic-bezier(.2,.9,.2,1) forwards; display:flex; flex-direction:column; align-items:center; gap:12px }
@@ -920,16 +941,11 @@
                 const bar = root.querySelector('.search-bar');
                 if (!exp) return;
                 if (expand){
-                    // measure content height for smooth transition
-                    exp.style.display = 'block';
-                    const full = exp.scrollHeight + 'px';
-                    exp.style.maxHeight = full;
-                    exp.style.opacity = '1';
+                    exp.classList.add('expanded');
                     if (arrow) arrow.style.transform = 'rotate(180deg)';
                     if (bar) bar.setAttribute('aria-expanded','true');
                 } else {
-                    exp.style.maxHeight = '0';
-                    exp.style.opacity = '0';
+                    exp.classList.remove('expanded');
                     if (arrow) arrow.style.transform = 'rotate(0deg)';
                     if (bar) bar.setAttribute('aria-expanded','false');
                 }
