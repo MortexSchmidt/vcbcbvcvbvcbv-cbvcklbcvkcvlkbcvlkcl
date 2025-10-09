@@ -234,10 +234,14 @@
             .game-card { width: 100%; min-width: 0; }
             .game-card .game-choose, .game-card .game-lobby, .game-card button { display: block !important; }
             .card-play-btn { display: block !important; width: 100%; box-sizing: border-box; }
+            /* place search indicator above bottom-nav and stretch across the menu area */
+            #search-indicator { left: 0 !important; right: 0 !important; bottom: 84px !important; transform: none !important; min-width: unset !important; width: calc(100% - 28px) !important; margin: 0 14px; }
+            #search-indicator .search-bar { justify-content: center; width: 100%; border-radius: 12px; }
             .game-card { cursor: pointer; }
         }
         /* Ensure per-card play buttons are always clickable and above overlays */
-        .card-play-btn { pointer-events: auto !important; position: relative !important; z-index: 2000 !important; }
+        /* keep play buttons clickable but below modals (modals have z-index >= 1200) */
+        .card-play-btn { pointer-events: auto !important; position: relative !important; z-index: 90 !important; }
     </style>
 </head>
 <body>
@@ -281,14 +285,14 @@
                         <h3>Мемо (скоро)</h3>
                         <p style="margin:0;color:var(--muted);font-size:13px">Карточная память — в разработке.</p>
                         <div style="height:6px"></div>
-                        <button class="menu-btn card-play-btn" style="display:none !important;" disabled>Играть</button>
+                        <!-- кнопки 'Играть' для этой карточки удалены: игра не готова -->
                     </article>
 
                     <article class="game-card" data-game="quiz" aria-disabled="true">
                         <h3>Quiz (скоро)</h3>
                         <p style="margin:0;color:var(--muted);font-size:13px">Викторина против друзей.</p>
                         <div style="height:6px"></div>
-                        <button class="menu-btn card-play-btn" style="display:none !important;" disabled>Играть</button>
+                        <!-- кнопки 'Играть' для этой карточки удалены: игра не готова -->
                     </article>
                 </div>
             </section>
