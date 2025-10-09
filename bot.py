@@ -1929,30 +1929,54 @@ def handle_quick_match(data):
 def handle_cancel_quick_match(data):
     """Cancel a pending hidden quick-match lobby created by this sid."""
     logger.info(f"cancel_quick_match from sid={request.sid}")
-    to_remove = None
+    # Try to cancel by sid OR by authenticated user_id (if known) so cancelling on one device
+    # also stops searches started from other devices of the same Telegram account.
+    requester = telegram_profiles.get(request.sid, {}) or {}
+    req_user_id = requester.get('user_id')
+
+    removed_any = False
+    removed_ids = []
+    # iterate over a copy because we may mutate hidden_waiting
     for hid in list(hidden_waiting):
         l = lobbies.get(hid)
-        if not l: 
+        if not l:
             try:
                 hidden_waiting.remove(hid)
             except ValueError:
                 pass
             continue
-        if l.get('players') and l['players'][0].get('sid') == request.sid:
-            to_remove = hid
-            break
+        first_player = (l.get('players') or [None])[0]
+        if not first_player:
+            continue
+        # match by sid or by user_id (if available)
+        if first_player.get('sid') == request.sid or (req_user_id and first_player.get('user_id') == req_user_id):
+            # remove this waiting lobby
+            try:
+                hidden_waiting.remove(hid)
+            except ValueError:
+                pass
+            try:
+                del lobbies[hid]
+            except KeyError:
+                pass
+            removed_any = True
+            removed_ids.append(hid)
+            # notify all connected sids for this user_id (if known)
+            notify_sids = [first_player.get('sid')]
+            if req_user_id:
+                for sid, profile in list(telegram_profiles.items()):
+                    try:
+                        if profile and profile.get('user_id') == req_user_id and sid not in notify_sids:
+                            notify_sids.append(sid)
+                    except Exception:
+                        pass
+            for sid in notify_sids:
+                try:
+                    socketio.emit('lobby_cancelled', {'lobby_id': hid, 'message': 'Поиск отменён'}, room=sid)
+                except Exception:
+                    pass
 
-    if to_remove:
-        try:
-            hidden_waiting.remove(to_remove)
-        except ValueError:
-            pass
-        try:
-            del lobbies[to_remove]
-        except KeyError:
-            pass
-        emit('lobby_cancelled', {'lobby_id': to_remove, 'message': 'Поиск отменён'}, room=request.sid)
-    else:
+    if not removed_any:
         emit('lobby_cancelled', {'lobby_id': None, 'message': 'Нечего отменять'}, room=request.sid)
 
 
