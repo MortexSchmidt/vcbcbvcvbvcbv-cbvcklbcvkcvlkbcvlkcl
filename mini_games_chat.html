@@ -1403,12 +1403,15 @@
                 modal.style.display = 'flex';
                 // ensure TGS animation plays when modal becomes visible
                 try{
-                    appendDebugLine && appendDebugLine('showEndScreen: attempting to play tgs animation');
+                    appendDebugLine && appendDebugLine('showEndScreen: attempting to play tgs animation (with retries)');
                     const anim = window.__tgs_trophy_anim;
                     if (anim && typeof anim.play === 'function'){
-                        // ensure looping and play
                         try{ anim.loop = true; }catch(e){}
-                        try{ anim.play(); appendDebugLine && appendDebugLine('showEndScreen: tgs play() called'); }catch(e){ appendDebugLine && appendDebugLine('showEndScreen: tgs play() threw: '+(e&&e.message)); }
+                        try{ if (typeof anim.setSpeed === 'function') anim.setSpeed(1); }catch(e){}
+                        // try immediate play and a couple of retries with short delays
+                        try{ anim.play(); appendDebugLine && appendDebugLine('showEndScreen: tgs play() immediate called'); }catch(e){ appendDebugLine && appendDebugLine('showEndScreen: immediate play threw: '+(e&&e.message)); }
+                        setTimeout(()=>{ try{ anim.play(); appendDebugLine && appendDebugLine('showEndScreen: tgs play() retry +50ms'); }catch(e){ appendDebugLine && appendDebugLine('showEndScreen: retry +50ms threw: '+(e&&e.message)); } }, 50);
+                        setTimeout(()=>{ try{ anim.play(); appendDebugLine && appendDebugLine('showEndScreen: tgs play() retry +300ms'); }catch(e){ appendDebugLine && appendDebugLine('showEndScreen: retry +300ms threw: '+(e&&e.message)); } }, 300);
                     } else {
                         appendDebugLine && appendDebugLine('showEndScreen: no tgs animation instance available');
                     }
