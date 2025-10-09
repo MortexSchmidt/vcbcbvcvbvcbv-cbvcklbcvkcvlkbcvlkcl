@@ -1875,10 +1875,12 @@ def handle_quick_match(data):
 
         # prepare a match confirmation step atomically
         with hidden_waiting_lock:
-            p0 = other['players'][0]['sid']
-            p1 = request.sid
+            p0 = other['players'][0]
+            p1 = {'sid': request.sid, 'user_id': user_id}
             match_id = uuid.uuid4().hex[:8]
-            pending_matches[match_id] = {'lobby_id': other['id'], 'players': [p0, p1], 'confirmed': set(), 'timer': None}
+            # normalize players as dicts: { sid, user_id }
+            p0_entry = {'sid': p0.get('sid'), 'user_id': p0.get('user_id')}
+            pending_matches[match_id] = {'lobby_id': other['id'], 'players': [p0_entry, p1], 'confirmed': set(), 'timer': None}
 
             payload = {'match_id': match_id, 'lobby': other}
             try:
@@ -1904,15 +1906,16 @@ def handle_quick_match(data):
                         pass
                     return
                 # if one confirmed, requeue that player
-                for sid in players:
-                    if sid in conf:
+                for p in players:
+                    psid = p if isinstance(p, str) else p.get('sid')
+                    if psid in conf:
                         # create new hidden lobby for this sid and notify searching
                         try:
                             nid = uuid.uuid4().hex[:8]
                             lobbies[nid] = {
                                 'id': nid,
                                 'name': 'Quick Match',
-                                'players': [{'sid': sid, 'user_id': None, 'name': 'Игрок', 'symbol': 'X', 'avatar': ''}],
+                                'players': [{'sid': psid, 'user_id': None, 'name': 'Игрок', 'symbol': 'X', 'avatar': ''}],
                                 'hidden': True,
                                 'status': 'waiting',
                                 'board': ['', '', '', '', '', '', '', '', ''],
@@ -1920,14 +1923,14 @@ def handle_quick_match(data):
                             }
                             with hidden_waiting_lock:
                                 hidden_waiting.append(nid)
-                            socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=sid)
-                            logger.info(f"match_timeout: requeued sid {sid} into hidden lobby {nid}")
+                            socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=psid)
+                            logger.info(f"match_timeout: requeued sid {psid} into hidden lobby {nid}")
                         except Exception:
                             pass
                     else:
                         # notify other player that match cancelled for them
                         try:
-                            socketio.emit('match_cancelled', {'match_id': m_id, 'reason': 'timeout'}, room=sid)
+                            socketio.emit('match_cancelled', {'match_id': m_id, 'reason': 'timeout'}, room=psid)
                         except Exception:
                             pass
                 try:
@@ -2014,8 +2017,9 @@ def _cancel_pending_match_internal(match_id, reason='cancelled', decliner_sid=No
 
     players = list(m.get('players', []))
     # notify and requeue logic
-    for psid in players:
+    for p in players:
         try:
+            psid = p if isinstance(p, str) else p.get('sid')
             if decliner_sid and psid == decliner_sid:
                 socketio.emit('match_cancelled', {'match_id': match_id, 'reason': reason}, room=psid)
             else:
@@ -2035,7 +2039,7 @@ def _cancel_pending_match_internal(match_id, reason='cancelled', decliner_sid=No
                 socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=psid)
                 logger.info(f"_cancel_pending_match_internal: requeued {psid} into hidden lobby {nid}")
         except Exception as e:
-            logger.warning(f"_cancel_pending_match_internal: error handling psid {psid}: {e}")
+            logger.warning(f"_cancel_pending_match_internal: error handling player {p}: {e}")
 
     try:
         del pending_matches[match_id]
@@ -2047,14 +2051,64 @@ def _cancel_pending_match_internal(match_id, reason='cancelled', decliner_sid=No
 @socketio.on('match_accept')
 def handle_match_accept(data):
     match_id = data.get('match_id')
+    logger.info(f"handle_match_accept: received accept for match {match_id} from sid={request.sid}")
     m = pending_matches.get(match_id)
     if not m:
         emit('error', {'message': 'Матч не найден или уже обработан'})
+        logger.warning(f"handle_match_accept: pending match {match_id} not found")
         return
     sid = request.sid
-    m['confirmed'].add(sid)
+
+    # normalize accepting sid: if the accepting socket isn't the stored one but the telegram user_id matches,
+    # update the stored player sid so users can confirm from another device.
+    try:
+        if sid not in (m.get('players') or []):
+            # extract simple list of sids (players elements may be dicts)
+            stored_sids = [p if isinstance(p, str) else p.get('sid') for p in m.get('players', [])]
+        else:
+            stored_sids = [p if isinstance(p, str) else p.get('sid') for p in m.get('players', [])]
+    except Exception:
+        stored_sids = []
+
+    # if sid not present, try to map by telegram_profiles user_id and replace stored sid
+    if sid not in stored_sids:
+        prof = telegram_profiles.get(sid) or {}
+        uid = prof.get('user_id')
+        if uid:
+            replaced = False
+            for idx, p in enumerate(m.get('players', [])):
+                try:
+                    p_uid = p.get('user_id') if isinstance(p, dict) else None
+                    if p_uid and p_uid == uid:
+                        # replace stored psid with this new sid (user confirmed from another device)
+                        if isinstance(p, dict):
+                            old = p.get('sid')
+                            p['sid'] = sid
+                            logger.info(f"handle_match_accept: replaced stored sid {old} with {sid} for user_id {uid} in match {match_id}")
+                            replaced = True
+                            break
+                except Exception:
+                    continue
+            if not replaced:
+                logger.warning(f"handle_match_accept: accept from sid {sid} (user_id={uid}) does not map to any player in match {match_id}")
+        else:
+            logger.warning(f"handle_match_accept: accept from unknown sid {sid} without telegram profile for match {match_id}")
+
+    # add to confirmed set
+    m.setdefault('confirmed', set()).add(sid)
+    logger.info(f"handle_match_accept: match {match_id} confirmed set now={m.get('confirmed')}")
+
+    # notify counterpart(s) that this side accepted (optional ack)
+    try:
+        for psid in m.get('players', []):
+            target_sid = psid if isinstance(psid, str) else psid.get('sid')
+            if target_sid and target_sid != sid:
+                socketio.emit('match_ack', {'match_id': match_id, 'from': sid}, room=target_sid)
+    except Exception as e:
+        logger.warning(f"handle_match_accept: error emitting match_ack for {match_id}: {e}")
+
     # if both confirmed -> start game
-    if len(m['confirmed']) >= 2:
+    if len(m.get('confirmed', set())) >= 2:
         # cancel timer
         try:
             if m.get('timer'):

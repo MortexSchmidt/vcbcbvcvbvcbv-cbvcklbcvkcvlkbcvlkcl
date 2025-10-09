@@ -182,6 +182,19 @@
             border: none;
             pointer-events: none;
         }
+    /* End-game modal styles */
+    .end-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2,6,23,0.8); z-index: 1300 }
+    .end-card { width: 92%; max-width: 520px; background: linear-gradient(180deg, rgba(20,30,60,0.9), rgba(10,14,26,0.95)); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 18px 60px rgba(2,6,23,0.8); transform: translateY(12px) scale(.98); opacity: 0; animation: popIn 420ms cubic-bezier(.2,.9,.2,1) forwards; display:flex; flex-direction:column; align-items:center; gap:12px }
+    @keyframes popIn { to { transform: translateY(0) scale(1); opacity: 1 } }
+    .winner-emoji { font-size:48px }
+    .winner-avatar { width:84px; height:84px; border-radius:20px; overflow:hidden; background:var(--glass); display:flex; align-items:center; justify-content:center; }
+    .winner-name { font-size:20px; font-weight:800; color:var(--text) }
+    .winner-sub { color:var(--muted); font-size:14px }
+    .end-actions { display:flex; gap:10px; margin-top:6px }
+    /* board icons */
+    .icon-x svg, .icon-o svg { width:100%; height:100%; display:block }
+    .icon-x svg line { stroke: #ffffff; stroke-width:12; stroke-linecap:round }
+    .icon-o svg circle { stroke: #ffffff; stroke-width:10; fill: none }
         .play-button.visible { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); pointer-events: auto; }
 
         @media (max-width: 720px) {
@@ -348,6 +361,19 @@
             <span>Настройки</span>
         </button>
     </nav>
+
+    <!-- End game modal -->
+    <div id="end-modal" class="end-modal">
+        <div class="end-card" id="end-card">
+            <div class="winner-avatar" id="winner-avatar"></div>
+            <div class="winner-emoji" id="winner-emoji">🏆</div>
+            <div class="winner-name" id="winner-name">Победитель</div>
+            <div class="winner-sub" id="winner-sub">Поздравляем!</div>
+            <div class="end-actions">
+                <button id="btn-return-home" class="menu-btn primary">Вернуться на главную</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // --- Helpers & state ---
@@ -725,8 +751,19 @@
                 // if not our lobby, but server sends update while in game view, swap
                 activeLobby = lobby;
             }
-            // if game started — show game
-            if (lobby.status==='playing') { showLobby(lobby); showView('game'); }
+            // if game finished — show end screen
+            if (lobby.status === 'finished'){
+                showLobby(lobby);
+                // figure winner (lobby.winner may be 'X'/'O'/'draw')
+                const winner = lobby.winner || null;
+                let winnerName = '';
+                let winnerAvatar = '';
+                if (winner && winner !== 'draw'){
+                    const pl = (lobby.players||[]).find(p=>p.symbol === winner);
+                    if (pl){ winnerName = pl.name || 'Игрок'; winnerAvatar = pl.avatar || ''; }
+                }
+                showEndScreen({ winner: winner, name: winnerName, avatar: winnerAvatar });
+            } else if (lobby.status==='playing') { showLobby(lobby); showView('game'); }
             else { showLobby(lobby); }
         });
 
@@ -778,7 +815,19 @@
                 cell.style.fontSize = window.innerWidth < 420 ? '22px' : '28px';
                 cell.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent)';
                 cell.style.border = '1px solid rgba(255,255,255,0.04)';
-                cell.textContent = board[i] || '';
+                // render icons for X/O
+                cell.innerHTML = '';
+                if (board[i] === 'X'){
+                    const wrap = document.createElement('div'); wrap.className='icon-x'; wrap.style.width='100%'; wrap.style.height='100%';
+                    wrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>`;
+                    cell.appendChild(wrap);
+                } else if (board[i] === 'O'){
+                    const wrap = document.createElement('div'); wrap.className='icon-o'; wrap.style.width='100%'; wrap.style.height='100%';
+                    wrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8"/></svg>`;
+                    cell.appendChild(wrap);
+                } else {
+                    cell.textContent = '';
+                }
                 if (!board[i] && lobby.status==='playing'){
                     // allow click only if this client is the current player
                     const mySid = socket.id;
