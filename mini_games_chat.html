@@ -1251,14 +1251,33 @@
 
         // leave / forfeit
         document.getElementById('btn-leave').addEventListener('click', ()=>{
-            // prevent leaving if game already started
-            if (activeLobby && activeLobby.status === 'playing') {
-                console.debug('leave blocked: game already started');
-                return;
-            }
-            activeLobby=null; showView('home'); socket.emit('get_lobbies');
+            try{
+                // if game already started, ask for confirmation to forfeit
+                if (activeLobby && activeLobby.status === 'playing') {
+                    const ok = window.confirm('Игра в процессе. Вы уверены, что хотите покинуть и сдаться?');
+                    if (!ok) return;
+                    try{ socket.emit('make_move',{ lobby_id: activeLobby.id, position: -1, forfeit: true }); }catch(e){ appendDebugLine('leave: emit forfeit failed: '+(e&&e.message)); }
+                    activeLobby = null;
+                    showView('home');
+                    try{ socket.emit('get_lobbies'); }catch(e){}
+                    return;
+                }
+                activeLobby=null; showView('home'); try{ socket.emit('get_lobbies'); }catch(e){}
+            }catch(e){ console.warn('btn-leave handler error', e); }
         });
-        document.getElementById('btn-forfeit').addEventListener('click', ()=>{ if (activeLobby && activeLobby.id) socket.emit('make_move',{ lobby_id: activeLobby.id, position: -1, forfeit:true }); });
+        document.getElementById('btn-forfeit').addEventListener('click', ()=>{
+            try{
+                if (activeLobby && activeLobby.id){
+                    try{ socket.emit('make_move',{ lobby_id: activeLobby.id, position: -1, forfeit:true }); appendDebugLine('forfeit: emitted for lobby ' + activeLobby.id); }catch(e){ appendDebugLine('forfeit emit failed: '+(e&&e.message)); }
+                    // navigate back to home after sending forfeit
+                    activeLobby = null;
+                    showView('home');
+                    try{ socket.emit('get_lobbies'); }catch(e){}
+                } else {
+                    appendDebugLine('forfeit clicked but no activeLobby');
+                }
+            }catch(e){ console.warn('btn-forfeit handler error', e); }
+        });
 
         // Reload/close protection: when in an active playing game, intercept refresh/close
         function _showReloadConfirm(){
