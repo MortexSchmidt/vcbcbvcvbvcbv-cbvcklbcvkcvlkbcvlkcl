@@ -481,6 +481,7 @@
             activeLobby = lobby;
             showLobby(activeLobby);
             showView('game');
+            try{ SoundEngine.lobbyCreated(); }catch(e){}
         });
 
         socket.on('update_lobby', (lobby)=>{
@@ -555,6 +556,31 @@
         // After initial load show home
         showView('home');
 
+        // --- Lightweight WebAudio sound engine (no external files) ---
+        const SoundEngine = (function(){
+            let ac = null;
+            function init(){ if (ac) return; ac = new (window.AudioContext || window.webkitAudioContext)(); }
+            function resume(){ if (!ac) init(); if (ac.state === 'suspended') return ac.resume(); return Promise.resolve(); }
+            function playTone(freq, type='sine', dur=0.12, vol=0.12, delay=0){
+                if (!ac) init(); try {
+                    const now = ac.currentTime + delay;
+                    const o = ac.createOscillator();
+                    const g = ac.createGain();
+                    o.type = type; o.frequency.setValueAtTime(freq, now);
+                    g.gain.setValueAtTime(0.0001, now);
+                    g.gain.exponentialRampToValueAtTime(Math.max(0.0001, vol), now + 0.01);
+                    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+                    o.connect(g); g.connect(ac.destination);
+                    o.start(now); o.stop(now + dur + 0.02);
+                } catch(e){ /* fail silently on weird browsers */ }
+            }
+            function select(){ resume().then(()=> playTone(880, 'sine', 0.08, 0.10)); }
+            function modalOpen(){ resume().then(()=>{ playTone(660,'triangle',0.14,0.12); setTimeout(()=> playTone(880,'sawtooth',0.08,0.08), 80); }); }
+            function create(){ resume().then(()=>{ playTone(1000,'sine',0.10,0.18); setTimeout(()=> playTone(1300,'sine',0.06,0.12), 70); }); }
+            function lobbyCreated(){ resume().then(()=>{ playTone(800,'triangle',0.11,0.18); setTimeout(()=> playTone(1000,'triangle',0.11,0.14), 90); setTimeout(()=> playTone(1200,'triangle',0.11,0.10), 180); }); }
+            return { init, resume, select, modalOpen, create, lobbyCreated };
+        })();
+
         // --- Game selection: mobile-friendly selection + floating Play button ---
         (function(){
             const isMobile = window.matchMedia && window.matchMedia('(max-width: 720px)').matches;
@@ -594,6 +620,8 @@
                             // show animated play button
                             playButton.classList.add('visible');
                             playButton.setAttribute('aria-hidden','false');
+                            // ensure audio context is allowed by user gesture and play a select sound
+                            try{ SoundEngine.init(); SoundEngine.select(); }catch(e){}
                         }
                     });
                     card.addEventListener('keydown', (ev)=>{
@@ -620,6 +648,7 @@
                 if (!selected) return;
                 // open modal for creating/joining lobby for selected game
                 openGameModal(selected);
+                try{ SoundEngine.modalOpen(); }catch(e){}
             });
 
             // Modal: show selected game and allow create lobby
@@ -666,6 +695,7 @@
                     const name = input.value || `${currentUser?.name || 'Игрок'}'s lobby`;
                     // emit create_lobby — socket handler on server will send 'lobby_created' and client will switch to game view
                     socket.emit('create_lobby', { name, player_name: currentUser?.name || 'Игрок', player_avatar: currentUser?.avatar || '', user_id: currentUser?.user_id });
+                    try{ SoundEngine.create(); }catch(e){}
                     // show waiting state in modal
                     box.innerHTML = `<h3 style="margin:0 0 8px 0">${escapeHtml(title)}</h3><p style="margin:0 0 12px 0;color:var(--muted)">Лобби создаётся. Ожидание игроков...</p><div style="display:flex;gap:8px;justify-content:flex-end;"><button class="menu-btn">Закрыть</button></div>`;
                     const closeNow = box.querySelector('.menu-btn');
