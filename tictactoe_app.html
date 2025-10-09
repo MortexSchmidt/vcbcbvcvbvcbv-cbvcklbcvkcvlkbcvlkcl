@@ -249,9 +249,13 @@
     @media (max-width: 768px) {
         .app-main .menu-btn,
         .app-main button,
-        .quick-actions { display: none !important; }
+        .quick-actions,
+        .section .menu-btn,
+        .section button {
+            display: none !important;
+        }
         .lobby-card { cursor: pointer; }
-        .lobby-card.selected { outline: 3px solid var(--accent); box-shadow: 0 6px 20px rgba(108,140,255,0.18); }
+        .lobby-card.selected { outline: 3px solid var(--accent); box-shadow: 0 6px 20px rgba(108,140,255,0.18); background: #1a2333; }
     }
     .play-button {
         position: fixed;
@@ -362,7 +366,6 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
-            const lobbyCards = document.querySelectorAll('.lobby-card');
             let playButton = document.querySelector('.play-button');
             if (!playButton) {
                 playButton = document.createElement('button');
@@ -371,8 +374,10 @@
                 document.body.appendChild(playButton);
             }
             let selectedCard = null;
-            if (isMobile) {
+            function updateLobbyCardListeners() {
+                const lobbyCards = document.querySelectorAll('.lobby-card');
                 lobbyCards.forEach(card => {
+                    card.onclick = null;
                     card.addEventListener('click', (e) => {
                         e.stopPropagation();
                         if (selectedCard === card) {
@@ -387,6 +392,9 @@
                         }
                     });
                 });
+            }
+            if (isMobile) {
+                updateLobbyCardListeners();
                 document.addEventListener('click', (event) => {
                     if (!event.target.closest('.lobby-card')) {
                         if (selectedCard) selectedCard.classList.remove('selected');
