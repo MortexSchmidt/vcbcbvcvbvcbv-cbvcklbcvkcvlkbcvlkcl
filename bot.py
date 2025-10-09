@@ -2427,7 +2427,9 @@ def handle_leave_lobby(data):
     leave_room(lobby_id)
 
 @socketio.on('get_lobbies')
-def handle_get_lobbies():
+def handle_get_lobbies(*args, **kwargs):
+    # Socket.IO may pass positional args even when the client emitted no payload.
+    # Accept arbitrary args to avoid TypeError crashes seen in production logs.
     # only return non-hidden lobbies to clients (hidden quick-match lobbies are internal)
     visible = [l for l in list(lobbies.values()) if not l.get('hidden')]
     emit('lobbies_list', visible)
