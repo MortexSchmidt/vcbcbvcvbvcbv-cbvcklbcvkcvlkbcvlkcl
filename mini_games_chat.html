@@ -619,30 +619,35 @@
             function uiClick(kind){ // kind: 'neutral' | 'primary' | 'destructive' | 'soft'
                 if (muted) return;
                 resume().then(()=>{
-                    if (kind==='primary') synth({ freq:420, type:'sawtooth', type2:'sine', detuneRatio:1.02, dur:0.12, amp:0.14, filterFreq:1600, noise:true, noiseDur:0.06, noiseVol:0.02 });
-                    else if (kind==='destructive') synth({ freq:240, type:'triangle', dur:0.16, amp:0.14, filterFreq:900, noise:true, noiseDur:0.12, noiseVol:0.035 });
-                    else if (kind==='soft') synth({ freq:760, type:'sine', dur:0.09, amp:0.08, filterFreq:4200 });
-                    else synth({ freq:520, type:'sine', dur:0.10, amp:0.10, filterFreq:2800, noise:true, noiseDur:0.04, noiseVol:0.01 });
+                    if (kind==='primary') {
+                        // punchy modern click
+                        synth({ freq:520, type:'sawtooth', type2:'sine', detuneRatio:1.03, dur:0.08, amp:0.16, filterFreq:2200, noise:true, noiseDur:0.04, noiseVol:0.03 });
+                        setTimeout(()=> synth({ freq:780, type:'sine', dur:0.06, amp:0.08, filterFreq:3600 }), 40);
+                    } else if (kind==='destructive') {
+                        synth({ freq:280, type:'triangle', dur:0.14, amp:0.18, filterFreq:1200, noise:true, noiseDur:0.08, noiseVol:0.05 });
+                    } else if (kind==='soft') {
+                        synth({ freq:880, type:'sine', dur:0.07, amp:0.08, filterFreq:4400 });
+                    } else {
+                        // neutral click
+                        synth({ freq:620, type:'sine', dur:0.08, amp:0.10, filterFreq:3200, noise:true, noiseDur:0.03, noiseVol:0.015 });
+                    }
                 }).catch(()=>{});
             }
 
-            function select(){ if (muted) return; resume().then(()=> synth({ freq:720, type:'triangle', dur:0.10, amp:0.10, filterFreq:3000 })); }
-            function modalOpen(){ if (muted) return; resume().then(()=>{ synth({ freq:520, type:'sawtooth', type2:'sine', detuneRatio:1.015, dur:0.14, amp:0.12, filterFreq:2200 }); setTimeout(()=> synth({ freq:760, type:'sine', dur:0.07, amp:0.08, filterFreq:3600 }), 70); }); }
-            function create(){ if (muted) return; resume().then(()=>{ synth({ freq:980, type:'sawtooth', dur:0.12, amp:0.16, filterFreq:2600, noise:true, noiseDur:0.06, noiseVol:0.03 }); setTimeout(()=> synth({ freq:1300, type:'sine', dur:0.06, amp:0.10, filterFreq:4200 }), 70); }); }
-            function lobbyCreated(){ if (muted) return; resume().then(()=>{ synth({ freq:720, type:'triangle', dur:0.12, amp:0.14, filterFreq:3000 }); setTimeout(()=> synth({ freq:900, type:'triangle', dur:0.11, amp:0.12, filterFreq:3400 }), 90); }); }
+            function select(){ if (muted) return; resume().then(()=>{ synth({ freq:920, type:'triangle', dur:0.06, amp:0.10, filterFreq:4200 }); synth({ freq:1200, type:'sine', dur:0.05, amp:0.06, filterFreq:5600, delay:0.03 }); }); }
+            function modalOpen(){ if (muted) return; resume().then(()=>{ synth({ freq:520, type:'sawtooth', type2:'sine', detuneRatio:1.02, dur:0.12, amp:0.14, filterFreq:2600 }); setTimeout(()=> synth({ freq:880, type:'sine', dur:0.08, amp:0.09, filterFreq:4200 }), 60); }); }
+            function create(){ if (muted) return; resume().then(()=>{ synth({ freq:1020, type:'sawtooth', dur:0.10, amp:0.20, filterFreq:3000, noise:true, noiseDur:0.05, noiseVol:0.045 }); setTimeout(()=> synth({ freq:1340, type:'sine', dur:0.06, amp:0.12, filterFreq:4800 }), 50); }); }
+            function lobbyCreated(){ if (muted) return; resume().then(()=>{ synth({ freq:760, type:'triangle', dur:0.10, amp:0.16, filterFreq:3600 }); setTimeout(()=> synth({ freq:980, type:'triangle', dur:0.09, amp:0.12, filterFreq:4200 }), 80); setTimeout(()=> synth({ freq:1180, type:'sine', dur:0.07, amp:0.10, filterFreq:5200 }), 160); }); }
 
-            function setMuted(v){ muted = !!v; localStorage.setItem('soundMuted', muted ? '1' : '0'); updateMuteButton(); }
+            // modern presets
+            function setMuted(v){ muted = !!v; }
             function isMuted(){ return !!muted; }
 
-            function updateMuteButton(){ const el = document.getElementById('sound-toggle-btn'); if (!el) return; el.textContent = muted ? '🔈' : '🔊'; el.title = muted ? 'Звук: выкл' : 'Звук: вкл'; }
+            // no UI mute button by default (removed per request)
+            // init muted default false
+            (function(){ muted = false; })();
 
-            // add a small toggle button to UI
-            function ensureUI(){ if (document.getElementById('sound-toggle-btn')) return; const btn = document.createElement('button'); btn.id='sound-toggle-btn'; btn.style.position='fixed'; btn.style.right='12px'; btn.style.bottom='84px'; btn.style.zIndex=1300; btn.style.width='44px'; btn.style.height='44px'; btn.style.borderRadius='10px'; btn.style.border='1px solid rgba(255,255,255,0.06)'; btn.style.background='var(--card)'; btn.style.color='var(--text)'; btn.style.boxShadow='0 8px 22px rgba(2,6,23,0.5)'; btn.style.cursor='pointer'; btn.style.fontSize='18px'; btn.style.display='flex'; btn.style.alignItems='center'; btn.style.justifyContent='center'; btn.setAttribute('aria-label','Toggle sound'); btn.addEventListener('click', (e)=>{ e.stopPropagation(); setMuted(!muted); }); document.body.appendChild(btn); updateMuteButton(); }
-
-            // init muted from localStorage
-            (function(){ try{ muted = localStorage.getItem('soundMuted') === '1'; }catch(e){ muted = false; } window.addEventListener('load', ()=> ensureUI()); })();
-
-            return { init, resume, uiClick, select, modalOpen, create, lobbyCreated, setMuted, isMuted };
+            return { init, resume, uiClick, select, modalOpen, create, lobbyCreated };
         })();
 
         // --- Game selection: mobile-friendly selection + floating Play button ---
