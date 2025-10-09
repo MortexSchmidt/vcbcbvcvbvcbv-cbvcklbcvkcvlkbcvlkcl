@@ -2316,33 +2316,87 @@ def handle_match_decline(data):
 def handle_make_move(data):
     lobby_id = data.get('lobby_id')
     position = data.get('position')
-    
+    forfeit = bool(data.get('forfeit'))
+
     if lobby_id not in lobbies:
         emit('error', {'message': 'Лобби не найдено'})
         return
-    
+
     lobby = lobbies[lobby_id]
-    if lobby['status'] != 'playing':
+
+    # If lobby is not in playing state, reject normal moves but allow forfeit to tidy up
+    if lobby.get('status') != 'playing' and not forfeit:
         emit('error', {'message': 'Игра не активна'})
         return
-    
+
+    # Handle forfeit / leave during play
+    if forfeit or (isinstance(position, int) and position == -1):
+        try:
+            forfeiter_sid = request.sid
+            # find opponent
+            opponent = None
+            for p in lobby.get('players', []):
+                if p.get('sid') != forfeiter_sid:
+                    opponent = p
+                    break
+
+            # mark lobby finished and set winner to opponent if available
+            if opponent:
+                lobby['status'] = 'finished'
+                # prefer opponent.symbol if present, otherwise try to infer
+                lobby['winner'] = opponent.get('symbol') or None
+                # broadcast update so the other player sees game end
+                try:
+                    socketio.emit('update_lobby', lobby, room=lobby_id)
+                except Exception:
+                    pass
+                # notify in-room event for clarity
+                try:
+                    socketio.emit('player_forfeited', {'forfeiter_sid': forfeiter_sid, 'winner_symbol': lobby.get('winner')}, room=lobby_id)
+                except Exception:
+                    pass
+            else:
+                # no opponent — remove lobby
+                try:
+                    del lobbies[lobby_id]
+                except Exception:
+                    pass
+
+            return
+        except Exception as e:
+            logger.exception(f"handle_make_move(forfeit) error: {e}")
+            emit('error', {'message': 'Ошибка обработки сдачи'})
+            return
+
+    # --- Normal move handling ---
+    # position must be a valid cell index
+    try:
+        pos = int(position)
+    except Exception:
+        emit('error', {'message': 'Неверная позиция'})
+        return
+
+    if pos < 0 or pos > 8:
+        emit('error', {'message': 'Неверная позиция'})
+        return
+
     # Найти текущего игрока
     current_player = None
     for player in lobby['players']:
         if player['sid'] == request.sid:
             current_player = player
             break
-    
-    if not current_player or current_player['symbol'] != lobby['current_player']:
+
+    if not current_player or current_player.get('symbol') != lobby.get('current_player'):
         emit('error', {'message': 'Не ваш ход'})
         return
-    
-    if lobby['board'][position] != '':
+
+    if lobby['board'][pos] != '':
         emit('error', {'message': 'Клетка занята'})
         return
-    
-    lobby['board'][position] = current_player['symbol']
-    
+
+    lobby['board'][pos] = current_player.get('symbol')
+
     # Проверить победу
     winner = check_winner(lobby['board'])
     if winner:
@@ -2353,8 +2407,8 @@ def handle_make_move(data):
         lobby['winner'] = 'draw'
     else:
         # Сменить ход
-        lobby['current_player'] = 'O' if lobby['current_player'] == 'X' else 'X'
-    
+        lobby['current_player'] = 'O' if lobby.get('current_player') == 'X' else 'X'
+
     emit('update_lobby', lobby, room=lobby_id)
 
 @socketio.on('leave_lobby')
@@ -2398,6 +2452,18 @@ def serve_tictactoe_app():
 @app.route('/mini_games_chat.html')
 def serve_mini_games_chat():
     return app.send_static_file('mini_games_chat.html')
+
+
+# Serve files placed in the assets/ folder (e.g. /assets/trophy.tgs)
+@app.route('/assets/<path:filename>')
+def serve_assets(filename):
+    try:
+        # use Flask's static file serving (static_folder is set to '.')
+        path = f'assets/{filename}'
+        return app.send_static_file(path)
+    except Exception as e:
+        logger.warning(f"serve_assets: failed to serve {filename}: {e}")
+        return (json.dumps({'error': 'not found'}), 404)
 
 
 @app.route('/auth_code', methods=['POST'])

@@ -411,9 +411,11 @@
     <div id="end-modal" class="end-modal">
         <div class="end-card" id="end-card">
             <div class="winner-avatar" id="winner-avatar"></div>
-            <div class="winner-emoji" id="winner-emoji"> 
-                <!-- white SVG trophy -->
-                <svg id="svg-trophy" viewBox="0 0 24 24" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 3h10v2a4 4 0 0 1-4 4h-2A4 4 0 0 1 7 5V3z" fill="#ffffff"/><path d="M5 7v2a5 5 0 0 0 5 5h4a5 5 0 0 0 5-5V7" stroke="#ffffff" stroke-width="0" fill="#ffffff"/><path d="M10 19h4v2h-4z" fill="#ffffff"/></svg>
+            <div class="winner-emoji" id="winner-emoji">
+                <!-- Animated Telegram .tgs sticker will render here. If loading fails, the SVG fallback below will remain hidden and can be shown instead. -->
+                <div id="tgs-trophy" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center"></div>
+                <!-- fallback SVG (kept for browsers where animation cannot load) -->
+                <svg id="svg-trophy" style="display:none" viewBox="0 0 24 24" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 3h10v2a4 4 0 0 1-4 4h-2A4 4 0 0 1 7 5V3z" fill="#ffffff"/><path d="M5 7v2a5 5 0 0 0 5 5h4a5 5 0 0 0 5-5V7" stroke="#ffffff" stroke-width="0" fill="#ffffff"/><path d="M10 19h4v2h-4z" fill="#ffffff"/></svg>
             </div>
             <div class="winner-name" id="winner-name">Победитель</div>
             <div class="winner-sub" id="winner-sub">Поздравляем!</div>
@@ -516,12 +518,27 @@
         function appendDebugLine(msg){
             try{
                 createDebugPanel();
-                const list = document.getElementById('debug-log-list');
+                // prefer dynamic debug-log-list (created by createDebugPanel), fallback to static debug-log
+                let list = document.getElementById('debug-log-list');
+                let useStatic = false;
+                if (!list) {
+                    list = document.getElementById('debug-log');
+                    useStatic = true;
+                }
                 if (!list) return;
                 const el = document.createElement('div'); el.style.padding='6px'; el.style.background='rgba(255,255,255,0.02)'; el.style.borderRadius='8px'; el.style.border='1px solid rgba(255,255,255,0.02)'; el.style.fontSize='12px'; el.textContent = (new Date()).toLocaleTimeString() + ' — ' + msg;
-                list.insertBefore(el, list.firstChild);
-                // keep last 200
-                while(list.children.length > 200) list.removeChild(list.lastChild);
+                if (useStatic) {
+                    // append to bottom for static area
+                    list.appendChild(el);
+                    // ensure panel is visible
+                    try{ document.getElementById('debug-panel').style.display = 'flex'; }catch(e){}
+                    // limit size by removing oldest
+                    while(list.children.length > 500) list.removeChild(list.firstChild);
+                } else {
+                    list.insertBefore(el, list.firstChild);
+                    // keep last 200
+                    while(list.children.length > 200) list.removeChild(list.lastChild);
+                }
             }catch(e){ console.warn('appendDebugLine err', e); }
         }
 
@@ -983,6 +1000,31 @@
             processedMatchIds.clear();
             hideSearchIndicator(); 
         }catch(e){} 
+    });
+
+    // server notifies when a player forfeits — show end screen immediately
+    socket.on('player_forfeited', (data)=>{
+        try{
+            appendDebugLine('player_forfeited: ' + JSON.stringify(data));
+            // if we have an activeLobby, mark it finished and show end screen
+            if (activeLobby && activeLobby.id){
+                activeLobby.status = 'finished';
+                // server may have set lobby.winner symbol already via update_lobby; prefer that
+                const winnerSym = (activeLobby.winner || data.winner_symbol || null);
+                activeLobby.winner = winnerSym;
+                // infer winner name/avatar from players
+                let winnerName = '';
+                let winnerAvatar = '';
+                try{
+                    const pl = (activeLobby.players||[]).find(p => (p.symbol === winnerSym));
+                    if (pl){ winnerName = pl.name || ''; winnerAvatar = pl.avatar || ''; }
+                }catch(e){}
+                showLobby(activeLobby);
+                showEndScreen({ winner: winnerSym, name: winnerName, avatar: winnerAvatar, board: activeLobby.board });
+            } else {
+                appendDebugLine('player_forfeited: no activeLobby, ignoring');
+            }
+        }catch(e){ console.warn('player_forfeited handler err', e); }
     });
 
         // server-side admin reset: force clients to clear local profile and show auth modal
@@ -1789,5 +1831,78 @@
         })();
     </script>
     <!-- background music feature removed -->
+    <script>
+        // TGS (Telegram animated sticker) runtime loader: fetches /assets/trophy.tgs, inflates with pako and renders via lottie-web
+        (function(){
+            const CONTAINER_ID = 'tgs-trophy';
+            const TGS_URL = '/assets/trophy.tgs'; // place your .tgs file here in repo: assets/trophy.tgs
+
+            // dynamic script loader
+            function loadScript(src){ return new Promise((res, rej)=>{ const s=document.createElement('script'); s.src=src; s.async=true; s.onload = ()=>res(); s.onerror = (e)=>rej(e); document.head.appendChild(s); }); }
+
+            async function ensureDeps(){
+                // pako for inflate, lottie for rendering
+                if (!window.pako){ await loadScript('https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js'); }
+                if (!window.lottie){ await loadScript('https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.9.6/lottie.min.js'); }
+            }
+
+            async function fetchAndRender(){
+                const container = document.getElementById(CONTAINER_ID);
+                if (!container) return;
+                appendDebugLine && appendDebugLine('tgs-loader: start');
+                try{
+                    await ensureDeps();
+                    appendDebugLine && appendDebugLine('tgs-loader: deps loaded (pako:' + !!window.pako + ', lottie:' + !!window.lottie + ')');
+                }catch(e){ console.warn('tgs-loader: failed to load deps', e); appendDebugLine && appendDebugLine('tgs-loader: deps load error: '+(e&&e.message)); document.getElementById('svg-trophy').style.display='block'; return; }
+
+                try{
+                    appendDebugLine && appendDebugLine('tgs-loader: fetching ' + TGS_URL);
+                    const resp = await fetch(TGS_URL);
+                    appendDebugLine && appendDebugLine('tgs-loader: fetch response ' + resp.status);
+                    if (!resp.ok) throw new Error('tgs fetch failed: ' + resp.status);
+                    const arrayBuf = await resp.arrayBuffer();
+                    appendDebugLine && appendDebugLine('tgs-loader: fetched ' + (arrayBuf.byteLength || 0) + ' bytes');
+                    const bytes = new Uint8Array(arrayBuf);
+                    // .tgs is zlib-compressed Lottie JSON (binary). Inflate with pako
+                    let inflated = null;
+                    try{
+                        inflated = window.pako.inflate(bytes, { to: 'string' });
+                        appendDebugLine && appendDebugLine('tgs-loader: inflate ok (zlib)');
+                    }catch(e){
+                        appendDebugLine && appendDebugLine('tgs-loader: inflate zlib failed, trying raw inflate: '+(e&&e.message));
+                        try{
+                            inflated = window.pako.inflateRaw(bytes, { to: 'string' });
+                            appendDebugLine && appendDebugLine('tgs-loader: inflateRaw ok');
+                        }catch(er){
+                            appendDebugLine && appendDebugLine('tgs-loader: inflateRaw failed: '+(er&&er.message));
+                            console.warn('tgs inflate failed', er);
+                            throw er;
+                        }
+                    }
+                    const json = JSON.parse(inflated);
+                    appendDebugLine && appendDebugLine('tgs-loader: parsed JSON, layers=' + (json.layers ? json.layers.length : 'unknown'));
+                    // render with lottie
+                    container.innerHTML = ''; // clear
+                    const anim = window.lottie.loadAnimation({
+                        container: container,
+                        renderer: 'svg',
+                        loop: false,
+                        autoplay: true,
+                        animationData: json
+                    });
+                    // small scaling to fit 48x48 box if needed
+                    container.style.width = '48px'; container.style.height = '48px';
+                    appendDebugLine && appendDebugLine('tgs-loader: animation loaded');
+                }catch(e){
+                    console.warn('tgs-loader error', e);
+                    appendDebugLine && appendDebugLine('tgs-loader: error: '+(e&&e.message));
+                    document.getElementById('svg-trophy').style.display='block';
+                }
+            }
+
+            // Delay load until DOM ready
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fetchAndRender); else fetchAndRender();
+        })();
+    </script>
 </body>
 </html>
