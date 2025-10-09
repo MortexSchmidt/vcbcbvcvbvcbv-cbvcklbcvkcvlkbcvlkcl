@@ -340,9 +340,10 @@
 
     <!-- Inline quick-match status (compact, expandable) -->
     <div id="search-indicator" class="search-indicator" style="position:fixed;left:50%;bottom:140px;transform:translateX(-50%);display:none;z-index:1002;min-width:180px">
-        <div class="search-bar" role="button" aria-expanded="false" tabindex="0" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:rgba(2,6,23,0.9);border:1px solid rgba(255,255,255,0.03);font-weight:700;color:var(--text);text-align:center;cursor:pointer">
-            <div id="search-title" style="font-weight:800">Поиск</div>
-            <div id="search-arrow" style="margin-left:6px;transition:transform .18s ease">▾</div>
+        <div class="search-bar" role="button" aria-expanded="false" tabindex="0" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:linear-gradient(90deg, #6b8cff, #5a6bd8);border:1px solid rgba(255,255,255,0.03);font-weight:700;color:#07102a;text-align:center;cursor:pointer">
+            <div id="search-title" style="font-weight:800;color:#07102a">Поиск</div>
+            <div id="search-timer-compact" style="margin-left:auto;font-weight:700;color:#07102a">00:00</div>
+            <div id="search-arrow" style="margin-left:6px;transition:transform .18s ease;color:#07102a">▾</div>
         </div>
         <div class="search-expanded" style="max-height:0;overflow:hidden;transition:max-height .22s ease,opacity .18s ease;opacity:0;padding:0 12px">
             <div id="search-timer-text" style="margin-top:8px;font-weight:700">Поиск: 00:00</div>
@@ -354,9 +355,7 @@
             </div>
             <div id="search-found-text" style="color:var(--muted);font-weight:600;margin-top:6px;font-size:12px">Игроков найдено: 0</div>
             <div id="search-long-text" style="display:none;color:var(--muted);font-weight:600;margin-top:6px;font-size:12px">Долгий поиск</div>
-            <div style="display:flex;justify-content:center;margin-top:8px;padding-bottom:8px">
-                <button id="search-collapse-btn" class="menu-btn" style="padding:6px 10px;font-size:13px">Закрыть</button>
-            </div>
+            <div style="display:flex;justify-content:center;margin-top:8px;padding-bottom:8px">&nbsp;</div>
         </div>
     </div>
 
@@ -956,6 +955,30 @@
             root.style.display = 'block';
             // ensure collapsed by default
             try{ _toggleSearchExpanded(root, false); }catch(e){}
+            // position: if mobile -> attach to top of left menu; if desktop -> show in top-right area after settings
+            try{
+                const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
+                if (isMobileNow){
+                    // attach to top menu (assume .left-col exists)
+                    const left = document.querySelector('.left-col') || document.querySelector('.app-container');
+                    if (left){
+                        root.style.position = 'fixed'; root.style.left = left.getBoundingClientRect().left + 'px'; root.style.width = (left.getBoundingClientRect().width) + 'px';
+                        root.style.top = '8px'; root.style.bottom = 'auto'; root.style.transform = 'none';
+                        // style as blue pill
+                        root.querySelector('.search-bar').style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)';
+                    }
+                } else {
+                    // desktop: place roughly near top-right after settings; use bottom nav area position after settings
+                    const settingsBtn = document.querySelector('.bottom-settings');
+                    if (settingsBtn){
+                        const rect = settingsBtn.getBoundingClientRect();
+                        root.style.position = 'fixed'; root.style.left = (rect.right + 12) + 'px'; root.style.top = (rect.top - 4) + 'px'; root.style.width = '260px'; root.style.transform = 'none';
+                        root.querySelector('.search-bar').style.background = 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent)';
+                        // expand details by default on desktop
+                        _toggleSearchExpanded(root, true);
+                    }
+                }
+            }catch(e){}
             // update game text
             try{
                 let gameName = opts.game || null;
@@ -990,7 +1013,7 @@
                 const elapsed = Math.floor((Date.now() - searchStart)/1000);
                 const mm = String(Math.floor(elapsed/60)).padStart(2,'0');
                 const ss = String(elapsed % 60).padStart(2,'0');
-                try{ const tt = root.querySelector('#search-timer-text'); if (tt) tt.textContent = `Поиск: ${mm}:${ss}`; }catch(e){}
+                try{ const tt = root.querySelector('#search-timer-text'); if (tt) tt.textContent = `Поиск: ${mm}:${ss}`; const compact = root.querySelector('#search-timer-compact'); if (compact) compact.textContent = `${mm}:${ss}`; }catch(e){}
             }, 500);
             // attach one-time handlers for toggle if not already attached
             try{
@@ -1614,7 +1637,7 @@
             // allow floating Play button behaviour on desktop as well
 
             // create floating play button if not present
-            playButton = document.querySelector('.play-button');
+        playButton = document.querySelector('.play-button');
             if (!playButton) {
                 playButton = document.createElement('button');
                 playButton.className = 'play-button';
@@ -1624,6 +1647,9 @@
             }
             // make floating button a bit wider on desktop and slightly higher
             if (!isMobile){ playButton.style.padding = '12px 32px'; playButton.style.bottom = '120px'; }
+
+            // hide global floating Play button completely (we'll use per-card play buttons)
+            try{ if (playButton) playButton.style.display = 'none'; }catch(e){}
 
             let selected = null;
 
@@ -1644,8 +1670,8 @@
                             card.classList.remove('selected');
                             card.setAttribute('aria-selected','false');
                             selected = null;
-                            playButton.classList.remove('visible');
-                            playButton.setAttribute('aria-hidden','true');
+                            // hide any per-card play button
+                            const pbtn = card.querySelector('.card-play-btn'); if (pbtn) pbtn.style.display='none';
                         } else {
                             if (selected) { selected.classList.remove('selected'); selected.setAttribute('aria-selected','false'); }
                             selected = card;
@@ -1654,8 +1680,16 @@
                             // force focus and repaint so visual border appears immediately
                             try{ card.focus(); card.getBoundingClientRect(); }catch(e){}
                             // show animated play button
-                            playButton.classList.add('visible');
-                            playButton.setAttribute('aria-hidden','false');
+                            // create or show per-card play button inside card
+                            let pbtn = card.querySelector('.card-play-btn');
+                            if (!pbtn){
+                                pbtn = document.createElement('button'); pbtn.className='menu-btn card-play-btn primary'; pbtn.textContent='Играть';
+                                pbtn.style.alignSelf='stretch'; pbtn.style.marginTop='6px'; pbtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); startCardSearch(card); });
+                                card.appendChild(pbtn);
+                            } else { pbtn.style.display='block'; }
+                            pbtn.style.display='block';
+                            playButton.classList.remove('visible');
+                            playButton.setAttribute('aria-hidden','true');
                             // ensure audio context is allowed by user gesture and play a select sound
                             try{ SoundEngine.init(); SoundEngine.select(); }catch(e){}
                         }
@@ -1667,6 +1701,26 @@
             }
 
             updateListeners();
+
+            // helper: ensure each card has no visible inline play buttons by default (we'll create them dynamically)
+            document.querySelectorAll('.game-selection .game-card .card-play-btn').forEach(b=>b.style.display='none');
+
+            // start search for card
+            function startCardSearch(card){
+                if (!currentUser || !currentUser.user_id) { openAuthModal(); return; }
+                // get game name
+                const gameName = card.dataset.game || card.querySelector('h3')?.textContent || '';
+                // switch per-card play -> cancel while searching
+                let pbtn = card.querySelector('.card-play-btn'); if (!pbtn) return;
+                // mark searching
+                lastSearchStart = Date.now(); lastSearchGame = gameName;
+                socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id, game: gameName });
+                // show search indicator and update positioning
+                showSearchIndicator({ game: gameName, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: 1, originCard: card });
+                // change button
+                pbtn.textContent = 'Отменить'; pbtn.classList.remove('primary'); pbtn.classList.add('danger');
+                pbtn.onclick = (ev)=>{ ev.stopPropagation(); try{ socket.emit('cancel_quick_match', {}); }catch(e){}; hideSearchIndicator(); pbtn.textContent='Играть'; pbtn.classList.remove('danger'); pbtn.classList.add('primary'); };
+            }
 
             // hide selection when tapping outside — but DO NOT clear selection while searching for opponent
             document.addEventListener('click', (ev)=>{
