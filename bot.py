@@ -1824,6 +1824,8 @@ def handle_quick_match(data):
         return
 
     lobby_id = uuid.uuid4().hex[:8]
+    logger.info(f"quick_match: creating hidden lobby {lobby_id} for sid={request.sid}, user_id={user_id}")
+
     lobbies[lobby_id] = {
         'id': lobby_id,
         'name': 'Quick Match',
@@ -1834,23 +1836,31 @@ def handle_quick_match(data):
         'current_player': 'X'
     }
     hidden_waiting.append(lobby_id)
+    logger.info(f"quick_match: added {lobby_id} to hidden_waiting. Current waiting: {hidden_waiting}")
+
     # try to match with another waiting hidden lobby (not the same sid)
     matched = None
     # protect matching with a lock to avoid races between concurrent quick_match calls
     with hidden_waiting_lock:
+        logger.info(f"quick_match: checking for matches. Available lobbies: {list(lobbies.keys())}")
         for hid in list(hidden_waiting):
             if hid == lobby_id:
                 continue
             other = lobbies.get(hid)
             if not other:
+                logger.warning(f"quick_match: removing invalid lobby {hid} from hidden_waiting")
                 try:
                     hidden_waiting.remove(hid)
                 except ValueError:
                     pass
                 continue
             # ensure not the same socket joining itself
+            logger.info(f"quick_match: checking lobby {hid} with players: {[p.get('sid') for p in other['players']]}")
             if any(p.get('sid') == request.sid for p in other['players']):
+                logger.info(f"quick_match: skipping self-match for lobby {hid}")
                 continue
+
+            logger.info(f"quick_match: found match! Matching {lobby_id} with {hid}")
             # match: append second player and start game
             other['players'].append({'sid': request.sid, 'user_id': user_id, 'name': player_name, 'symbol': 'O', 'avatar': player_avatar})
             other['status'] = 'playing'
@@ -1864,6 +1874,7 @@ def handle_quick_match(data):
             except ValueError:
                 pass
             matched = other
+            logger.info(f"quick_match: successfully matched lobbies {hid} and {lobby_id}")
             break
     if matched:
         # remove the temporary lobby created by this sid to avoid leaving an orphan hidden lobby
@@ -2026,6 +2037,7 @@ def handle_quick_match(data):
             t.start()
     else:
         # no match yet — keep waiting; notify creator that search is ongoing
+        logger.info(f"quick_match: no immediate match found for {lobby_id}, waiting for opponent")
         emit('lobby_waiting', {'lobby_id': lobby_id, 'message': 'Поиск соперника...'}, room=request.sid)
 
 
