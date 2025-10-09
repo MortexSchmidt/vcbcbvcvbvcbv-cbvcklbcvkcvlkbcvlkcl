@@ -461,6 +461,33 @@
         </div>
     </div>
 
+    <!-- Custom loading modal shown before game starts -->
+    <div id="preload-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.85);z-index:1300;pointer-events:auto">
+        <div style="position:absolute;inset:0;background:transparent;z-index:1300"></div>
+        <div id="preload-box" style="width:92%;max-width:520px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6);z-index:1301;display:flex;flex-direction:column;align-items:center;gap:12px;pointer-events:auto">
+            <!-- Center animation (user will upload loading.tgs to this path) -->
+            <div id="preload-center" style="width:160px;height:160px;display:flex;align-items:center;justify-content:center">
+                <!-- Placeholder image; replace with .tgs or supported animation. -->
+                <img id="preload-tgs" src="/loading.tgs" alt="loading animation" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
+                <!-- Fallback simple SVG animation if .tgs not supported -->
+                <svg id="preload-fallback" viewBox="0 0 100 100" width="120" height="120" style="display:none">
+                    <circle cx="50" cy="50" r="40" stroke="rgba(108,140,255,0.9)" stroke-width="6" fill="none" stroke-linecap="round">
+                        <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="1s" repeatCount="indefinite" />
+                    </circle>
+                </svg>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+                <div style="color:var(--text);font-weight:800;font-size:18px">Загрузка</div>
+                <div style="color:var(--muted);font-weight:700">Пожалуйста, подождите...</div>
+            </div>
+            <div id="preload-timer" style="font-weight:700;color:var(--accent)">10</div>
+        </div>
+        <!-- bottom-right spinner -->
+        <div id="preload-spinner" style="position:fixed;right:18px;bottom:18px;width:48px;height:48px;border-radius:24px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;z-index:1400">
+            <div style="width:28px;height:28px;border:3px solid rgba(108,140,255,0.14);border-top-color:var(--accent);border-radius:50%;animation:spin 800ms linear infinite"></div>
+        </div>
+    </div>
+
     <!-- Bottom nav для телефонов -->
     <nav class="bottom-nav" aria-hidden="false">
         <button class="bottom-play" data-action="go-home" title="Играть">
@@ -516,6 +543,34 @@
 
     // debug monkeypatch removed in production
     try{ /* emit monkeypatch disabled */ }catch(e){}
+
+    // Preload modal control: show for exactly 10s or random up to 10s
+    function showPreload(options){
+        // options: { random: boolean }
+        const random = options && options.random;
+        // determine duration
+        let duration = 10;
+        if (random){ duration = Math.max(1, Math.floor(Math.random()*10) ); }
+        // show modal, hide sidebar
+        try{ document.getElementById('preload-modal').style.display = 'flex'; }catch(e){}
+        try{ document.querySelector('.app-sidebar').style.display = 'none'; }catch(e){}
+        // timer display
+        try{ document.getElementById('preload-timer').textContent = String(duration); }catch(e){}
+        let left = duration;
+        const tick = setInterval(()=>{
+            left -= 1;
+            try{ document.getElementById('preload-timer').textContent = String(left); }catch(e){}
+            if (left <= 0){ clearInterval(tick); hidePreload(); }
+        }, 1000);
+        // ensure it's removed after exactly duration seconds even if tab hidden
+        setTimeout(()=>{ try{ clearInterval(tick); hidePreload(); }catch(e){} }, duration*1000 + 50);
+    }
+
+    function hidePreload(){
+        try{ document.getElementById('preload-modal').style.display = 'none'; }catch(e){}
+        try{ document.querySelector('.app-sidebar').style.display = ''; }catch(e){}
+        try{ document.getElementById('preload-spinner').style.display = 'none'; }catch(e){}
+    }
 
     // Добавляем обработчик ошибок подключения
     socket.on('connect_error', (error) => {
@@ -1352,8 +1407,10 @@
             try{ if (lobby && lobby.id) delete lastMatchStarts[lobby.id]; }catch(e){}
             lastSearchStart = 0; lastSearchGame = null; processedMatchIds.clear();
             activeLobby = lobby;
-            showLobby(activeLobby);
-            showView('game');
+            // show preload BEFORE showing game
+            try{ showPreload({ random: false }); }catch(e){}
+            // after preload hides, show lobby and game view
+            setTimeout(()=>{ try{ showLobby(activeLobby); showView('game'); }catch(e){} }, 10100);
             try{ SoundEngine.lobbyCreated(); }catch(e){}
             // clear any quick-match UI and allow navigation
             hideSearchIndicator();
@@ -1383,8 +1440,14 @@
                     if (pl){ winnerName = pl.name || 'Игрок'; winnerAvatar = pl.avatar || ''; }
                 }
                 showEndScreen({ winner: winner, name: winnerName, avatar: winnerAvatar });
+                // ensure sidebar is visible again after game
+                try{ document.querySelector('.app-sidebar').style.display = ''; }catch(e){}
             } else if (lobby.status==='playing') {
-                try{ showLobby(lobby); showView('game'); }catch(e){ try{ appendDebugLine('update_lobby: showLobby/showView threw: '+(e&&e.message)); }catch(_){} }
+                try{
+                    // when server signals game start, show preload then game
+                    showPreload({ random: false });
+                    setTimeout(()=>{ try{ showLobby(lobby); showView('game'); }catch(e){} }, 10100);
+                }catch(e){ try{ appendDebugLine('update_lobby: showLobby/showView threw: '+(e&&e.message)); }catch(_){} }
             } else {
                 showLobby(lobby);
             }
