@@ -1845,9 +1845,7 @@ def handle_quick_match(data):
                 except ValueError:
                     pass
                 continue
-            # ensure not the same user joining themselves (by user_id or sid)
-            if user_id and any(p.get('user_id') == user_id for p in other['players']):
-                continue
+            # ensure not the same socket joining itself
             if any(p.get('sid') == request.sid for p in other['players']):
                 continue
             # match: append second player and start game
