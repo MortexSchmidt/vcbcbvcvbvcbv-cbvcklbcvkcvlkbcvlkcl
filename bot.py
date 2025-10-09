@@ -1898,8 +1898,13 @@ def handle_quick_match(data):
         except Exception:
             pass
 
+        # Use a stable reference to the matched lobby (avoid relying on 'other' variable scope)
+        matched_lobby = matched
         # First get the player info
-        p0 = other['players'][0]
+        try:
+            p0 = matched_lobby['players'][0]
+        except Exception:
+            p0 = {'sid': None, 'user_id': None, 'name': '', 'avatar': '', 'symbol': ''}
         p1 = {'sid': request.sid, 'user_id': user_id}
 
         # Clean up any stale pending matches for these players before creating new one
@@ -1937,7 +1942,7 @@ def handle_quick_match(data):
 
             p0_entry = {'sid': p0.get('sid'), 'user_id': p0.get('user_id'), 'user_key': make_user_key(p0.get('sid'), p0.get('user_id'))}
             p1_entry = {'sid': p1.get('sid'), 'user_id': p1.get('user_id'), 'user_key': make_user_key(p1.get('sid'), p1.get('user_id'))}
-            pending_matches[match_id] = {'lobby_id': other['id'], 'players': [p0_entry, p1_entry], 'confirmed': set(), 'timer': None}
+            pending_matches[match_id] = {'lobby_id': matched_lobby['id'], 'players': [p0_entry, p1_entry], 'confirmed': set(), 'timer': None}
 
             # prepare richer payload so clients can render accept/decline UI reliably
             try:
@@ -1947,33 +1952,31 @@ def handle_quick_match(data):
                         players_meta.append({'sid': p.get('sid'), 'user_id': p.get('user_id'), 'name': p.get('name'), 'avatar': p.get('avatar'), 'symbol': p.get('symbol'), 'user_key': p.get('user_key')})
                     else:
                         players_meta.append({'sid': p, 'user_id': None, 'name': '', 'avatar': '', 'symbol': ''})
-                payload = {'match_id': match_id, 'lobby': other, 'players': players_meta, 'confirmed': list(pending_matches[match_id].get('confirmed', set())), 'expires_in': 30}
+                payload = {'match_id': match_id, 'lobby': matched_lobby, 'players': players_meta, 'confirmed': list(pending_matches[match_id].get('confirmed', set())), 'expires_in': 30}
+                # Emit match_found to both players so clients show the confirm UI
+                try:
+                    p0_sid = p0.get('sid') if isinstance(p0, dict) else p0
+                    p1_sid = p1.get('sid') if isinstance(p1, dict) else p1
+                    logger.info(f"quick_match: MATCH FOUND! Emitting payload to p0_sid={p0_sid}, p1_sid={p1_sid}")
+                    socketio.emit('match_found', payload, room=p0_sid)
+                    socketio.emit('match_found', payload, room=p1_sid)
+                    logger.info(f"quick_match: match_found emitted successfully for match {match_id}")
+                except Exception as e:
+                    logger.warning(f"quick_match: failed emitting match_found for {match_id}: {e}")
             except Exception:
                 # Create payload with correct player positioning
                 payload = {
                     'match_id': match_id,
-                    'lobby': other,
+                    'lobby': matched_lobby,
                     'current_player_sid': request.sid,  # The player who initiated the search
                     'opponent_sid': p0.get('sid') if isinstance(p0, dict) else p0
                 }
                 try:
                     p0_sid = p0.get('sid') if isinstance(p0, dict) else p0
                     p1_sid = p1.get('sid') if isinstance(p1, dict) else p1
-                    logger.info(f"quick_match: MATCH FOUND! Sending to p0_sid={p0_sid}, p1_sid={p1_sid}")
-                    logger.info(f"quick_match: payload={json.dumps(payload, ensure_ascii=False)}")
-    
-                    # Send match_found event to both players
+                    logger.info(f"quick_match: MATCH FOUND! Sending fallback payload to p0_sid={p0_sid}, p1_sid={p1_sid}")
                     socketio.emit('match_found', payload, room=p0_sid)
                     socketio.emit('match_found', payload, room=p1_sid)
-                    logger.info(f"quick_match: match_found emitted successfully for match {match_id}")
-    
-                    # Also try to send directly to sid if room doesn't work
-                    try:
-                        socketio.emit('match_found', payload, room=p0_sid)
-                        logger.info(f"quick_match: direct emit to {p0_sid}")
-                    except Exception as e:
-                        logger.warning(f"quick_match: direct emit failed for {p0_sid}: {e}")
-    
                 except Exception as e:
                     logger.error(f"quick_match: CRITICAL ERROR emitting match_found for {match_id}: {e}")
                     logger.error(f"quick_match: p0_sid={p0.get('sid') if isinstance(p0, dict) else p0}, p1_sid={p1.get('sid') if isinstance(p1, dict) else p1}")
