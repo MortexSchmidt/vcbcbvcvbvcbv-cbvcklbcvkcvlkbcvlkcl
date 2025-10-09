@@ -619,57 +619,87 @@
             function init(){ if (ac) return; ac = new (window.AudioContext || window.webkitAudioContext)(); }
             function resume(){ if (!ac) init(); if (ac.state === 'suspended') return ac.resume(); return Promise.resolve(); }
 
-            function makeNoise(duration, volume, now){
-                const bufferSize = ac.sampleRate * duration;
+            function makeNoise(duration, now){
+                const bufferSize = Math.floor(ac.sampleRate * duration);
                 const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
                 const data = buffer.getChannelData(0);
-                for (let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
+                for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
                 const src = ac.createBufferSource(); src.buffer = buffer;
-                const g = ac.createGain(); g.gain.setValueAtTime(volume, now);
-                src.connect(g);
-                return { src, g };
+                return src;
             }
 
-            function synth(opts){
-                if (!ac) init(); try{
-                    const now = ac.currentTime + (opts.delay||0);
-                    const o1 = ac.createOscillator(); const o2 = ac.createOscillator();
-                    const f1 = opts.freq || 440; o1.type = opts.type || 'sine'; o2.type = opts.type2 || 'sawtooth';
-                    o1.frequency.setValueAtTime(f1, now); o2.frequency.setValueAtTime(f1 * (opts.detuneRatio||1.01), now);
-                    const filt = ac.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.setValueAtTime(opts.filterFreq || 8000, now);
-                    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, now);
-                    // envelope
-                    g.gain.linearRampToValueAtTime(Math.max(0.0001, opts.amp||0.12), now + 0.001);
-                    g.gain.exponentialRampToValueAtTime(0.0001, now + (opts.dur || 0.12));
-                    o1.connect(filt); o2.connect(filt); filt.connect(g); g.connect(ac.destination);
-                    o1.start(now); o2.start(now); o1.stop(now + (opts.dur||0.12) + 0.02); o2.stop(now + (opts.dur||0.12) + 0.02);
-                    // optional noise layer
-                    if (opts.noise){ const n = makeNoise(opts.noiseDur||0.08, opts.noiseVol||0.02, now); n.src.connect(ac.destination); n.src.start(now); n.src.stop(now + (opts.noiseDur||0.08)); }
-                }catch(e){ /* ignore */ }
+            // Percussive tactile click: short noise transient through bandpass + short pitched body
+            function playClick(opts){
+                if (!ac) init();
+                const now = ac.currentTime + (opts.delay || 0);
+
+                // body oscillator (low) for 'thud'
+                const body = ac.createOscillator(); body.type = opts.bodyType || 'sine';
+                body.frequency.setValueAtTime(opts.bodyFreq || 180, now);
+                const gBody = ac.createGain(); gBody.gain.setValueAtTime(0.0001, now);
+                gBody.gain.linearRampToValueAtTime(opts.bodyGain || 0.12, now + 0.001);
+                gBody.gain.exponentialRampToValueAtTime(0.0001, now + (opts.bodyDur || 0.12));
+                body.connect(gBody);
+
+                // click oscillator (high transient)
+                const click = ac.createOscillator(); click.type = opts.clickType || 'triangle';
+                click.frequency.setValueAtTime(opts.clickFreq || 3600, now);
+                // quick pitch sweep down for bite
+                click.frequency.linearRampToValueAtTime((opts.clickFreq || 3600) * 0.6, now + 0.02);
+                const gClick = ac.createGain(); gClick.gain.setValueAtTime(0.0001, now);
+                gClick.gain.linearRampToValueAtTime(opts.clickGain || 0.12, now + 0.002);
+                gClick.gain.exponentialRampToValueAtTime(0.0001, now + (opts.clickDur || 0.04));
+                click.connect(gClick);
+
+                // noise transient through bandpass for tactile edge
+                const noiseSrc = makeNoise(opts.noiseDur || 0.06, now);
+                const noiseFilt = ac.createBiquadFilter(); noiseFilt.type = 'bandpass'; noiseFilt.frequency.setValueAtTime(opts.noiseFreq || 2400, now);
+                const gNoise = ac.createGain(); gNoise.gain.setValueAtTime(opts.noiseGain || 0.06, now);
+                noiseSrc.connect(noiseFilt); noiseFilt.connect(gNoise);
+
+                // master gain for click
+                const master = ac.createGain(); master.gain.setValueAtTime(opts.masterGain || 1.0, now);
+
+                // routing
+                gBody.connect(master); gClick.connect(master); gNoise.connect(master);
+                master.connect(ac.destination);
+
+                // start/stop
+                body.start(now); body.stop(now + (opts.bodyDur || 0.12) + 0.02);
+                click.start(now); click.stop(now + (opts.clickDur || 0.04) + 0.01);
+                noiseSrc.start(now); noiseSrc.stop(now + (opts.noiseDur || 0.06) + 0.01);
             }
 
-            function uiClick(kind){ // kind: 'neutral' | 'primary' | 'destructive' | 'soft'
-                if (muted) return;
+            // small melodic ping for confirmations
+            function playPing(freq, dur, amp, delay){
+                if (!ac) init();
+                const now = ac.currentTime + (delay || 0);
+                const o = ac.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(freq, now);
+                const g = ac.createGain(); g.gain.setValueAtTime(0.0001, now);
+                g.gain.linearRampToValueAtTime(amp || 0.12, now + 0.004);
+                g.gain.exponentialRampToValueAtTime(0.0001, now + (dur || 0.18));
+                o.connect(g); g.connect(ac.destination);
+                o.start(now); o.stop(now + (dur || 0.18) + 0.02);
+            }
+
+            function uiClick(kind){ // tactile UI clicks
                 resume().then(()=>{
-                    if (kind==='primary') {
-                        // punchy modern click
-                        synth({ freq:520, type:'sawtooth', type2:'sine', detuneRatio:1.03, dur:0.08, amp:0.16, filterFreq:2200, noise:true, noiseDur:0.04, noiseVol:0.03 });
-                        setTimeout(()=> synth({ freq:780, type:'sine', dur:0.06, amp:0.08, filterFreq:3600 }), 40);
-                    } else if (kind==='destructive') {
-                        synth({ freq:280, type:'triangle', dur:0.14, amp:0.18, filterFreq:1200, noise:true, noiseDur:0.08, noiseVol:0.05 });
-                    } else if (kind==='soft') {
-                        synth({ freq:880, type:'sine', dur:0.07, amp:0.08, filterFreq:4400 });
+                    if (kind === 'primary') {
+                        playClick({ bodyFreq: 200, bodyDur: 0.12, bodyGain: 0.14, clickFreq: 4200, clickDur: 0.04, clickGain: 0.14, noiseFreq: 2700, noiseGain: 0.06 });
+                    } else if (kind === 'destructive') {
+                        playClick({ bodyFreq: 140, bodyDur: 0.16, bodyGain: 0.18, clickFreq: 2200, clickDur: 0.05, clickGain: 0.16, noiseFreq: 1200, noiseGain: 0.08 });
+                    } else if (kind === 'soft') {
+                        playClick({ bodyFreq: 300, bodyDur: 0.10, bodyGain: 0.08, clickFreq: 3200, clickDur: 0.03, clickGain: 0.06, noiseFreq: 3600, noiseGain: 0.02 });
                     } else {
-                        // neutral click
-                        synth({ freq:620, type:'sine', dur:0.08, amp:0.10, filterFreq:3200, noise:true, noiseDur:0.03, noiseVol:0.015 });
+                        playClick({ bodyFreq: 220, bodyDur: 0.10, bodyGain: 0.10, clickFreq: 3400, clickDur: 0.035, clickGain: 0.09, noiseFreq: 2600, noiseGain: 0.03 });
                     }
                 }).catch(()=>{});
             }
 
-            function select(){ if (muted) return; resume().then(()=>{ synth({ freq:920, type:'triangle', dur:0.06, amp:0.10, filterFreq:4200 }); synth({ freq:1200, type:'sine', dur:0.05, amp:0.06, filterFreq:5600, delay:0.03 }); }); }
-            function modalOpen(){ if (muted) return; resume().then(()=>{ synth({ freq:520, type:'sawtooth', type2:'sine', detuneRatio:1.02, dur:0.12, amp:0.14, filterFreq:2600 }); setTimeout(()=> synth({ freq:880, type:'sine', dur:0.08, amp:0.09, filterFreq:4200 }), 60); }); }
-            function create(){ if (muted) return; resume().then(()=>{ synth({ freq:1020, type:'sawtooth', dur:0.10, amp:0.20, filterFreq:3000, noise:true, noiseDur:0.05, noiseVol:0.045 }); setTimeout(()=> synth({ freq:1340, type:'sine', dur:0.06, amp:0.12, filterFreq:4800 }), 50); }); }
-            function lobbyCreated(){ if (muted) return; resume().then(()=>{ synth({ freq:760, type:'triangle', dur:0.10, amp:0.16, filterFreq:3600 }); setTimeout(()=> synth({ freq:980, type:'triangle', dur:0.09, amp:0.12, filterFreq:4200 }), 80); setTimeout(()=> synth({ freq:1180, type:'sine', dur:0.07, amp:0.10, filterFreq:5200 }), 160); }); }
+            function select(){ resume().then(()=>{ playClick({ bodyFreq: 260, bodyDur: 0.10, bodyGain: 0.10, clickFreq: 3800, clickDur: 0.03, clickGain: 0.08 }); playPing(1100, 0.08, 0.06, 0.04); }); }
+            function modalOpen(){ resume().then(()=>{ playClick({ bodyFreq: 240, bodyDur: 0.12, bodyGain: 0.12, clickFreq: 4000, clickDur: 0.04, clickGain: 0.10 }); playPing(780, 0.12, 0.07, 0.06); }); }
+            function create(){ resume().then(()=>{ playClick({ bodyFreq: 320, bodyDur: 0.14, bodyGain: 0.16, clickFreq: 3600, clickDur: 0.05, clickGain: 0.14, noiseFreq: 2800, noiseGain: 0.05 }); playPing(1200, 0.14, 0.12, 0.05); }); }
+            function lobbyCreated(){ resume().then(()=>{ playClick({ bodyFreq: 300, bodyDur: 0.12, bodyGain: 0.14, clickFreq: 4200, clickDur: 0.04, clickGain: 0.12 }); playPing(900, 0.12, 0.12, 0.05); playPing(1150, 0.10, 0.09, 0.12); }); }
 
             // modern presets
             function setMuted(v){ muted = !!v; }
