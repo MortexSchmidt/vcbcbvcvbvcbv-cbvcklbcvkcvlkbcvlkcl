@@ -1874,6 +1874,10 @@ def handle_quick_match(data):
         except Exception:
             pass
 
+        # First get the player info
+        p0 = other['players'][0]
+        p1 = {'sid': request.sid, 'user_id': user_id}
+
         # Clean up any stale pending matches for these players before creating new one
         with hidden_waiting_lock:
             players_to_clean = [p0.get('user_id'), user_id]
@@ -1897,8 +1901,6 @@ def handle_quick_match(data):
                     logger.warning(f"Error cleaning stale match {stale_match_id}: {e}")
 
             # Now create fresh match confirmation
-            p0 = other['players'][0]
-            p1 = {'sid': request.sid, 'user_id': user_id}
             match_id = uuid.uuid4().hex[:8]
             # normalize players as dicts: { sid, user_id, user_key }
             def make_user_key(sid_val, uid_val):
