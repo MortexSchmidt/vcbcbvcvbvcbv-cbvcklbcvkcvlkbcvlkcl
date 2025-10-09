@@ -317,9 +317,10 @@
     <div id="search-indicator" style="position:fixed;left:50%;bottom:140px;transform:translateX(-50%);display:none;z-index:1002;padding:8px 12px;border-radius:10px;background:rgba(2,6,23,0.9);border:1px solid rgba(255,255,255,0.03);font-weight:700;color:var(--text);text-align:center;min-width:220px">
         <div id="search-timer-text">Поиск: 00:00</div>
         <div id="search-game-text" style="color:var(--muted);font-weight:600;margin-top:6px;font-size:13px">Игра: —</div>
-        <div id="search-player-row" style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:6px">
-            <div id="search-player-avatar" style="width:28px;height:28px;border-radius:6px;overflow:hidden;background:var(--glass);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text);font-size:12px"></div>
-            <div id="search-player-name" style="color:var(--muted);font-weight:600;font-size:13px">Игрок: —</div>
+        <div id="search-player-row" style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:6px;">
+            <div style="color:var(--muted);font-weight:600;font-size:13px">Игрок:</div>
+            <div id="search-player-avatar" style="width:32px;height:32px;border-radius:8px;overflow:hidden;background:var(--glass);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text);font-size:12px"></div>
+            <div id="search-player-name" style="color:var(--muted);font-weight:600;font-size:13px">—</div>
         </div>
         <div id="search-found-text" style="color:var(--muted);font-weight:600;margin-top:6px;font-size:12px">Игроков найдено: 0</div>
         <div id="search-long-text" style="display:none;color:var(--muted);font-weight:600;margin-top:6px;font-size:12px">Долгий поиск</div>
@@ -704,17 +705,22 @@
             searching = true; searchStart = Date.now();
             document.getElementById('search-indicator').style.display = 'block';
             // update game text
-            try{ document.getElementById('search-game-text').textContent = 'Игра: ' + (opts.game || '—'); }catch(e){}
+            try{
+                // prefer explicit option, then selected card title if available
+                let gameName = opts.game || null;
+                if (!gameName){ const sel = document.querySelector('.game-selection .game-card.selected'); if (sel) gameName = sel.querySelector('h3')?.textContent || sel.dataset.game; }
+                document.getElementById('search-game-text').textContent = 'Игра: ' + (gameName || '—');
+            }catch(e){}
             // update player avatar + name
             try{
                 const av = document.getElementById('search-player-avatar');
                 av.innerHTML = '';
                 if (opts.player && opts.player.avatar){ const img = document.createElement('img'); img.src = opts.player.avatar; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; av.appendChild(img); }
                 else { av.textContent = (opts.player && opts.player.name ? (opts.player.name||'').slice(0,1).toUpperCase() : '—'); }
-                document.getElementById('search-player-name').textContent = 'Игрок: ' + (opts.player && opts.player.name ? opts.player.name : '—');
+                document.getElementById('search-player-name').textContent = (opts.player && opts.player.name ? opts.player.name : '—');
             }catch(e){}
-            // update found count
-            try{ document.getElementById('search-found-text').textContent = 'Игроков найдено: ' + (Number(opts.foundCount) || 0); }catch(e){}
+            // update found count (ensure at least 1 — you are included)
+            try{ const fc = Math.max(1, Number(opts.foundCount) || 0); document.getElementById('search-found-text').textContent = 'Игроков найдено: ' + fc; }catch(e){}
 
             // reset long-search label and start 15s timer to show it
             try{ document.getElementById('search-long-text').style.display = 'none'; }catch(e){}
@@ -760,7 +766,7 @@
             try{ document.getElementById('search-found-text').textContent = 'Игроков найдено: 0'; }catch(e){}
         }
 
-    socket.on('lobby_waiting', (data)=>{ try{ console.debug('socket:lobby_waiting', data); const opts = { game: data?.game || data?.name || null, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: data?.foundCount || (data && data.players ? data.players.length : 0) }; showSearchIndicator(opts); }catch(e){} });
+    socket.on('lobby_waiting', (data)=>{ try{ console.debug('socket:lobby_waiting', data); const found = (data && Array.isArray(data.players) ? data.players.length : (typeof data?.foundCount !== 'undefined' ? Number(data.foundCount) : 1)); const opts = { game: data?.game || data?.name || null, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: found }; showSearchIndicator(opts); }catch(e){} });
     socket.on('lobby_cancelled', (data)=>{ try{ console.debug('socket:lobby_cancelled', data); hideSearchIndicator(); }catch(e){} });
 
         
