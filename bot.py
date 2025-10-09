@@ -122,6 +122,7 @@ MAX_PLAYERS_PER_LOBBY = int(os.environ.get('MAX_PLAYERS_PER_LOBBY', 10))
 # queue for hidden quick-match lobbies
 hidden_waiting = []  # list of lobby_id
 pending_matches = {}  # match_id -> { lobby_id, players: [sid1,sid2], confirmed: set(), timer }
+hidden_waiting_lock = threading.Lock()
 
 # Функции модерации
 async def add_warning(user_id: int, violation_type: str, context: ContextTypes.DEFAULT_TYPE):
@@ -1830,33 +1831,39 @@ def handle_quick_match(data):
         'current_player': 'X'
     }
     hidden_waiting.append(lobby_id)
-
     # try to match with another waiting hidden lobby (not the same sid)
     matched = None
-    for hid in list(hidden_waiting):
-        if hid == lobby_id:
-            continue
-        other = lobbies.get(hid)
-        if not other:
-            hidden_waiting.remove(hid)
-            continue
-        # ensure not the same user joining themselves (by user_id or sid)
-        if any(p.get('user_id') == user_id for p in other['players']):
-            continue
-        # match: append second player and start game
-        other['players'].append({'sid': request.sid, 'user_id': user_id, 'name': player_name, 'symbol': 'O', 'avatar': player_avatar})
-        other['status'] = 'playing'
-        # remove both from waiting queue
-        try:
-            hidden_waiting.remove(hid)
-        except ValueError:
-            pass
-        try:
-            hidden_waiting.remove(lobby_id)
-        except ValueError:
-            pass
-        matched = other
-        break
+    # protect matching with a lock to avoid races between concurrent quick_match calls
+    with hidden_waiting_lock:
+        for hid in list(hidden_waiting):
+            if hid == lobby_id:
+                continue
+            other = lobbies.get(hid)
+            if not other:
+                try:
+                    hidden_waiting.remove(hid)
+                except ValueError:
+                    pass
+                continue
+            # ensure not the same user joining themselves (by user_id or sid)
+            if user_id and any(p.get('user_id') == user_id for p in other['players']):
+                continue
+            if any(p.get('sid') == request.sid for p in other['players']):
+                continue
+            # match: append second player and start game
+            other['players'].append({'sid': request.sid, 'user_id': user_id, 'name': player_name, 'symbol': 'O', 'avatar': player_avatar})
+            other['status'] = 'playing'
+            # remove both from waiting queue
+            try:
+                hidden_waiting.remove(hid)
+            except ValueError:
+                pass
+            try:
+                hidden_waiting.remove(lobby_id)
+            except ValueError:
+                pass
+            matched = other
+            break
 
     if matched:
         # remove the temporary lobby created by this sid to avoid leaving an orphan hidden lobby
