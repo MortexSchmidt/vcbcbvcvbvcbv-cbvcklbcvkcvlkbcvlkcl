@@ -1504,7 +1504,7 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
     chat = update.effective_chat
     chat_id = chat.id if chat else None
     chat_type = getattr(chat, 'type', 'unknown')
-    logger.info(f"tictactoe invoked by user {update.effective_user.id} in chat {chat_id} (type={chat_type})"
+    logger.info(f"tictactoe invoked by user {update.effective_user.id} in chat {chat_id} (type={chat_type})")
     
     # URL Mini-App
     miniapp_url = "https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/mini_games_chat.html"
