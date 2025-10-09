@@ -147,8 +147,8 @@
             .app-sidebar { display:none }
             .app-main { padding:18px 14px 92px 14px }
 
-            /* show cards as two columns on phones (no horizontal swipe) */
-            .game-selection { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; padding-bottom:12px }
+            /* show cards as one column on phones (vertical layout) */
+            .game-selection { display:grid; grid-template-columns: 1fr; gap:12px; padding-bottom:12px }
             .game-card { width:100%; box-shadow: 0 6px 18px rgba(2,6,23,0.45); }
 
             /* bottom nav */
@@ -229,16 +229,11 @@
           #confirm-box #confirm-meta-a, #confirm-box #confirm-meta-b { display:block; }
 
         @media (max-width: 720px) {
-            /* hide action buttons inside game cards on phones (keep global nav) */
-            .game-card .game-choose, .game-card .game-lobby, .game-card button { display: none !important; }
-
-        /* Mobile layout: one card per row, show per-card Play buttons */
-        @media (max-width: 720px) {
+            /* Mobile layout: one card per row, show per-card Play buttons */
             .game-selection { flex-direction: column; }
             .game-card { width: 100%; min-width: 0; }
             .game-card .game-choose, .game-card .game-lobby, .game-card button { display: block !important; }
             .card-play-btn { display: block !important; width: 100%; box-sizing: border-box; }
-        }
             .game-card { cursor: pointer; }
         }
     </style>
