@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0f14;
+            --card: #0f1720;
+            --muted: #98a0b3;
+            --text: #e6eef8;
+            --accent: #6c8cff;
+            --success: #22c55e;
+            --danger: #ff6b6b;
+            --glass: rgba(255,255,255,0.03);
+            --shadow-1: 0 8px 28px rgba(2,6,23,0.6);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --gap: 14px;
+            --transition: 180ms cubic-bezier(.2,.9,.2,1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 16px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 920px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-1);
+            background: var(--card);
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 22px;
+            height: calc(100vh - 44px);
+        }
+
+        .app-sidebar {
+            padding: 18px;
+            background: transparent;
+            border-right: 1px solid rgba(255,255,255,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: 100%;
+        }
+
+        .profile-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--glass);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .profile-name {
+            font-weight: 600;
+        }
+
+        .profile-sub {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.03);
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+            transition: all var(--transition);
+            font-weight: 600;
+            text-align: left;
+            min-height: 48px;
+        }
+
+        .menu-btn.primary {
+            background: var(--accent);
+            color: #07102a;
+            border: 0;
+        }
+
+        .menu-btn.disabled {
+            background: var(--muted);
+            color: var(--card);
+            cursor: not-allowed;
+        }
+
+        .menu-btn:hover:not(.disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(2,6,23,0.55);
+        }
+
+        .app-main {
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            background: transparent;
+            height: 100%;
+        }
+
+        .game-selection {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .game-card {
+            background: var(--card);
+            border: 1px solid var(--glass);
+            border-radius: var(--radius);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .game-card h3 {
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .game-card button {
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--glass);
+            background: var(--accent);
+            color: #07102a;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .game-card button.disabled {
+            background: var(--muted);
+            color: var(--card);
+            cursor: not-allowed;
+        }
+
+        .game-card button:hover:not(.disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(2,6,23,0.55);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="app-sidebar">
+            <div class="profile-row">
+                <div class="avatar">
+                    <img src="" alt="avatar" onerror="this.src='https://ui-avatars.com/api/?name=Guest&background=5865f2&color=ffffff&size=128';">
+                </div>
+                <div class="profile-info">
+                    <div class="profile-name">Гость</div>
+                    <div class="profile-sub">Не авторизован</div>
+                </div>
+            </div>
+
+            <div class="menu-buttons">
+                <button class="menu-btn disabled">Играть</button>
+                <button class="menu-btn">Настройки</button>
+                <button class="menu-btn">Лобби</button>
+            </div>
+        </aside>
+
+        <main class="app-main">
+            <div class="game-selection">
+                <div class="game-card">
+                    <h3>Крестики-Нолики</h3>
+                    <button class="disabled">Выбрать</button>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
