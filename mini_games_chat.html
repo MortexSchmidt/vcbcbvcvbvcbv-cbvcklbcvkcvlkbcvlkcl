@@ -233,7 +233,8 @@
             .game-selection { flex-direction: column; }
             .game-card { width: 100%; min-width: 0; }
             .game-card .game-choose, .game-card .game-lobby, .game-card button { display: block !important; }
-            .card-play-btn { display: block !important; width: 100%; box-sizing: border-box; }
+            /* do not auto-show per-card play buttons on mobile; they appear after selection */
+            .card-play-btn { width: 100%; box-sizing: border-box; }
             /* place search indicator above bottom-nav and stretch across the menu area */
             #search-indicator { left: 0 !important; right: 0 !important; bottom: 84px !important; transform: none !important; min-width: unset !important; width: calc(100% - 28px) !important; margin: 0 14px; }
             #search-indicator .search-bar { justify-content: center; width: 100%; border-radius: 12px; }
@@ -1792,8 +1793,8 @@
                     try{
                         const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
                         if (isMobileNow){
-                            let pbtn = createCardPlayButton(card);
-                            if (pbtn) pbtn.style.display = 'block';
+                            // ensure factory exists but do not show by default on mobile
+                            createCardPlayButton(card);
                         }
                     }catch(e){}
                 });
