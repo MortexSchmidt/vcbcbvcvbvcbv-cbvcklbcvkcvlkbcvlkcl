@@ -106,6 +106,19 @@
         .game-card button.disabled { background:var(--muted); color:var(--card); cursor:not-allowed }
         .game-card button:hover:not(.disabled){ transform:translateY(-2px); box-shadow:0 8px 20px rgba(2,6,23,0.55) }
 
+    /* Lobby list styles */
+    .lobbies-list { display:flex; flex-direction:column; gap:10px }
+    .lobby-card { display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent); border:1px solid rgba(255,255,255,0.03); transition:transform .12s ease, box-shadow .12s ease }
+    .lobby-card:hover { transform:translateY(-4px); box-shadow:0 10px 30px rgba(2,6,23,0.5) }
+    .lobby-avatar { width:44px; height:44px; border-radius:10px; background:var(--glass); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--text) }
+    .lobby-info { flex:1; min-width:0 }
+    .lobby-name { font-weight:700; font-size:15px; color:var(--text); margin-bottom:4px }
+    .lobby-meta { color:var(--muted); font-size:13px }
+    .lobby-actions { display:flex; gap:8px }
+    .badge { padding:6px 8px; border-radius:999px; font-size:12px; font-weight:700; color:#07102a; background:var(--accent); }
+    .badge.wait { background:#ffd166; color:#07102a }
+    .badge.playing { background:var(--success); color:#07102a }
+
         /* Bottom navigation for mobile */
         .bottom-nav { display:none }
 
@@ -190,13 +203,13 @@
             <section id="view-lobby" class="view" data-view="lobby" style="display:none">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
                     <h2 style="margin:0">Лобби</h2>
-                    <div style="display:flex;gap:8px">
-                        <input id="lobby-name" placeholder="Название лобби" style="padding:8px;border-radius:10px;border:1px solid var(--glass);background:transparent;color:var(--text)">
-                        <button id="btn-create-lobby" class="menu-btn">Создать</button>
-                    </div>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <input id="lobby-name" placeholder="Название лобби" style="padding:10px;border-radius:10px;border:1px solid var(--glass);background:transparent;color:var(--text);flex:1;min-width:0">
+                            <button id="btn-create-lobby" class="menu-btn">Создать</button>
+                        </div>
                 </div>
 
-                <div id="lobbies-list" style="margin-top:12px;display:flex;flex-direction:column;gap:10px"></div>
+                    <div id="lobbies-list" class="lobbies-list" style="margin-top:12px"></div>
             </section>
 
             <section id="view-game" class="view" data-view="game" style="display:none">
@@ -308,18 +321,42 @@
         function renderLobbies(list){
             const root = document.getElementById('lobbies-list');
             root.innerHTML = '';
-            if (!list || list.length===0) { root.innerHTML = '<div style="color:var(--muted)">Лобби ещё нет. Создайте своё!</div>'; return; }
+            if (!list || list.length===0) {
+                root.innerHTML = '<div style="color:var(--muted);padding:12px;border-radius:10px;border:1px dashed rgba(255,255,255,0.03)">Лобби ещё нет. Создайте своё!</div>';
+                return;
+            }
+
             list.forEach(lobby=>{
                 const el = document.createElement('div');
-                el.className = 'game-card';
-                el.style.display = 'flex';
-                el.style.justifyContent = 'space-between';
-                el.style.alignItems = 'center';
-                el.innerHTML = `<div style="flex:1;min-width:0"><div style="font-weight:600">${escapeHtml(lobby.name || 'Лобби')}</div><div style='color:var(--muted);font-size:13px'>Игроков: ${lobby.players?.length||0} — ${lobby.status||'—'}</div></div>`;
+                el.className = 'lobby-card';
+
+                const avatar = document.createElement('div');
+                avatar.className = 'lobby-avatar';
+                const initial = (lobby.name||'L').trim().slice(0,1).toUpperCase();
+                avatar.textContent = initial;
+
+                const info = document.createElement('div');
+                info.className = 'lobby-info';
+                info.innerHTML = `<div class="lobby-name">${escapeHtml(lobby.name || 'Лобби')}</div><div class="lobby-meta">Игроков: ${lobby.players?.length||0} • ${escapeHtml(lobby.status||'—')}</div>`;
+
+                const actions = document.createElement('div');
+                actions.className = 'lobby-actions';
+
+                const statusBadge = document.createElement('div');
+                statusBadge.className = 'badge ' + (lobby.status==='playing' ? 'playing' : 'wait');
+                statusBadge.textContent = lobby.status==='playing' ? 'Игра' : 'Ожидание';
+
                 const join = document.createElement('button'); join.className='menu-btn'; join.textContent = lobby.players && lobby.players.length>=2 ? 'Полное' : 'Войти';
                 if (lobby.players && lobby.players.length>=2) join.disabled = true;
                 join.addEventListener('click', ()=>{ socket.emit('join_lobby', { lobby_id: lobby.id, player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id }); });
-                el.appendChild(join);
+
+                actions.appendChild(statusBadge);
+                actions.appendChild(join);
+
+                el.appendChild(avatar);
+                el.appendChild(info);
+                el.appendChild(actions);
+
                 root.appendChild(el);
             });
         }
