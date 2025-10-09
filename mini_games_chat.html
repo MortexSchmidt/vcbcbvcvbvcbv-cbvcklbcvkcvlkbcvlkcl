@@ -489,14 +489,18 @@
                 </div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:18px">
-                <div style="color:var(--text);font-weight:800;font-size:20px">Загрузка</div>
-                <div style="color:var(--muted);font-weight:700">Пожалуйста, подождите...</div>
+                    <div style="color:var(--text);font-weight:800;font-size:20px">Загрузка</div>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+                    <div style="color:var(--muted);font-weight:700">Пожалуйста, подождите</div>
+                    <!-- inline spinner fallback shown next to text -->
+                    <div id="preload-inline-spinner" style="width:28px;height:28px;border-radius:14px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;">
+                        <div style="width:18px;height:18px;border:3px solid rgba(108,140,255,0.14);border-top-color:var(--accent);border-radius:50%;animation:spin 800ms linear infinite"></div>
+                    </div>
+                </div>
             </div>
         </div>
         <!-- bottom-right spinner -->
-        <div id="preload-spinner" style="position:fixed;right:18px;bottom:18px;width:48px;height:48px;border-radius:24px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;z-index:1400">
-            <div style="width:28px;height:28px;border:3px solid rgba(108,140,255,0.14);border-top-color:var(--accent);border-radius:50%;animation:spin 800ms linear infinite"></div>
-        </div>
+        <!-- right-bottom spinner removed; using inline spinner next to text -->
     </div>
 
     <!-- Bottom nav для телефонов -->
@@ -565,8 +569,8 @@
         // show modal, hide sidebar
         try{ document.getElementById('preload-modal').style.display = 'flex'; }catch(e){}
         try{ document.querySelector('.app-sidebar').style.display = 'none'; }catch(e){}
-        // show spinner in bottom-right while preload is visible
-        try{ document.getElementById('preload-spinner').style.display = 'flex'; }catch(e){}
+    // show inline spinner next to text while preload is visible
+    try{ document.getElementById('preload-inline-spinner').style.display = 'flex'; }catch(e){}
         // ensure it's removed after exactly duration seconds even if tab hidden
         setTimeout(()=>{ try{ hidePreload(); }catch(e){} }, duration*1000 + 50);
         // attempt to load and play assets/loading.tgs (zlib-compressed lottie json)
@@ -576,7 +580,7 @@
     function hidePreload(){
         try{ document.getElementById('preload-modal').style.display = 'none'; }catch(e){}
         try{ document.querySelector('.app-sidebar').style.display = ''; }catch(e){}
-        try{ document.getElementById('preload-spinner').style.display = 'none'; }catch(e){}
+    try{ document.getElementById('preload-inline-spinner').style.display = 'none'; }catch(e){}
     }
 
     // Play loading.tgs using pako + lottie-web
