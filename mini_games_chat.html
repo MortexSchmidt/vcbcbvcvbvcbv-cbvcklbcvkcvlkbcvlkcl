@@ -576,10 +576,18 @@
             playButton.setAttribute('aria-hidden','false');
             // start timer update
             if (searchTimer) clearInterval(searchTimer);
+            // update immediately
+            (function update(){
+                const elapsed = Math.floor((Date.now() - searchStart)/1000);
+                const mm = String(Math.floor(elapsed/60)).padStart(2,'0');
+                const ss = String(elapsed % 60).padStart(2,'0');
+                document.getElementById('search-indicator').textContent = `Поиск: ${mm}:${ss} — 1/2`;
+            })();
             searchTimer = setInterval(()=>{
                 const elapsed = Math.floor((Date.now() - searchStart)/1000);
-                const sec = String(elapsed).padStart(2,'0');
-                document.getElementById('search-indicator').textContent = `Поиск: ${sec} — 1/2`;
+                const mm = String(Math.floor(elapsed/60)).padStart(2,'0');
+                const ss = String(elapsed % 60).padStart(2,'0');
+                document.getElementById('search-indicator').textContent = `Поиск: ${mm}:${ss} — 1/2`;
             }, 500);
         }
 
