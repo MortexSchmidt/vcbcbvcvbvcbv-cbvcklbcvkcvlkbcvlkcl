@@ -615,15 +615,16 @@
             enableNavigation();
         }
 
-        socket.on('lobby_waiting', (data)=>{ try{ showSearchIndicator(); }catch(e){} });
-        socket.on('lobby_cancelled', (data)=>{ try{ hideSearchIndicator(); }catch(e){} });
+    socket.on('lobby_waiting', (data)=>{ try{ console.debug('socket:lobby_waiting', data); showSearchIndicator(); }catch(e){} });
+    socket.on('lobby_cancelled', (data)=>{ try{ console.debug('socket:lobby_cancelled', data); hideSearchIndicator(); }catch(e){} });
 
         
 
         // match found confirmation flow
         let confirmCountdown = null;
-        socket.on('match_found', (payload)=>{
+    socket.on('match_found', (payload)=>{
             try{
+        console.debug('socket:match_found', payload);
                 // show blocking confirm modal
                 document.getElementById('confirm-modal').style.display = 'flex';
                 // while waiting for confirmation, ensure navigation is disabled
@@ -661,7 +662,7 @@
             }catch(e){ console.error(e); }
         });
 
-    socket.on('match_cancelled', (data)=>{ try{ hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } enableNavigation(); }catch(e){} });
+    socket.on('match_cancelled', (data)=>{ try{ console.debug('socket:match_cancelled', data); hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } enableNavigation(); }catch(e){} });
         socket.on('lobby_created', (data)=>{
             // server returns lobby_id and lobby
             const lobby = data.lobby || data;

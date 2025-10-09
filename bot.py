@@ -1864,76 +1864,80 @@ def handle_quick_match(data):
                 pass
             matched = other
             break
-
     if matched:
         # remove the temporary lobby created by this sid to avoid leaving an orphan hidden lobby
         try:
             if lobby_id in lobbies:
                 del lobbies[lobby_id]
+                logger.info(f"quick_match: removed orphan lobby {lobby_id}")
         except Exception:
             pass
 
-        # prepare a match confirmation step: emit 'match_found' to both players with a 15s confirmation window
-        p0 = other['players'][0]['sid']
-        p1 = request.sid
-        match_id = uuid.uuid4().hex[:8]
-        pending_matches[match_id] = {'lobby_id': other['id'], 'players': [p0, p1], 'confirmed': set(), 'timer': None}
+        # prepare a match confirmation step atomically
+        with hidden_waiting_lock:
+            p0 = other['players'][0]['sid']
+            p1 = request.sid
+            match_id = uuid.uuid4().hex[:8]
+            pending_matches[match_id] = {'lobby_id': other['id'], 'players': [p0, p1], 'confirmed': set(), 'timer': None}
 
-        payload = {'match_id': match_id, 'lobby': other}
-        try:
-            socketio.emit('match_found', payload, room=p0)
-            socketio.emit('match_found', payload, room=p1)
-        except Exception:
-            pass
+            payload = {'match_id': match_id, 'lobby': other}
+            try:
+                socketio.emit('match_found', payload, room=p0)
+                socketio.emit('match_found', payload, room=p1)
+                logger.info(f"quick_match: match_found emitted for match {match_id} to {p0} and {p1}")
+            except Exception as e:
+                logger.warning(f"quick_match: failed to emit match_found for {match_id}: {e}")
 
-        # start timeout timer (15s)
-        def match_timeout(m_id=match_id):
-            m = pending_matches.get(m_id)
-            if not m:
-                return
-            # determine who confirmed
-            conf = m.get('confirmed', set())
-            players = m.get('players', [])
-            # if both confirmed, do nothing (should have been started)
-            if len(conf) >= 2:
+            # start timeout timer (15s)
+            def match_timeout(m_id=match_id):
+                m = pending_matches.get(m_id)
+                if not m:
+                    return
+                # determine who confirmed
+                conf = m.get('confirmed', set())
+                players = m.get('players', [])
+                # if both confirmed, do nothing (should have been started)
+                if len(conf) >= 2:
+                    try:
+                        del pending_matches[m_id]
+                    except Exception:
+                        pass
+                    return
+                # if one confirmed, requeue that player
+                for sid in players:
+                    if sid in conf:
+                        # create new hidden lobby for this sid and notify searching
+                        try:
+                            nid = uuid.uuid4().hex[:8]
+                            lobbies[nid] = {
+                                'id': nid,
+                                'name': 'Quick Match',
+                                'players': [{'sid': sid, 'user_id': None, 'name': 'Игрок', 'symbol': 'X', 'avatar': ''}],
+                                'hidden': True,
+                                'status': 'waiting',
+                                'board': ['', '', '', '', '', '', '', '', ''],
+                                'current_player': 'X'
+                            }
+                            with hidden_waiting_lock:
+                                hidden_waiting.append(nid)
+                            socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=sid)
+                            logger.info(f"match_timeout: requeued sid {sid} into hidden lobby {nid}")
+                        except Exception:
+                            pass
+                    else:
+                        # notify other player that match cancelled for them
+                        try:
+                            socketio.emit('match_cancelled', {'match_id': m_id, 'reason': 'timeout'}, room=sid)
+                        except Exception:
+                            pass
                 try:
                     del pending_matches[m_id]
                 except Exception:
                     pass
-                return
-            # if one confirmed, requeue that player
-            for sid in players:
-                if sid in conf:
-                    # create new hidden lobby for this sid and notify searching
-                    try:
-                        nid = uuid.uuid4().hex[:8]
-                        lobbies[nid] = {
-                            'id': nid,
-                            'name': 'Quick Match',
-                            'players': [{'sid': sid, 'user_id': None, 'name': 'Игрок', 'symbol': 'X', 'avatar': ''}],
-                            'hidden': True,
-                            'status': 'waiting',
-                            'board': ['', '', '', '', '', '', '', '', ''],
-                            'current_player': 'X'
-                        }
-                        hidden_waiting.append(nid)
-                        socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=sid)
-                    except Exception:
-                        pass
-                else:
-                    # notify other player that match cancelled for them
-                    try:
-                        socketio.emit('match_cancelled', {'match_id': m_id, 'reason': 'timeout'}, room=sid)
-                    except Exception:
-                        pass
-            try:
-                del pending_matches[m_id]
-            except Exception:
-                pass
 
-        t = threading.Timer(15.0, match_timeout)
-        pending_matches[match_id]['timer'] = t
-        t.start()
+            t = threading.Timer(15.0, match_timeout)
+            pending_matches[match_id]['timer'] = t
+            t.start()
     else:
         # no match yet — keep waiting; notify creator that search is ongoing
         emit('lobby_waiting', {'lobby_id': lobby_id, 'message': 'Поиск соперника...'}, room=request.sid)
