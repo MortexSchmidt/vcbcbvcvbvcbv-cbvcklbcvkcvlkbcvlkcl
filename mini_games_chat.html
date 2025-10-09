@@ -111,10 +111,14 @@
     .lobby-card { display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent); border:1px solid rgba(255,255,255,0.03); transition:transform .12s ease, box-shadow .12s ease }
     .lobby-card:hover { transform:translateY(-4px); box-shadow:0 10px 30px rgba(2,6,23,0.5) }
     .lobby-avatar { width:44px; height:44px; border-radius:10px; background:var(--glass); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--text) }
+    /* prevent avatar images from overflowing their container and keep consistent sizing */
+    .lobby-avatar { overflow: hidden; flex: 0 0 44px; }
+    .lobby-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 8px; }
     .lobby-info { flex:1; min-width:0 }
     .lobby-name { font-weight:700; font-size:15px; color:var(--text); margin-bottom:4px }
     .lobby-meta { color:var(--muted); font-size:13px }
     .lobby-actions { display:flex; gap:8px }
+    .lobby-actions { align-items: center; }
     .badge { padding:6px 8px; border-radius:999px; font-size:12px; font-weight:700; color:#07102a; background:var(--accent); }
     .badge.wait { background:#ffd166; color:#07102a }
     .badge.playing { background:var(--success); color:#07102a }
@@ -628,33 +632,36 @@
                 return src;
             }
 
-            // Percussive tactile click: short noise transient through bandpass + short pitched body
+            // Percussive tactile click: softened transient using sine body + filtered click + shaped noise
             function playClick(opts){
                 if (!ac) init();
                 const now = ac.currentTime + (opts.delay || 0);
 
-                // body oscillator (low) for 'thud'
+                // body oscillator (low) for 'thud' — use sine for smoothness
                 const body = ac.createOscillator(); body.type = opts.bodyType || 'sine';
-                body.frequency.setValueAtTime(opts.bodyFreq || 180, now);
+                body.frequency.setValueAtTime(opts.bodyFreq || 160, now);
                 const gBody = ac.createGain(); gBody.gain.setValueAtTime(0.0001, now);
-                gBody.gain.linearRampToValueAtTime(opts.bodyGain || 0.12, now + 0.001);
+                gBody.gain.linearRampToValueAtTime(opts.bodyGain || 0.10, now + 0.002);
                 gBody.gain.exponentialRampToValueAtTime(0.0001, now + (opts.bodyDur || 0.12));
                 body.connect(gBody);
 
-                // click oscillator (high transient)
-                const click = ac.createOscillator(); click.type = opts.clickType || 'triangle';
-                click.frequency.setValueAtTime(opts.clickFreq || 3600, now);
-                // quick pitch sweep down for bite
-                click.frequency.linearRampToValueAtTime((opts.clickFreq || 3600) * 0.6, now + 0.02);
+                // click oscillator (high transient) — use sine and gentle sweep, then lowpass to remove digital harshness
+                const click = ac.createOscillator(); click.type = opts.clickType || 'sine';
+                click.frequency.setValueAtTime(opts.clickFreq || 2200, now);
+                // gentler pitch sweep for character without chiptune artifacts
+                click.frequency.linearRampToValueAtTime((opts.clickFreq || 2200) * 0.85, now + 0.035);
                 const gClick = ac.createGain(); gClick.gain.setValueAtTime(0.0001, now);
-                gClick.gain.linearRampToValueAtTime(opts.clickGain || 0.12, now + 0.002);
-                gClick.gain.exponentialRampToValueAtTime(0.0001, now + (opts.clickDur || 0.04));
-                click.connect(gClick);
+                gClick.gain.linearRampToValueAtTime(opts.clickGain || 0.08, now + 0.003);
+                gClick.gain.exponentialRampToValueAtTime(0.0001, now + (opts.clickDur || 0.05));
+                // lowpass to soften the top end (removes '8-bit' brightness)
+                const clickLP = ac.createBiquadFilter(); clickLP.type = 'lowpass'; clickLP.frequency.setValueAtTime(opts.clickLP || 3800, now);
+                click.connect(clickLP);
+                clickLP.connect(gClick);
 
-                // noise transient through bandpass for tactile edge
-                const noiseSrc = makeNoise(opts.noiseDur || 0.06, now);
-                const noiseFilt = ac.createBiquadFilter(); noiseFilt.type = 'bandpass'; noiseFilt.frequency.setValueAtTime(opts.noiseFreq || 2400, now);
-                const gNoise = ac.createGain(); gNoise.gain.setValueAtTime(opts.noiseGain || 0.06, now);
+                // noise transient through bandpass for tactile edge (kept subtle)
+                const noiseSrc = makeNoise(opts.noiseDur || 0.055, now);
+                const noiseFilt = ac.createBiquadFilter(); noiseFilt.type = 'bandpass'; noiseFilt.frequency.setValueAtTime(opts.noiseFreq || 1800, now);
+                const gNoise = ac.createGain(); gNoise.gain.setValueAtTime(opts.noiseGain || 0.045, now);
                 noiseSrc.connect(noiseFilt); noiseFilt.connect(gNoise);
 
                 // master gain for click
@@ -666,40 +673,42 @@
 
                 // start/stop
                 body.start(now); body.stop(now + (opts.bodyDur || 0.12) + 0.02);
-                click.start(now); click.stop(now + (opts.clickDur || 0.04) + 0.01);
-                noiseSrc.start(now); noiseSrc.stop(now + (opts.noiseDur || 0.06) + 0.01);
+                click.start(now); click.stop(now + (opts.clickDur || 0.05) + 0.01);
+                noiseSrc.start(now); noiseSrc.stop(now + (opts.noiseDur || 0.055) + 0.01);
             }
 
-            // small melodic ping for confirmations
+            // small melodic ping for confirmations — keep smooth sine and slightly lower amplitude
             function playPing(freq, dur, amp, delay){
                 if (!ac) init();
                 const now = ac.currentTime + (delay || 0);
                 const o = ac.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(freq, now);
                 const g = ac.createGain(); g.gain.setValueAtTime(0.0001, now);
-                g.gain.linearRampToValueAtTime(amp || 0.12, now + 0.004);
-                g.gain.exponentialRampToValueAtTime(0.0001, now + (dur || 0.18));
-                o.connect(g); g.connect(ac.destination);
-                o.start(now); o.stop(now + (dur || 0.18) + 0.02);
+                g.gain.linearRampToValueAtTime((amp || 0.09), now + 0.006);
+                g.gain.exponentialRampToValueAtTime(0.0001, now + (dur || 0.16));
+                // subtle highcut so pings aren't too bright
+                const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(5200, now);
+                o.connect(g); g.connect(lp); lp.connect(ac.destination);
+                o.start(now); o.stop(now + (dur || 0.16) + 0.02);
             }
 
             function uiClick(kind){ // tactile UI clicks
                 resume().then(()=>{
                     if (kind === 'primary') {
-                        playClick({ bodyFreq: 200, bodyDur: 0.12, bodyGain: 0.14, clickFreq: 4200, clickDur: 0.04, clickGain: 0.14, noiseFreq: 2700, noiseGain: 0.06 });
+                        playClick({ bodyFreq: 200, bodyDur: 0.12, bodyGain: 0.12, clickFreq: 2800, clickDur: 0.05, clickGain: 0.10, noiseFreq: 2000, noiseGain: 0.05, clickLP: 3600 });
                     } else if (kind === 'destructive') {
-                        playClick({ bodyFreq: 140, bodyDur: 0.16, bodyGain: 0.18, clickFreq: 2200, clickDur: 0.05, clickGain: 0.16, noiseFreq: 1200, noiseGain: 0.08 });
+                        playClick({ bodyFreq: 140, bodyDur: 0.16, bodyGain: 0.14, clickFreq: 1600, clickDur: 0.06, clickGain: 0.12, noiseFreq: 1200, noiseGain: 0.06, clickLP: 2600 });
                     } else if (kind === 'soft') {
-                        playClick({ bodyFreq: 300, bodyDur: 0.10, bodyGain: 0.08, clickFreq: 3200, clickDur: 0.03, clickGain: 0.06, noiseFreq: 3600, noiseGain: 0.02 });
+                        playClick({ bodyFreq: 300, bodyDur: 0.10, bodyGain: 0.08, clickFreq: 3000, clickDur: 0.04, clickGain: 0.06, noiseFreq: 3000, noiseGain: 0.02, clickLP: 3800 });
                     } else {
-                        playClick({ bodyFreq: 220, bodyDur: 0.10, bodyGain: 0.10, clickFreq: 3400, clickDur: 0.035, clickGain: 0.09, noiseFreq: 2600, noiseGain: 0.03 });
+                        playClick({ bodyFreq: 220, bodyDur: 0.10, bodyGain: 0.10, clickFreq: 2400, clickDur: 0.045, clickGain: 0.08, noiseFreq: 1800, noiseGain: 0.03, clickLP: 3400 });
                     }
                 }).catch(()=>{});
             }
 
-            function select(){ resume().then(()=>{ playClick({ bodyFreq: 260, bodyDur: 0.10, bodyGain: 0.10, clickFreq: 3800, clickDur: 0.03, clickGain: 0.08 }); playPing(1100, 0.08, 0.06, 0.04); }); }
-            function modalOpen(){ resume().then(()=>{ playClick({ bodyFreq: 240, bodyDur: 0.12, bodyGain: 0.12, clickFreq: 4000, clickDur: 0.04, clickGain: 0.10 }); playPing(780, 0.12, 0.07, 0.06); }); }
-            function create(){ resume().then(()=>{ playClick({ bodyFreq: 320, bodyDur: 0.14, bodyGain: 0.16, clickFreq: 3600, clickDur: 0.05, clickGain: 0.14, noiseFreq: 2800, noiseGain: 0.05 }); playPing(1200, 0.14, 0.12, 0.05); }); }
-            function lobbyCreated(){ resume().then(()=>{ playClick({ bodyFreq: 300, bodyDur: 0.12, bodyGain: 0.14, clickFreq: 4200, clickDur: 0.04, clickGain: 0.12 }); playPing(900, 0.12, 0.12, 0.05); playPing(1150, 0.10, 0.09, 0.12); }); }
+            function select(){ resume().then(()=>{ playClick({ bodyFreq: 260, bodyDur: 0.10, bodyGain: 0.10, clickFreq: 2600, clickDur: 0.04, clickGain: 0.07, clickLP:3600 }); playPing(900, 0.08, 0.05, 0.04); }); }
+            function modalOpen(){ resume().then(()=>{ playClick({ bodyFreq: 240, bodyDur: 0.12, bodyGain: 0.12, clickFreq: 2800, clickDur: 0.05, clickGain: 0.09, clickLP:3600 }); playPing(680, 0.12, 0.06, 0.06); }); }
+            function create(){ resume().then(()=>{ playClick({ bodyFreq: 320, bodyDur: 0.14, bodyGain: 0.14, clickFreq: 2400, clickDur: 0.055, clickGain: 0.12, noiseFreq: 2000, noiseGain: 0.045, clickLP:3500 }); playPing(980, 0.14, 0.10, 0.05); }); }
+            function lobbyCreated(){ resume().then(()=>{ playClick({ bodyFreq: 300, bodyDur: 0.12, bodyGain: 0.12, clickFreq: 3000, clickDur: 0.05, clickGain: 0.10, clickLP:3600 }); playPing(820, 0.12, 0.09, 0.05); playPing(980, 0.10, 0.07, 0.12); }); }
 
             // modern presets
             function setMuted(v){ muted = !!v; }
