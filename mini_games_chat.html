@@ -1240,14 +1240,22 @@
             try{ const lt = root.querySelector('#search-long-text'); if (lt) { lt.style.display = 'none'; lt.style.opacity = '0'; lt.style.transform = 'translateY(6px)'; } }catch(e){}
             try{ if (searchLongTimer) clearTimeout(searchLongTimer); }catch(e){}
             searchLongTimer = setTimeout(()=>{ try{
-                    const bar = root.querySelector('.search-bar'); if (bar) bar.classList.add('long-search');
+                    const bar = root.querySelector('.search-bar');
+                    if (bar){
+                        // save any inline background so we can restore it later
+                        try{ bar.dataset._prevBg = bar.style.background || ''; bar.dataset._prevColor = bar.style.color || ''; }catch(e){}
+                        // remove inline background/color which would override our CSS class
+                        try{ bar.style.background = ''; bar.style.removeProperty('background'); bar.style.color = ''; }catch(e){}
+                        bar.classList.add('long-search');
+                    }
                     // highlight only active per-card play buttons (those with data-searching='1')
                     try{
                         const activeBtns = Array.from(document.querySelectorAll('.card-play-btn')).filter(b=>b && b.dataset && b.dataset.searching === '1');
                         if (activeBtns && activeBtns.length){ activeBtns.forEach(b=>b.classList.add('long-search')); }
                     }catch(e){}
-                    // reveal expanded 'Долгий поиск' text
+                    // reveal expanded 'Долгий поиск' text and also animate alt title inside pill
                     const lt = root.querySelector('#search-long-text'); if (lt){ lt.style.display='block'; lt.style.opacity='1'; lt.style.transform='translateY(0)'; }
+                    try{ const alt = root.querySelector('#search-alt-title'); if (alt) { alt.style.display='block'; alt.style.opacity='1'; alt.style.transform='translateY(0)'; } }catch(e){}
                 }catch(e){} }, 15000);
             playButton.textContent = 'Отменить';
             playButton.classList.add('visible');
