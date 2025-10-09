@@ -119,15 +119,10 @@ pending_auths = {}  # { code: { 'sid': sid, 'ts': datetime } }
 # Limits (can be configured via env)
 MAX_LOBBIES = int(os.environ.get('MAX_LOBBIES', 10))
 MAX_PLAYERS_PER_LOBBY = int(os.environ.get('MAX_PLAYERS_PER_LOBBY', 10))
-# Auto-confirm rematches between players who just played
-AUTO_CONFIRM_REMATCH = os.environ.get('AUTO_CONFIRM_REMATCH', 'false').lower() == 'true'
 # queue for hidden quick-match lobbies
 hidden_waiting = []  # list of lobby_id
 pending_matches = {}  # match_id -> { lobby_id, players: [sid1,sid2], confirmed: set(), timer }
 hidden_waiting_lock = threading.Lock()
-# Track recent matches between players for auto-confirm rematch feature
-recent_matches = {}  # (player1_id, player2_id) -> timestamp
-REMATCH_WINDOW_MINUTES = 5  # Time window for considering a rematch
 
 # Функции модерации
 async def add_warning(user_id: int, violation_type: str, context: ContextTypes.DEFAULT_TYPE):
@@ -1876,112 +1871,44 @@ def handle_quick_match(data):
         except Exception:
             pass
 
-        # Check if this is a rematch between recent opponents
-        p0 = other['players'][0]
-        p0_id = p0.get('user_id') if isinstance(p0, dict) else None
-        p1_id = user_id
-
-        # If auto-confirm rematch is enabled and players recently played together, skip confirmation
-        if AUTO_CONFIRM_REMATCH and is_recent_opponent(p0_id, p1_id):
-            logger.info(f"Auto-confirming rematch between {p0_id} and {p1_id}")
-            # Directly start the game without confirmation step
-            try:
-                # Mark lobby as playing
-                other['status'] = 'playing'
-                # Remove from hidden waiting queue
+        # Clean up any stale pending matches for these players before creating new one
+        with hidden_waiting_lock:
+            players_to_clean = [p0.get('user_id'), user_id]
+            for stale_match_id, stale_match in list(pending_matches.items()):
                 try:
-                    with hidden_waiting_lock:
-                        if other['id'] in hidden_waiting:
-                            hidden_waiting.remove(other['id'])
-                except Exception:
-                    pass
+                    stale_players = stale_match.get('players', [])
+                    stale_player_ids = [p.get('user_id') if isinstance(p, dict) else None for p in stale_players]
 
-                # Enrich player info from telegram_profiles where missing
-                try:
-                    for pl in (other.get('players') or []):
-                        try:
-                            if (not pl.get('name') or not pl.get('avatar')) and pl.get('sid'):
-                                prof = telegram_profiles.get(pl.get('sid')) or {}
-                                if prof:
-                                    pl['name'] = pl.get('name') or prof.get('name')
-                                    pl['avatar'] = pl.get('avatar') or prof.get('avatar')
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
-
-                # Ensure both sockets join the lobby room
-                for pl in other.get('players', []):
-                    try:
-                        target_sid = pl if isinstance(pl, str) else pl.get('sid')
-                        if not target_sid:
-                            continue
-                        try:
-                            join_room(other['id'], sid=target_sid)
-                        except Exception:
+                    # If this stale match involves our players, clean it up
+                    if any(pid in players_to_clean for pid in stale_player_ids if pid):
+                        # Cancel timer if exists
+                        if stale_match.get('timer'):
                             try:
-                                socketio.server.enter_room(target_sid, other['id'])
-                            except Exception:
-                                logger.warning(f"quick_match: unable to add sid {target_sid} to room {other['id']}")
-                    except Exception as e:
-                        logger.warning(f"quick_match: failed to add player {pl} to room {other['id']}: {e}")
-
-                # Send lobby started event to both players
-                try:
-                    emitted_lobby = {'id': other['id'], 'status': 'playing'}
-                    emitted_lobby['name'] = other.get('name')
-                    emitted_lobby['board'] = other.get('board')
-                    emitted_lobby['current_player'] = other.get('current_player')
-                    # normalize players into objects with expected fields
-                    players_out = []
-                    for pl in (other.get('players') or []):
-                        if isinstance(pl, str):
-                            players_out.append({'name': pl, 'sid': None, 'user_id': None, 'avatar': '', 'symbol': ''})
-                        else:
-                            players_out.append({'sid': pl.get('sid'), 'user_id': pl.get('user_id'), 'name': pl.get('name') or ('Игрок' if pl.get('user_id') else ''), 'avatar': pl.get('avatar') or '', 'symbol': pl.get('symbol') or ''})
-                    emitted_lobby['players'] = players_out
-
-                    # Emit to both players
-                    for pl in other.get('players', []):
-                        try:
-                            target_sid = pl if isinstance(pl, str) else pl.get('sid')
-                            if not target_sid:
-                                continue
-                            socketio.emit('lobby_started', emitted_lobby, room=target_sid)
-                            # Also send update_lobby for consistency
-                            try:
-                                socketio.emit('update_lobby', other, room=target_sid)
+                                stale_match['timer'].cancel()
                             except Exception:
                                 pass
-                        except Exception as e:
-                            logger.warning(f"quick_match: failed to emit lobby_started to {target_sid}: {e}")
+                        # Remove from pending matches
+                        del pending_matches[stale_match_id]
+                        logger.info(f"Cleaned up stale match {stale_match_id} for players {players_to_clean}")
                 except Exception as e:
-                    logger.warning(f"quick_match: error preparing lobby_started payload for rematch: {e}")
+                    logger.warning(f"Error cleaning stale match {stale_match_id}: {e}")
 
-                # Record this match as recent for future rematches
-                record_recent_match(p0_id, p1_id)
+            # Now create fresh match confirmation
+            p0 = other['players'][0]
+            p1 = {'sid': request.sid, 'user_id': user_id}
+            match_id = uuid.uuid4().hex[:8]
+            # normalize players as dicts: { sid, user_id, user_key }
+            def make_user_key(sid_val, uid_val):
+                try:
+                    if uid_val:
+                        return f"uid:{uid_val}"
+                except Exception:
+                    pass
+                return f"sid:{sid_val}"
 
-            except Exception as e:
-                logger.warning(f"quick_match: error starting auto-confirmed rematch: {e}")
-
-        else:
-            # prepare a match confirmation step atomically
-            with hidden_waiting_lock:
-                p0 = other['players'][0]
-                p1 = {'sid': request.sid, 'user_id': user_id}
-                match_id = uuid.uuid4().hex[:8]
-                # normalize players as dicts: { sid, user_id, user_key }
-                def make_user_key(sid_val, uid_val):
-                    try:
-                        if uid_val:
-                            return f"uid:{uid_val}"
-                    except Exception:
-                        pass
-                    return f"sid:{sid_val}"
-
-                p0_entry = {'sid': p0.get('sid'), 'user_id': p0.get('user_id'), 'user_key': make_user_key(p0.get('sid'), p0.get('user_id'))}
-                p1_entry = {'sid': p1.get('sid'), 'user_id': p1.get('user_id'), 'user_key': make_user_key(p1.get('sid'), p1.get('user_id'))}
-                pending_matches[match_id] = {'lobby_id': other['id'], 'players': [p0_entry, p1_entry], 'confirmed': set(), 'timer': None}
+            p0_entry = {'sid': p0.get('sid'), 'user_id': p0.get('user_id'), 'user_key': make_user_key(p0.get('sid'), p0.get('user_id'))}
+            p1_entry = {'sid': p1.get('sid'), 'user_id': p1.get('user_id'), 'user_key': make_user_key(p1.get('sid'), p1.get('user_id'))}
+            pending_matches[match_id] = {'lobby_id': other['id'], 'players': [p0_entry, p1_entry], 'confirmed': set(), 'timer': None}
 
             payload = {'match_id': match_id, 'lobby': other}
             try:
@@ -1993,74 +1920,84 @@ def handle_quick_match(data):
             except Exception as e:
                 logger.warning(f"quick_match: failed to emit match_found for {match_id}: {e}")
 
-            # start timeout timer (15s)
-            def match_timeout(m_id=match_id):
-                m = pending_matches.get(m_id)
-                if not m:
-                    return
-                # determine who confirmed (we store normalized user_keys in confirmed)
-                conf = m.get('confirmed', set())
-                players = m.get('players', [])
-                # if both confirmed, do nothing (should have been started)
-                if len(conf) >= 2:
-                    try:
-                        del pending_matches[m_id]
-                    except Exception:
-                        pass
-                    return
-                # if one confirmed, requeue that player
-                for p in players:
-                    # resolve player's key for matching against confirmed set
-                    player_key = None
-                    try:
-                        if isinstance(p, dict):
-                            player_key = p.get('user_key') or (f"uid:{p.get('user_id')}" if p.get('user_id') else f"sid:{p.get('sid')}")
-                        else:
-                            player_key = f"sid:{p}"
-                    except Exception:
-                        player_key = f"sid:{p if isinstance(p, str) else ''}"
+           # start timeout timer (30s)
+           def match_timeout(m_id=match_id):
+               m = pending_matches.get(m_id)
+               if not m:
+                   return
 
-                    if player_key in conf:
-                        # create new hidden lobby for this sid and notify searching
-                        try:
-                            nid = uuid.uuid4().hex[:8]
-                            # try to get original sid to notify; fall back to None
-                            notify_sid = None
-                            if isinstance(p, dict):
-                                notify_sid = p.get('sid')
-                            else:
-                                notify_sid = p
-                            lobbies[nid] = {
-                                'id': nid,
-                                'name': 'Quick Match',
-                                'players': [{'sid': notify_sid, 'user_id': None, 'name': 'Игрок', 'symbol': 'X', 'avatar': ''}],
-                                'hidden': True,
-                                'status': 'waiting',
-                                'board': ['', '', '', '', '', '', '', '', ''],
-                                'current_player': 'X'
-                            }
-                            with hidden_waiting_lock:
-                                hidden_waiting.append(nid)
-                            socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=notify_sid)
-                            logger.info(f"match_timeout: requeued player_key {player_key} into hidden lobby {nid}")
-                        except Exception:
-                            pass
-                    else:
-                        # notify other player that match cancelled for them
-                        try:
-                            # resolve notify sid
-                            notify_sid = None
-                            if isinstance(p, dict):
-                                notify_sid = p.get('sid')
-                            else:
-                                notify_sid = p
-                            socketio.emit('match_cancelled', {'match_id': m_id, 'reason': 'timeout'}, room=notify_sid)
-                        except Exception:
-                            pass
-                try:
-                    del pending_matches[m_id]
-                except Exception:
-                    pass
+               logger.info(f"match_timeout: checking match {m_id}, confirmed: {len(m.get('confirmed', set()))}")
+
+               # determine who confirmed (we store normalized user_keys in confirmed)
+               conf = m.get('confirmed', set())
+               players = m.get('players', [])
+
+               # if both confirmed, do nothing (should have been started)
+               if len(conf) >= 2:
+                   logger.info(f"match_timeout: match {m_id} already confirmed by both players, cleaning up")
+                   try:
+                       del pending_matches[m_id]
+                   except Exception:
+                       pass
+                   return
+
+               # if one confirmed, requeue that player
+               logger.info(f"match_timeout: match {m_id} timed out, requeueing confirmed players")
+               for p in players:
+                   # resolve player's key for matching against confirmed set
+                   player_key = None
+                   try:
+                       if isinstance(p, dict):
+                           player_key = p.get('user_key') or (f"uid:{p.get('user_id')}" if p.get('user_id') else f"sid:{p.get('sid')}")
+                       else:
+                           player_key = f"sid:{p}"
+                   except Exception:
+                       player_key = f"sid:{p if isinstance(p, str) else ''}"
+
+                   if player_key in conf:
+                       # create new hidden lobby for this sid and notify searching
+                       try:
+                           nid = uuid.uuid4().hex[:8]
+                           # try to get original sid to notify; fall back to None
+                           notify_sid = None
+                           if isinstance(p, dict):
+                               notify_sid = p.get('sid')
+                           else:
+                               notify_sid = p
+                           lobbies[nid] = {
+                               'id': nid,
+                               'name': 'Quick Match',
+                               'players': [{'sid': notify_sid, 'user_id': None, 'name': 'Игрок', 'symbol': 'X', 'avatar': ''}],
+                               'hidden': True,
+                               'status': 'waiting',
+                               'board': ['', '', '', '', '', '', '', '', ''],
+                               'current_player': 'X'
+                           }
+                           with hidden_waiting_lock:
+                               hidden_waiting.append(nid)
+                           socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=notify_sid)
+                           logger.info(f"match_timeout: requeued player_key {player_key} into hidden lobby {nid}")
+                       except Exception as e:
+                           logger.warning(f"match_timeout: error requeueing player {player_key}: {e}")
+                   else:
+                       # notify other player that match cancelled for them
+                       try:
+                           # resolve notify sid
+                           notify_sid = None
+                           if isinstance(p, dict):
+                               notify_sid = p.get('sid')
+                           else:
+                               notify_sid = p
+                           socketio.emit('match_cancelled', {'match_id': m_id, 'reason': 'timeout'}, room=notify_sid)
+                           logger.info(f"match_timeout: notified player {notify_sid} that match {m_id} timed out")
+                       except Exception as e:
+                           logger.warning(f"match_timeout: error notifying player {notify_sid}: {e}")
+
+               try:
+                   del pending_matches[m_id]
+                   logger.info(f"match_timeout: cleaned up match {m_id}")
+               except Exception as e:
+                   logger.warning(f"match_timeout: error deleting match {m_id}: {e}")
 
             t = threading.Timer(30.0, match_timeout)
             pending_matches[match_id]['timer'] = t
@@ -2200,6 +2137,26 @@ def handle_match_accept(data):
         logger.warning(f"handle_match_accept: pending match {match_id} not found")
         return
     sid = request.sid
+
+    # Check if this sid is already in any other pending matches and clean them up
+    # This prevents stale confirmations from previous matches
+    for other_match_id, other_match in list(pending_matches.items()):
+        if other_match_id != match_id:
+            try:
+                # Remove this sid from other matches' confirmed sets
+                if sid in other_match.get('confirmed', set()):
+                    other_match['confirmed'].discard(sid)
+                    logger.info(f"Cleaned up stale confirmation for sid {sid} in match {other_match_id}")
+
+                # If this match becomes invalid (no confirmations and timer expired), clean it up
+                if (not other_match.get('confirmed') and
+                    other_match.get('timer') and
+                    hasattr(other_match['timer'], 'is_alive') and
+                    not other_match['timer'].is_alive()):
+                    del pending_matches[other_match_id]
+                    logger.info(f"Cleaned up expired match {other_match_id}")
+            except Exception as e:
+                logger.warning(f"Error cleaning up stale match {other_match_id}: {e}")
 
     # normalize accepting sid: if the accepting socket isn't the stored one but the telegram user_id matches,
     # update the stored player sid so users can confirm from another device.
@@ -2545,23 +2502,9 @@ def handle_make_move(data):
     if winner:
         lobby['status'] = 'finished'
         lobby['winner'] = winner
-        # Record this match as recent for future auto-confirm rematches
-        try:
-            players_with_ids = [p for p in lobby.get('players', []) if p.get('user_id')]
-            if len(players_with_ids) >= 2:
-                record_recent_match(players_with_ids[0].get('user_id'), players_with_ids[1].get('user_id'))
-        except Exception as e:
-            logger.warning(f"Failed to record recent match: {e}")
     elif '' not in lobby['board']:
         lobby['status'] = 'finished'
         lobby['winner'] = 'draw'
-        # Record draw as recent match for future auto-confirm rematches
-        try:
-            players_with_ids = [p for p in lobby.get('players', []) if p.get('user_id')]
-            if len(players_with_ids) >= 2:
-                record_recent_match(players_with_ids[0].get('user_id'), players_with_ids[1].get('user_id'))
-        except Exception as e:
-            logger.warning(f"Failed to record recent draw match: {e}")
     else:
         # Сменить ход
         lobby['current_player'] = 'O' if lobby.get('current_player') == 'X' else 'X'
@@ -2602,39 +2545,6 @@ def check_winner(board):
 
     return None
 
-def is_recent_opponent(player1_id, player2_id):
-    """Проверяет, играли ли два игрока недавно друг против друга"""
-    if not player1_id or not player2_id:
-        return False
-
-    # Создаем ключ для пары игроков (сортируем для консистентности)
-    player_pair = tuple(sorted([player1_id, player2_id]))
-    last_match_time = recent_matches.get(player_pair)
-
-    if not last_match_time:
-        return False
-
-    # Проверяем, прошло ли менее REMATCH_WINDOW_MINUTES минут
-    time_diff = datetime.now() - last_match_time
-    return time_diff.total_seconds() < (REMATCH_WINDOW_MINUTES * 60)
-
-def record_recent_match(player1_id, player2_id):
-    """Записывает завершенный матч между двумя игроками"""
-    if not player1_id or not player2_id:
-        return
-
-    player_pair = tuple(sorted([player1_id, player2_id]))
-    recent_matches[player_pair] = datetime.now()
-
-    # Очищаем старые записи (старше REMATCH_WINDOW_MINUTES минут)
-    current_time = datetime.now()
-    expired_pairs = []
-    for pair, match_time in recent_matches.items():
-        if (current_time - match_time).total_seconds() > (REMATCH_WINDOW_MINUTES * 60):
-            expired_pairs.append(pair)
-
-    for pair in expired_pairs:
-        del recent_matches[pair]
 
 @app.route('/tictactoe_app.html')
 def serve_tictactoe_app():
