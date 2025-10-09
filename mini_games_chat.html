@@ -138,9 +138,19 @@
             .bottom-nav svg { width:22px; height:22px; opacity:0.95 }
 
             /* Lobby header: stack input + button on very small screens */
-            #view-lobby > div { align-items: flex-start }
-            #view-lobby input { flex: 1 1 auto; min-width: 0; margin-bottom:8px }
-            #view-lobby > div > div { display:flex; flex-direction:column; gap:8px }
+            #view-lobby > div { justify-content: flex-start !important; align-items: flex-start; flex-direction: column; gap:8px; }
+            /* place input and button on the same row, left aligned */
+            #view-lobby > div > div { display:flex; flex-direction:row; gap:8px; align-items:center; }
+            #lobby-name { flex: 1 1 auto; min-width:0; width: auto; margin:0; }
+            #btn-create-lobby { flex: 0 0 auto; }
+
+            /* Lobbies list layout improvements */
+            .lobbies-list { padding: 6px 0; display:flex; flex-direction:column; gap:10px; }
+            .lobby-card { width:100%; display:flex; flex-direction:row; align-items:center; gap:12px; padding:12px; border-radius:12px; box-shadow: 0 6px 18px rgba(2,6,23,0.25); background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent); }
+            .lobby-avatar { width:44px; height:44px; flex:0 0 44px; border-radius:10px; }
+            .lobby-info { flex:1 1 auto; min-width:0; }
+            .lobby-actions { display:flex; gap:8px; flex:0 0 auto; }
+            .lobby-name { font-size:15px; }
         }
 
         /* Game card selection styles + floating Play button */
