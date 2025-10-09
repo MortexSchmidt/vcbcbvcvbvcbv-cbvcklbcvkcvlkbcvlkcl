@@ -1941,6 +1941,42 @@
                 }
             }
 
+            // --- Diagnostic helpers: delegated listeners and emit logger ---
+            // These help determine whether pointer events reach the button and whether socket.emit is called
+            try{
+                document.addEventListener('pointerdown', (ev)=>{
+                    try{
+                        const btn = ev.target.closest?.('.card-play-btn');
+                        if (btn) {
+                            ev.stopPropagation();
+                            appendDebugLine('DOC pointerdown -> ' + (btn.textContent||'') + ' searching=' + btn.dataset.searching);
+                            // highlight briefly for visual confirmation
+                            btn.style.outline = '3px solid rgba(108,140,255,0.9)';
+                            setTimeout(()=>{ btn.style.outline=''; }, 800);
+                        }
+                    }catch(e){}
+                }, { capture: true, passive: true });
+
+                document.addEventListener('click', (ev)=>{
+                    try{
+                        const btn = ev.target.closest?.('.card-play-btn');
+                        if (btn) {
+                            appendDebugLine('DOC click -> ' + (btn.textContent||'') + ' searching=' + btn.dataset.searching);
+                        }
+                    }catch(e){}
+                }, { capture: true });
+
+                // monkeypatch socket.emit to log outgoing events for easier tracing
+                if (window.socket && !socket.__emit_logged){
+                    const _emit = socket.emit.bind(socket);
+                    socket.__emit_logged = true;
+                    socket.emit = function(eventName, payload){
+                        try{ appendDebugLine('EMIT -> ' + eventName + ' payload=' + JSON.stringify(payload || {})); }catch(e){}
+                        return _emit(eventName, payload);
+                    }
+                }
+            }catch(e){ console.warn('diagnostic hooks failed', e); }
+
             // hide selection when tapping outside — but DO NOT clear selection while searching for opponent
             document.addEventListener('click', (ev)=>{
                 // if searching, ignore outside clicks (keep selection and cancel only via playButton)
