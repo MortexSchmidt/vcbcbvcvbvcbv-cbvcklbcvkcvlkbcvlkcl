@@ -607,6 +607,7 @@
             document.querySelectorAll('.view').forEach(v=>{ v.style.display = v.dataset.view===name ? 'block' : 'none'; v.classList.remove('view-enter'); });
             const enter = document.querySelector(`[data-view="${name}"]`);
             if (enter) { enter.classList.add('view-enter'); }
+            try{ appendDebugLine('view_change: ' + name); }catch(e){}
             // update bottom nav active state (optional)
         }
 
@@ -1070,9 +1071,12 @@
 
         function showLobby(lobby){
             activeLobby = lobby;
+            try{ appendDebugLine('showLobby: received lobby ' + JSON.stringify({ id: lobby?.id, status: lobby?.status, playersType: Array.isArray(lobby?.players)? typeof (lobby.players[0]) : 'none' })); }catch(e){}
             // players row
             const pr = document.getElementById('players-row'); pr.innerHTML = '';
-            (lobby.players||[]).forEach(p=>{
+            const playersArr = (lobby.players||[]).map(p => (typeof p === 'string' ? { name: p } : p));
+            lobby.players = playersArr;
+            playersArr.forEach(p=>{
                 const d = document.createElement('div'); d.style.display='flex'; d.style.alignItems='center'; d.style.gap='8px';
                 const imgWrap = document.createElement('div'); imgWrap.style.width='40px'; imgWrap.style.height='40px'; imgWrap.style.borderRadius='8px'; imgWrap.style.background='var(--glass)'; imgWrap.style.display='flex'; imgWrap.style.alignItems='center'; imgWrap.style.justifyContent='center'; imgWrap.style.fontWeight='600';
                 if (p.avatar){ const img = document.createElement('img'); img.src = p.avatar; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; img.style.borderRadius='8px'; imgWrap.appendChild(img); }
