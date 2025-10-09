@@ -556,29 +556,70 @@
         // After initial load show home
         showView('home');
 
-        // --- Lightweight WebAudio sound engine (no external files) ---
+        // --- Modern WebAudio sound engine (layered synth + noise) ---
         const SoundEngine = (function(){
             let ac = null;
+            let muted = false;
+
             function init(){ if (ac) return; ac = new (window.AudioContext || window.webkitAudioContext)(); }
             function resume(){ if (!ac) init(); if (ac.state === 'suspended') return ac.resume(); return Promise.resolve(); }
-            function playTone(freq, type='sine', dur=0.12, vol=0.12, delay=0){
-                if (!ac) init(); try {
-                    const now = ac.currentTime + delay;
-                    const o = ac.createOscillator();
-                    const g = ac.createGain();
-                    o.type = type; o.frequency.setValueAtTime(freq, now);
-                    g.gain.setValueAtTime(0.0001, now);
-                    g.gain.exponentialRampToValueAtTime(Math.max(0.0001, vol), now + 0.01);
-                    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
-                    o.connect(g); g.connect(ac.destination);
-                    o.start(now); o.stop(now + dur + 0.02);
-                } catch(e){ /* fail silently on weird browsers */ }
+
+            function makeNoise(duration, volume, now){
+                const bufferSize = ac.sampleRate * duration;
+                const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1) * (1 - i/bufferSize);
+                const src = ac.createBufferSource(); src.buffer = buffer;
+                const g = ac.createGain(); g.gain.setValueAtTime(volume, now);
+                src.connect(g);
+                return { src, g };
             }
-            function select(){ resume().then(()=> playTone(880, 'sine', 0.08, 0.10)); }
-            function modalOpen(){ resume().then(()=>{ playTone(660,'triangle',0.14,0.12); setTimeout(()=> playTone(880,'sawtooth',0.08,0.08), 80); }); }
-            function create(){ resume().then(()=>{ playTone(1000,'sine',0.10,0.18); setTimeout(()=> playTone(1300,'sine',0.06,0.12), 70); }); }
-            function lobbyCreated(){ resume().then(()=>{ playTone(800,'triangle',0.11,0.18); setTimeout(()=> playTone(1000,'triangle',0.11,0.14), 90); setTimeout(()=> playTone(1200,'triangle',0.11,0.10), 180); }); }
-            return { init, resume, select, modalOpen, create, lobbyCreated };
+
+            function synth(opts){
+                if (!ac) init(); try{
+                    const now = ac.currentTime + (opts.delay||0);
+                    const o1 = ac.createOscillator(); const o2 = ac.createOscillator();
+                    const f1 = opts.freq || 440; o1.type = opts.type || 'sine'; o2.type = opts.type2 || 'sawtooth';
+                    o1.frequency.setValueAtTime(f1, now); o2.frequency.setValueAtTime(f1 * (opts.detuneRatio||1.01), now);
+                    const filt = ac.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.setValueAtTime(opts.filterFreq || 8000, now);
+                    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, now);
+                    // envelope
+                    g.gain.linearRampToValueAtTime(Math.max(0.0001, opts.amp||0.12), now + 0.001);
+                    g.gain.exponentialRampToValueAtTime(0.0001, now + (opts.dur || 0.12));
+                    o1.connect(filt); o2.connect(filt); filt.connect(g); g.connect(ac.destination);
+                    o1.start(now); o2.start(now); o1.stop(now + (opts.dur||0.12) + 0.02); o2.stop(now + (opts.dur||0.12) + 0.02);
+                    // optional noise layer
+                    if (opts.noise){ const n = makeNoise(opts.noiseDur||0.08, opts.noiseVol||0.02, now); n.src.connect(ac.destination); n.src.start(now); n.src.stop(now + (opts.noiseDur||0.08)); }
+                }catch(e){ /* ignore */ }
+            }
+
+            function uiClick(kind){ // kind: 'neutral' | 'primary' | 'destructive' | 'soft'
+                if (muted) return;
+                resume().then(()=>{
+                    if (kind==='primary') synth({ freq:420, type:'sawtooth', type2:'sine', detuneRatio:1.02, dur:0.12, amp:0.14, filterFreq:1600, noise:true, noiseDur:0.06, noiseVol:0.02 });
+                    else if (kind==='destructive') synth({ freq:240, type:'triangle', dur:0.16, amp:0.14, filterFreq:900, noise:true, noiseDur:0.12, noiseVol:0.035 });
+                    else if (kind==='soft') synth({ freq:760, type:'sine', dur:0.09, amp:0.08, filterFreq:4200 });
+                    else synth({ freq:520, type:'sine', dur:0.10, amp:0.10, filterFreq:2800, noise:true, noiseDur:0.04, noiseVol:0.01 });
+                }).catch(()=>{});
+            }
+
+            function select(){ if (muted) return; resume().then(()=> synth({ freq:720, type:'triangle', dur:0.10, amp:0.10, filterFreq:3000 })); }
+            function modalOpen(){ if (muted) return; resume().then(()=>{ synth({ freq:520, type:'sawtooth', type2:'sine', detuneRatio:1.015, dur:0.14, amp:0.12, filterFreq:2200 }); setTimeout(()=> synth({ freq:760, type:'sine', dur:0.07, amp:0.08, filterFreq:3600 }), 70); }); }
+            function create(){ if (muted) return; resume().then(()=>{ synth({ freq:980, type:'sawtooth', dur:0.12, amp:0.16, filterFreq:2600, noise:true, noiseDur:0.06, noiseVol:0.03 }); setTimeout(()=> synth({ freq:1300, type:'sine', dur:0.06, amp:0.10, filterFreq:4200 }), 70); }); }
+            function lobbyCreated(){ if (muted) return; resume().then(()=>{ synth({ freq:720, type:'triangle', dur:0.12, amp:0.14, filterFreq:3000 }); setTimeout(()=> synth({ freq:900, type:'triangle', dur:0.11, amp:0.12, filterFreq:3400 }), 90); }); }
+
+            function setMuted(v){ muted = !!v; localStorage.setItem('soundMuted', muted ? '1' : '0'); updateMuteButton(); }
+            function isMuted(){ return !!muted; }
+
+            function updateMuteButton(){ const el = document.getElementById('sound-toggle-btn'); if (!el) return; el.textContent = muted ? '🔈' : '🔊'; el.title = muted ? 'Звук: выкл' : 'Звук: вкл'; }
+
+            // add a small toggle button to UI
+            function ensureUI(){ if (document.getElementById('sound-toggle-btn')) return; const btn = document.createElement('button'); btn.id='sound-toggle-btn'; btn.style.position='fixed'; btn.style.right='12px'; btn.style.bottom='84px'; btn.style.zIndex=1300; btn.style.width='44px'; btn.style.height='44px'; btn.style.borderRadius='10px'; btn.style.border='1px solid rgba(255,255,255,0.06)'; btn.style.background='var(--card)'; btn.style.color='var(--text)'; btn.style.boxShadow='0 8px 22px rgba(2,6,23,0.5)'; btn.style.cursor='pointer'; btn.style.fontSize='18px'; btn.style.display='flex'; btn.style.alignItems='center'; btn.style.justifyContent='center'; btn.setAttribute('aria-label','Toggle sound'); btn.addEventListener('click', (e)=>{ e.stopPropagation(); setMuted(!muted); }); document.body.appendChild(btn); updateMuteButton(); }
+
+            // init muted from localStorage
+            (function(){ try{ muted = localStorage.getItem('soundMuted') === '1'; }catch(e){ muted = false; } window.addEventListener('load', ()=> ensureUI()); })();
+
+            return { init, resume, uiClick, select, modalOpen, create, lobbyCreated, setMuted, isMuted };
         })();
 
         // --- Game selection: mobile-friendly selection + floating Play button ---
@@ -702,6 +743,34 @@
                     closeNow.addEventListener('click', ()=>{ overlay.remove(); });
                 });
             }
+        })();
+
+        // Delegated UI sound handler — covers buttons, menu-btn, links, input interactions
+        (function(){
+            document.addEventListener('click', (ev)=>{
+                const btn = ev.target.closest('button, [role=button], a, input, select, textarea');
+                if (!btn) return;
+                // ignore decorative controls
+                if (btn.disabled) return;
+                // decide kind
+                let kind = 'neutral';
+                if (btn.classList && btn.classList.contains('primary')) kind = 'primary';
+                else if (btn.classList && btn.classList.contains('danger')) kind = 'destructive';
+                else if (btn.classList && btn.classList.contains('menu-btn')) kind = 'soft';
+                try{ SoundEngine.uiClick(kind); }catch(e){}
+            }, { capture: true });
+
+            // also keyboard activation (Enter/Space)
+            document.addEventListener('keydown', (ev)=>{
+                if (ev.key !== 'Enter' && ev.key !== ' ') return;
+                const el = document.activeElement;
+                if (!el) return;
+                const interactive = el.matches && el.matches('button, [role=button], a, input[type=checkbox], input[type=radio]');
+                if (!interactive) return;
+                let kind = 'neutral';
+                if (el.classList && el.classList.contains('primary')) kind = 'primary';
+                try{ SoundEngine.uiClick(kind); }catch(e){}
+            });
         })();
     </script>
 </body>
