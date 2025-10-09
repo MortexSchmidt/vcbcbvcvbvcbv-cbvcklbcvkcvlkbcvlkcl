@@ -1555,34 +1555,34 @@
                 // ensure floating play button and search indicator are positioned correctly on desktop
                 function positionFloatingControls(){
                     try{
-                        const app = document.querySelector('.app-container');
+                        // target the game-selection column (where cards are) so the Play button centers over the list
+                        const target = document.querySelector('.game-selection') || document.querySelector('.app-main') || document.querySelector('.app-container');
                         const search = document.getElementById('search-indicator');
-                        if (!playButton) return;
+                        if (!playButton || !target) return;
                         const isMobileNow = window.matchMedia && window.matchMedia('(max-width: 720px)').matches;
-                        if (!isMobileNow && app){
-                            // center over the app container rather than the viewport
-                            const rect = app.getBoundingClientRect();
+                        if (!isMobileNow){
+                            const rect = target.getBoundingClientRect();
                             const centerX = rect.left + rect.width/2;
-                            // set left in pixels to avoid percent calc quirks
                             playButton.style.left = centerX + 'px';
                             playButton.style.transform = 'translateX(-50%) translateY(0) scale(1)';
-                            // set bottom to be slightly above the container's bottom (with a small gap)
-                            const gap = 24; // px gap from container bottom
+
+                            // position the button a bit below the visible area of the cards but above the bottom nav
+                            const gap = 20; // px gap from container bottom
                             const bottomPx = Math.max(86, window.innerHeight - rect.bottom + gap);
                             playButton.style.bottom = bottomPx + 'px';
-                            // ensure search indicator sits above the play button (avoid overlap)
+
+                            // position search-indicator above the Play button to avoid overlap
                             if (search) {
-                                const siBottom = bottomPx + playButton.offsetHeight + 12; // place search indicator above button
-                                // position search-indicator with fixed bottom
-                                search.style.left = '50%';
+                                search.style.left = centerX + 'px';
                                 search.style.transform = 'translateX(-50%)';
+                                // put search indicator slightly above the play button
                                 search.style.bottom = (bottomPx + playButton.offsetHeight + 18) + 'px';
                             }
                         } else {
-                            // mobile / fallback: restore defaults
+                            // mobile fallback
                             playButton.style.left = '50%';
                             playButton.style.transform = 'translateX(-50%) translateY(0) scale(.98)';
-                            playButton.style.bottom = isMobileNow ? '120px' : '86px';
+                            playButton.style.bottom = '120px';
                             if (search) { search.style.left = '50%'; search.style.transform = 'translateX(-50%)'; search.style.bottom = '140px'; }
                         }
                     }catch(e){ console.warn('positionFloatingControls err', e); }
