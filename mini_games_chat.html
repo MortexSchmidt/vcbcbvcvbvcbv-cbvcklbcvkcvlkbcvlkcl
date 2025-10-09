@@ -879,8 +879,15 @@
 
             updateListeners();
 
-            // hide selection when tapping outside
+            // hide selection when tapping outside — but DO NOT clear selection while searching for opponent
             document.addEventListener('click', (ev)=>{
+                // if searching, ignore outside clicks (keep selection and cancel only via playButton)
+                if (searching) {
+                    // allow clicks on playButton (it will handle cancel) and on modals
+                    if (ev.target.closest('.play-button') || ev.target.closest('.game-modal')) return;
+                    // otherwise ignore outside clicks while searching
+                    return;
+                }
                 // if clicked outside both card and modal and not on playButton — clear selection
                 if (!ev.target.closest('.game-card') && !ev.target.closest('.play-button') && !ev.target.closest('.game-modal')){
                     if (selected) { selected.classList.remove('selected'); selected.setAttribute('aria-selected','false'); selected = null; }
@@ -889,13 +896,21 @@
                 }
             });
 
-            // clicking floating Play triggers quick-match (fast play) for selected game
+            // clicking floating Play toggles quick-match / cancel while respecting searching state
             playButton.addEventListener('click', (ev)=>{
                 ev.stopPropagation();
-                if (!selected) return;
-                // quick match: emit 'quick_match' to server (hidden lobby)
+                // if not selected and not searching, nothing to do
+                if (!selected && !searching) return;
                 if (!currentUser || !currentUser.user_id) { openAuthModal(); return; }
+                if (searching) {
+                    // cancel search
+                    try{ socket.emit('cancel_quick_match', {}); }catch(e){}
+                    hideSearchIndicator();
+                    return;
+                }
+                // start quick match: emit 'quick_match' to server (hidden lobby) and show indicator immediately
                 socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id });
+                try{ showSearchIndicator(); }catch(e){}
                 try{ SoundEngine.modalOpen(); }catch(e){}
             });
 
