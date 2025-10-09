@@ -635,6 +635,7 @@
                     console.debug('socket:match_found', payload);
                     // show blocking confirm modal (keep it on top)
                     document.getElementById('confirm-modal').style.display = 'flex';
+                try{ SoundEngine.matchFound(); }catch(e){}
                     // while waiting for confirmation, ensure navigation is disabled
                     disableNavigation();
                     // disable play button interactions underneath modal
@@ -854,6 +855,20 @@
                 }).catch(()=>{});
             }
 
+            // upbeat match found sound: short arpeggio of pings
+            function matchFound(){
+                resume().then(()=>{
+                    try{
+                        // three ascending pings
+                        playPing(880, 0.12, 0.10, 0);
+                        playPing(1100, 0.12, 0.08, 0.06);
+                        playPing(1400, 0.12, 0.07, 0.13);
+                        // a soft thud for body
+                        playClick({ bodyFreq: 120, bodyGain: 0.08, bodyDur: 0.12, clickGain: 0.04, clickFreq: 1200 });
+                    }catch(e){ }
+                }).catch(()=>{});
+            }
+
             function select(){ resume().then(()=>{ uiClick('soft'); }); }
             function modalOpen(){ resume().then(()=>{ uiClick('primary'); }); }
             function create(){ resume().then(()=>{ uiClick('primary'); }); }
@@ -867,7 +882,7 @@
             // init muted default false
             (function(){ muted = false; })();
 
-            return { init, resume, uiClick, select, modalOpen, create, lobbyCreated };
+            return { init, resume, uiClick, select, modalOpen, create, lobbyCreated, matchFound };
         })();
 
         // --- Game selection: mobile-friendly selection + floating Play button ---
