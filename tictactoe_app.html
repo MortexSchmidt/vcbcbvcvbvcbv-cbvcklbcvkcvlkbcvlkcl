@@ -245,46 +245,72 @@
     .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
     .section-title i{color:var(--accent)}
 
-    /* На мобильных: скрываем все кнопки вне сайдбара */
-    @media (max-width: 768px) {
-        .app-main .menu-btn,
-        .app-main button,
-        .quick-actions,
-        .section .menu-btn,
-        .section button {
-            display: none !important;
-        }
-        .lobby-card { cursor: pointer; }
-        .lobby-card.selected { outline: 3px solid var(--accent); box-shadow: 0 6px 20px rgba(108,140,255,0.18); background: #1a2333; }
-    }
-    .play-button {
-        position: fixed;
-        left: 50%;
-        bottom: 80px;
-        transform: translateX(-50%);
-        background: var(--accent);
-        color: #fff;
-        padding: 16px 36px;
-        border-radius: var(--radius);
-        font-size: 1.15rem;
-        font-weight: 700;
-        box-shadow: var(--shadow-1);
-        display: none;
-        z-index: 1000;
-        border: none;
-    }
+    /* Оформление списка игр */
+.game-selection { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
+.game-card {
+    background: var(--card);
+    border: 1px solid var(--glass);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 180px;
+    flex: 1 1 220px;
+    cursor: pointer;
+    transition: box-shadow var(--transition), outline var(--transition);
+}
+.game-card.selected {
+    outline: 3px solid var(--accent);
+    box-shadow: 0 6px 20px rgba(108,140,255,0.18);
+    background: #1a2333;
+}
+@media (max-width: 768px) {
+    .game-selection { flex-wrap: wrap; gap: 10px; }
+    .game-card { min-width: 44vw; max-width: 100vw; }
+    .game-card button, .game-card .menu-btn { display: none !important; }
+}
 
-    /* На мобильных: скрываем только кнопки внутри карточек лобби (не всю навигацию) */
-    @media (max-width: 768px) {
-        /* Кнопки общие (меню) остаются видимыми, но любые кнопки внутри карточек лобби скрываем */
-        .lobby-card .menu-btn, .lobby-card button { display: none; }
-
-        /* Улучшаем область нажатия для карточек лобби */
-        .lobby-card { cursor: pointer; }
-
-        /* Стиль выделенной карточки */
-        .lobby-card.selected { outline: 2px solid rgba(108,140,255,0.18); box-shadow: 0 6px 20px rgba(108,140,255,0.06); }
+/* На мобильных: скрываем все кнопки вне сайдбара */
+@media (max-width: 768px) {
+    .app-main .menu-btn,
+    .app-main button,
+    .quick-actions,
+    .section .menu-btn,
+    .section button {
+        display: none !important;
     }
+    .lobby-card { cursor: pointer; }
+    .lobby-card.selected { outline: 3px solid var(--accent); box-shadow: 0 6px 20px rgba(108,140,255,0.18); background: #1a2333; }
+}
+.play-button {
+    position: fixed;
+    left: 50%;
+    bottom: 80px;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: #fff;
+    padding: 16px 36px;
+    border-radius: var(--radius);
+    font-size: 1.15rem;
+    font-weight: 700;
+    box-shadow: var(--shadow-1);
+    display: none;
+    z-index: 1000;
+    border: none;
+}
+
+/* На мобильных: скрываем только кнопки внутри карточек лобби (не всю навигацию) */
+@media (max-width: 768px) {
+    /* Кнопки общие (меню) остаются видимыми, но любые кнопки внутри карточек лобби скрываем */
+    .lobby-card .menu-btn, .lobby-card button { display: none; }
+
+    /* Улучшаем область нажатия для карточек лобби */
+    .lobby-card { cursor: pointer; }
+
+    /* Стиль выделенной карточки */
+    .lobby-card.selected { outline: 2px solid rgba(108,140,255,0.18); box-shadow: 0 6px 20px rgba(108,140,255,0.06); }
+}
     </style>
 </head>
 <body>
@@ -373,20 +399,20 @@
                 playButton.textContent = 'Играть';
                 document.body.appendChild(playButton);
             }
-            let selectedCard = null;
-            function updateLobbyCardListeners() {
-                const lobbyCards = document.querySelectorAll('.lobby-card');
-                lobbyCards.forEach(card => {
+            let selectedGameCard = null;
+            function updateGameCardListeners() {
+                const gameCards = document.querySelectorAll('.game-card');
+                gameCards.forEach(card => {
                     card.onclick = null;
                     card.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        if (selectedCard === card) {
+                        if (selectedGameCard === card) {
                             card.classList.remove('selected');
-                            selectedCard = null;
+                            selectedGameCard = null;
                             playButton.style.display = 'none';
                         } else {
-                            if (selectedCard) selectedCard.classList.remove('selected');
-                            selectedCard = card;
+                            if (selectedGameCard) selectedGameCard.classList.remove('selected');
+                            selectedGameCard = card;
                             card.classList.add('selected');
                             playButton.style.display = 'block';
                         }
@@ -394,21 +420,21 @@
                 });
             }
             if (isMobile) {
-                updateLobbyCardListeners();
+                updateGameCardListeners();
                 document.addEventListener('click', (event) => {
-                    if (!event.target.closest('.lobby-card')) {
-                        if (selectedCard) selectedCard.classList.remove('selected');
-                        selectedCard = null;
+                    if (!event.target.closest('.game-card')) {
+                        if (selectedGameCard) selectedGameCard.classList.remove('selected');
+                        selectedGameCard = null;
                         playButton.style.display = 'none';
                     }
                 });
                 playButton.addEventListener('click', () => {
-                    if (!selectedCard) return;
-                    const lobbyName = selectedCard.querySelector('.lobby-name')?.textContent || '';
+                    if (!selectedGameCard) return;
+                    const gameName = selectedGameCard.querySelector('h3')?.textContent || '';
                     if (window.Telegram && window.Telegram.WebApp) {
-                        window.Telegram.WebApp.showAlert(lobbyName ? `Вы выбрали: ${lobbyName}` : 'Выбрана игра');
+                        window.Telegram.WebApp.showAlert(gameName ? `Вы выбрали: ${gameName}` : 'Выбрана игра');
                     } else {
-                        alert(lobbyName ? `Вы выбрали: ${lobbyName}` : 'Выбрана игра');
+                        alert(gameName ? `Вы выбрали: ${gameName}` : 'Выбрана игра');
                     }
                 });
             }
@@ -538,6 +564,28 @@
                     <!-- End of lobby card example -->
 
                     <!-- Repeat lobby cards as needed -->
+                </div>
+            </div>
+
+            <!-- Section: game selection -->
+            <div class="section">
+                <h2 class="section-title">
+                    <i class="fas fa-gamepad"></i>
+                    Выбор игры
+                </h2>
+                <div class="game-selection">
+                    <div class="game-card" data-game="tictactoe">
+                        <h3>Крестики-нолики</h3>
+                        <div style="color:var(--muted);font-size:13px">Быстрая игра 1 на 1</div>
+                    </div>
+                    <div class="game-card" data-game="memory">
+                        <h3>Мемо (скоро)</h3>
+                        <div style="color:var(--muted);font-size:13px">Карточная память</div>
+                    </div>
+                    <div class="game-card" data-game="quiz">
+                        <h3>Quiz (скоро)</h3>
+                        <div style="color:var(--muted);font-size:13px">Викторина</div>
+                    </div>
                 </div>
             </div>
         </div>
