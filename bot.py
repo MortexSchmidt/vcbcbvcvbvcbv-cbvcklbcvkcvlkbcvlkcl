@@ -2023,12 +2023,28 @@ def _cancel_pending_match_internal(match_id, reason='cancelled', decliner_sid=No
             if decliner_sid and psid == decliner_sid:
                 socketio.emit('match_cancelled', {'match_id': match_id, 'reason': reason}, room=psid)
             else:
-                # requeue other player for quick match
+                # requeue other player for quick match; try to preserve profile info
                 nid = uuid.uuid4().hex[:8]
+                # try to get best profile info from p or global telegram_profiles
+                user_id = None
+                name = 'Игрок'
+                avatar = ''
+                try:
+                    if isinstance(p, dict):
+                        user_id = p.get('user_id')
+                        if p.get('name'):
+                            name = p.get('name')
+                    prof = telegram_profiles.get(psid) or {}
+                    if prof:
+                        user_id = user_id or prof.get('user_id')
+                        name = prof.get('name') or name
+                        avatar = prof.get('avatar') or avatar
+                except Exception:
+                    pass
                 lobbies[nid] = {
                     'id': nid,
                     'name': 'Quick Match',
-                    'players': [{'sid': psid, 'user_id': None, 'name': 'Игрок', 'symbol': 'X', 'avatar': ''}],
+                    'players': [{'sid': psid, 'user_id': user_id, 'name': name, 'symbol': 'X', 'avatar': avatar}],
                     'hidden': True,
                     'status': 'waiting',
                     'board': ['', '', '', '', '', '', '', '', ''],
@@ -2037,7 +2053,7 @@ def _cancel_pending_match_internal(match_id, reason='cancelled', decliner_sid=No
                 with hidden_waiting_lock:
                     hidden_waiting.append(nid)
                 socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=psid)
-                logger.info(f"_cancel_pending_match_internal: requeued {psid} into hidden lobby {nid}")
+                logger.info(f"_cancel_pending_match_internal: requeued {psid} into hidden lobby {nid} (name={name}, user_id={user_id})")
         except Exception as e:
             logger.warning(f"_cancel_pending_match_internal: error handling player {p}: {e}")
 
@@ -2185,6 +2201,34 @@ def handle_match_accept(data):
                 logger.warning(f"match_accept: error cancelling other hidden lobbies: {e}")
         else:
             logger.warning(f"match_accept: lobby {lobby_id} missing when starting match {match_id}")
+        # enrich lobby player info from telegram_profiles where missing
+        try:
+            for pl in (lobby.get('players') or []):
+                try:
+                    if (not pl.get('name') or not pl.get('avatar')) and pl.get('sid'):
+                        prof = telegram_profiles.get(pl.get('sid')) or {}
+                        if prof:
+                            pl['name'] = pl.get('name') or prof.get('name')
+                            pl['avatar'] = pl.get('avatar') or prof.get('avatar')
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # notify clients that match is starting and include player info (diagnostic/helpful UI)
+        try:
+            match_start_payload = {'match_id': match_id, 'lobby_id': lobby_id, 'players': [(p if isinstance(p, str) else {'sid': p.get('sid'), 'user_id': p.get('user_id'), 'name': p.get('name'), 'avatar': p.get('avatar')}) for p in (lobby.get('players') or [])]}
+            for p in (m.get('players') or []):
+                try:
+                    target_sid = p if isinstance(p, str) else p.get('sid')
+                    if not target_sid:
+                        continue
+                    socketio.emit('match_starting', match_start_payload, room=target_sid)
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"match_accept: failed to emit match_starting: {e}")
+
         # ensure both sockets join the lobby room so they receive room broadcasts
         for p in m.get('players', []):
             try:
