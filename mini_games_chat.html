@@ -785,13 +785,15 @@
                 if (!lobby) return;
 
                 // If server sent only minimal data (id/status) without players/board, request a fuller update
-                const hasPlayers = Array.isArray(lobby.players) && lobby.players.length;
-                const hasBoard = !!lobby.board;
                 // attempt to use cached match_starting players if lobby_started lacks players
+                let hasPlayers = Array.isArray(lobby.players) && lobby.players.length;
+                const hasBoard = !!lobby.board;
                 if (!hasPlayers && lobby.id && lastMatchStarts && lastMatchStarts[lobby.id]){
                     try{ appendDebugLine('lobby_started: merging players from recent match_starting cache'); }catch(e){}
                     const cached = lastMatchStarts[lobby.id];
                     try{ lobby.players = Array.isArray(cached) ? cached.map(p => (typeof p==='string' ? { name: p } : p)) : lobby.players; }catch(e){}
+                    // recompute after merge
+                    hasPlayers = Array.isArray(lobby.players) && lobby.players.length;
                 }
                 if (!hasPlayers && !hasBoard) {
                     try{ appendDebugLine('lobby_started: incomplete payload — waiting briefly for match_starting then requesting lobbies update'); }catch(e){}
