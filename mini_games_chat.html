@@ -368,6 +368,17 @@
             }catch(e){ console.error('updateProfile err', e); }
         }
 
+        // navigation lock helpers (used during quick-match searching/confirmation)
+        function disableNavigation(){
+            document.querySelectorAll('[data-action]').forEach(b=>{ try{ b.dataset._disabled = b.dataset.action; b.disabled = true; b.classList.add('disabled'); }catch(e){} });
+            document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.disabled=true; b.classList.add('disabled'); }catch(e){} });
+        }
+
+        function enableNavigation(){
+            document.querySelectorAll('[data-action]').forEach(b=>{ try{ b.disabled = false; b.classList.remove('disabled'); delete b.dataset._disabled; }catch(e){} });
+            document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.disabled=false; b.classList.remove('disabled'); }catch(e){} });
+        }
+
         socket.on('connect', ()=>{
             console.log('socket connected');
             if (currentUser) socket.emit('identify', currentUser);
@@ -574,6 +585,8 @@
             playButton.textContent = 'Отменить';
             playButton.classList.add('visible');
             playButton.setAttribute('aria-hidden','false');
+            // disable navigation while searching
+            disableNavigation();
             // start timer update
             if (searchTimer) clearInterval(searchTimer);
             // update immediately
@@ -598,6 +611,8 @@
             playButton.textContent = 'Играть';
             playButton.classList.remove('visible');
             playButton.setAttribute('aria-hidden','true');
+            // re-enable navigation when search ends
+            enableNavigation();
         }
 
         socket.on('lobby_waiting', (data)=>{ try{ showSearchIndicator(); }catch(e){} });
@@ -611,6 +626,8 @@
             try{
                 // show blocking confirm modal
                 document.getElementById('confirm-modal').style.display = 'flex';
+                // while waiting for confirmation, ensure navigation is disabled
+                disableNavigation();
                 let timeLeft = 15;
                 document.getElementById('confirm-timer').textContent = String(timeLeft);
                 // start countdown
@@ -631,16 +648,20 @@
                     socket.emit('match_accept', { match_id: payload.match_id });
                     document.getElementById('confirm-modal').style.display = 'none';
                     if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
+                    // allow navigation again once accepted
+                    enableNavigation();
                 };
                 document.getElementById('btn-decline').onclick = ()=>{
                     socket.emit('match_decline', { match_id: payload.match_id });
                     document.getElementById('confirm-modal').style.display = 'none';
                     if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
+                    // re-enable navigation after decline
+                    enableNavigation();
                 };
             }catch(e){ console.error(e); }
         });
 
-        socket.on('match_cancelled', (data)=>{ try{ hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } }catch(e){} });
+    socket.on('match_cancelled', (data)=>{ try{ hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } enableNavigation(); }catch(e){} });
         socket.on('lobby_created', (data)=>{
             // server returns lobby_id and lobby
             const lobby = data.lobby || data;
@@ -650,6 +671,9 @@
             showLobby(activeLobby);
             showView('game');
             try{ SoundEngine.lobbyCreated(); }catch(e){}
+            // clear any quick-match UI and allow navigation
+            hideSearchIndicator();
+            enableNavigation();
         });
 
         socket.on('update_lobby', (lobby)=>{

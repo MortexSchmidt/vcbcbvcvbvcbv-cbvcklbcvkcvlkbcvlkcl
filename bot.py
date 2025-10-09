@@ -1859,6 +1859,13 @@ def handle_quick_match(data):
         break
 
     if matched:
+        # remove the temporary lobby created by this sid to avoid leaving an orphan hidden lobby
+        try:
+            if lobby_id in lobbies:
+                del lobbies[lobby_id]
+        except Exception:
+            pass
+
         # prepare a match confirmation step: emit 'match_found' to both players with a 15s confirmation window
         p0 = other['players'][0]['sid']
         p1 = request.sid
@@ -2121,7 +2128,9 @@ def handle_leave_lobby(data):
 
 @socketio.on('get_lobbies')
 def handle_get_lobbies():
-    emit('lobbies_list', list(lobbies.values()))
+    # only return non-hidden lobbies to clients (hidden quick-match lobbies are internal)
+    visible = [l for l in list(lobbies.values()) if not l.get('hidden')]
+    emit('lobbies_list', visible)
 
 def check_winner(board):
     win_patterns = [
