@@ -1563,27 +1563,31 @@
                         if (!isMobileNow){
                             const rect = target.getBoundingClientRect();
                             const centerX = rect.left + rect.width/2;
+                            // horizontally center over game-selection, but keep vertical position fixed near viewport bottom
                             playButton.style.left = centerX + 'px';
                             playButton.style.transform = 'translateX(-50%) translateY(0) scale(1)';
-
-                            // position the button a bit below the visible area of the cards but above the bottom nav
-                            const gap = 20; // px gap from container bottom
-                            const bottomPx = Math.max(86, window.innerHeight - rect.bottom + gap);
-                            playButton.style.bottom = bottomPx + 'px';
+                            const desktopBottom = 86; // fixed distance from viewport bottom
+                            playButton.style.bottom = desktopBottom + 'px';
 
                             // position search-indicator above the Play button to avoid overlap
                             if (search) {
                                 search.style.left = centerX + 'px';
                                 search.style.transform = 'translateX(-50%)';
-                                // put search indicator slightly above the play button
-                                search.style.bottom = (bottomPx + playButton.offsetHeight + 18) + 'px';
+                                search.style.bottom = (desktopBottom + playButton.offsetHeight + 18) + 'px';
                             }
                         } else {
-                            // mobile fallback
+                            // mobile fallback: center in viewport and place higher to avoid bottom nav
                             playButton.style.left = '50%';
                             playButton.style.transform = 'translateX(-50%) translateY(0) scale(.98)';
-                            playButton.style.bottom = '120px';
-                            if (search) { search.style.left = '50%'; search.style.transform = 'translateX(-50%)'; search.style.bottom = '140px'; }
+                            const mobileBottom = 120;
+                            playButton.style.bottom = mobileBottom + 'px';
+                            if (search) {
+                                search.style.left = '50%';
+                                search.style.transform = 'translateX(-50%)';
+                                // ensure search indicator is not too close to Play button on mobile
+                                const searchMin = mobileBottom + playButton.offsetHeight + 22;
+                                search.style.bottom = Math.max(searchMin, 160) + 'px';
+                            }
                         }
                     }catch(e){ console.warn('positionFloatingControls err', e); }
                 }
