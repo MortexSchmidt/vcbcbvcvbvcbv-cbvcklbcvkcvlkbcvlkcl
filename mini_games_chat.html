@@ -675,6 +675,11 @@
             const enter = document.querySelector(`[data-view="${name}"]`);
             if (enter) { enter.classList.add('view-enter'); }
             try{ /* view changed: '" + name + "' */ }catch(e){}
+            // if search is active, reposition the floating/search indicator so it remains visible across view switches
+            try{ if (searching){ const root = document.getElementById('search-indicator'); if (root && root.style.display !== 'none'){ /* re-run position logic: */
+                        try{ const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches; if (isMobileNow){ /* keep current options */ } else { /* desktop: reposition under settings */ showSearchIndicator({}); } }catch(e){} }
+                }
+            }catch(e){}
             // update bottom nav active state (optional)
         }
 
@@ -976,8 +981,8 @@
         }
 
         function showSearchIndicator(opts = {}){
-            // opts: { game, player: { name, avatar }, foundCount }
-            searching = true; searchStart = Date.now();
+                // opts: { game, player: { name, avatar }, foundCount }
+            if (!searching){ searching = true; searchStart = Date.now(); }
             const root = document.getElementById('search-indicator');
             if (!root) return;
             root.style.display = 'block';
@@ -1026,13 +1031,13 @@
                             const menuButtons = sidebar.querySelector('.menu-buttons');
                             if (menuButtons){
                                 const mbRect = menuButtons.getBoundingClientRect();
-                                // Prefer to position the search card below the profile row so profile (avatar/ID) stays visible
-                                const profileRow = sidebar.querySelector('.profile-row');
-                                const gap = 8; // small gap under profile
-                                let topStart = mbRect.top;
-                                try{
-                                    if (profileRow){ const pr = profileRow.getBoundingClientRect(); topStart = pr.bottom + gap; }
-                                }catch(e){}
+                                    // Position the search card under the Settings button so profile stays visible
+                                    const settingsBtn = sidebar.querySelector('.menu-buttons [data-action="go-settings"]');
+                                    const gap = 8; // small gap under settings button
+                                    let topStart = mbRect.top;
+                                    try{
+                                        if (settingsBtn){ const sb = settingsBtn.getBoundingClientRect(); topStart = sb.bottom + gap; }
+                                    }catch(e){}
                                 // compute available space down to bottom of sidebar so we don't overflow the layout
                                 const sbRect = sidebar.getBoundingClientRect();
                                 const availableSpace = Math.max(80, Math.floor(sbRect.bottom - topStart - 12));
@@ -1040,14 +1045,7 @@
                                 const desiredHeight = Math.min( Math.max(56, Math.floor(mbRect.height) + extraDown), availableSpace );
                                 root.style.top = (topStart) + 'px';
                                 root.style.height = desiredHeight + 'px';
-                                // hide the menu-buttons visually while searching (we'll restore later)
-                                menuButtons.dataset._wasHiddenBySearch = '1';
-                                // remember previous display and visibility
-                                menuButtons.dataset._prevDisplay = menuButtons.style.display || '';
-                                menuButtons.dataset._prevVisibility = menuButtons.style.visibility || '';
-                                // hide completely so it doesn't take space
-                                menuButtons.style.display = 'none';
-                                menuButtons.style.visibility = 'hidden';
+                                // do NOT hide menu buttons; keep them visible as requested
                                 // set expanded area to use available space (avoid inner scroll where possible)
                                 const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.maxHeight = (desiredHeight - 8) + 'px'; exp.style.overflow = 'auto'; }
                             }
