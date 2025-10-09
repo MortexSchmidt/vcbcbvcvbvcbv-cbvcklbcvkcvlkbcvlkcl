@@ -203,6 +203,11 @@
     @keyframes popIn { to { transform: translateY(0) scale(1); opacity: 1 } }
     .winner-emoji { font-size:48px }
     .winner-avatar { width:84px; height:84px; border-radius:20px; overflow:hidden; background:var(--glass); display:flex; align-items:center; justify-content:center; }
+    /* mini board in end modal */
+    .end-mini { display:grid; grid-template-columns: repeat(3, 18px); grid-template-rows: repeat(3, 18px); gap:6px; margin-top:6px }
+    .end-mini .mini-cell { width:18px; height:18px; border-radius:6px; background:transparent; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.04) }
+    .end-mini .mini-cell .icon-x svg line { stroke-width:2 }
+    .end-mini .mini-cell .icon-o svg circle { stroke-width:2 }
     .winner-name { font-size:20px; font-weight:800; color:var(--text) }
     .winner-sub { color:var(--muted); font-size:14px }
     .end-actions { display:flex; gap:10px; margin-top:6px }
@@ -411,9 +416,14 @@
     <div id="end-modal" class="end-modal">
         <div class="end-card" id="end-card">
             <div class="winner-avatar" id="winner-avatar"></div>
-            <div class="winner-emoji" id="winner-emoji">🏆</div>
+            <div class="winner-emoji" id="winner-emoji"> 
+                <!-- white SVG trophy -->
+                <svg id="svg-trophy" viewBox="0 0 24 24" width="48" height="48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 3h10v2a4 4 0 0 1-4 4h-2A4 4 0 0 1 7 5V3z" fill="#ffffff"/><path d="M5 7v2a5 5 0 0 0 5 5h4a5 5 0 0 0 5-5V7" stroke="#ffffff" stroke-width="0" fill="#ffffff"/><path d="M10 19h4v2h-4z" fill="#ffffff"/></svg>
+            </div>
             <div class="winner-name" id="winner-name">Победитель</div>
             <div class="winner-sub" id="winner-sub">Поздравляем!</div>
+            <!-- mini board to illustrate final positions -->
+            <div class="end-mini" id="end-mini" aria-hidden="false"></div>
             <div class="end-actions">
                 <button id="btn-return-home" class="menu-btn primary">Вернуться на главную</button>
             </div>
@@ -1299,12 +1309,38 @@
                 if (nameEl) nameEl.textContent = winnerName || 'Ничья';
                 if (subEl) subEl.textContent = winnerName ? 'Победитель' : 'Ничья';
 
+                // render mini board if available
+                try{ renderEndMini(payload && payload.board ? payload.board : null); }catch(e){ appendDebugLine('renderEndMini threw: '+(e&&e.message)); }
+
                 // animate modal in (CSS already defines popIn on .end-card)
                 modal.style.display = 'flex';
 
                 // wire button
                 if (btn){ btn.onclick = function(){ appendDebugLine('end-modal: return home clicked'); modal.style.display='none'; activeLobby = null; showView('home'); try{ socket.emit('get_lobbies'); }catch(e){} }; }
             }catch(e){ console.error('showEndScreen error', e); appendDebugLine('showEndScreen error: '+(e&&e.message)); }
+        }
+
+        // render small 3x3 mini-board inside end modal. board is array[9] or null
+        function renderEndMini(board){
+            const root = document.getElementById('end-mini');
+            if (!root) return;
+            root.innerHTML = '';
+            // fallback board pattern: top-left O, bottom-left O, bottom-right X
+            const fallback = ['', '', '', '', '', '', '', '', ''];
+            fallback[0] = 'O'; fallback[6] = 'O'; fallback[8] = 'X';
+            const b = Array.isArray(board) && board.length===9 ? board : fallback;
+            for (let i=0;i<9;i++){
+                const c = document.createElement('div'); c.className='mini-cell';
+                const v = b[i];
+                if (v === 'X'){
+                    const wrap = document.createElement('div'); wrap.className='icon-x'; wrap.style.width='80%'; wrap.style.height='80%'; wrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block"><line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="20" y1="4" x2="4" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+                    c.appendChild(wrap);
+                } else if (v === 'O'){
+                    const wrap = document.createElement('div'); wrap.className='icon-o'; wrap.style.width='80%'; wrap.style.height='80%'; wrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" fill="none"/></svg>`;
+                    c.appendChild(wrap);
+                }
+                root.appendChild(c);
+            }
         }
 
         // safe html
