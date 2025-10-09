@@ -219,12 +219,12 @@
             opacity: 1;
             pointer-events: auto;
         }
-        /* Desktop anchored variant: display expanded content as a full card inside sidebar area */
+        /* Desktop anchored variant: compact card inside sidebar area. Keep limited height so it doesn't cover content. */
         #search-indicator[data-desktop="1"] {
-            border-radius: 12px; box-shadow: 0 12px 40px rgba(2,6,23,0.6); background: linear-gradient(90deg,#0f1720, #0b1220); padding: 8px; z-index: 60;
+            border-radius: 12px; box-shadow: 0 12px 40px rgba(2,6,23,0.6); background: linear-gradient(90deg,#0f1720, #0b1220); padding: 6px; z-index: 60; overflow: visible;
         }
-        #search-indicator[data-desktop="1"] .search-bar { border-radius: 10px; padding: 10px 12px; font-weight:700; }
-        #search-indicator[data-desktop="1"] .search-expanded { position: relative; bottom: auto; transform: none; opacity: 1; pointer-events: auto; margin-top:8px; }
+        #search-indicator[data-desktop="1"] .search-bar { border-radius: 10px; padding: 8px 12px; font-weight:700; display:flex; align-items:center }
+        #search-indicator[data-desktop="1"] .search-expanded { position: relative; bottom: auto; transform: none; opacity: 1; pointer-events: auto; margin-top:8px; max-height: 140px; overflow: auto; }
         #search-indicator[data-desktop="1"] #search-player-row { justify-content: flex-start; }
     /* End-game modal styles */
     .end-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2,6,23,0.8); z-index: 1300 }
@@ -1059,19 +1059,21 @@
             }, 500);
             // attach one-time handlers for toggle if not already attached
             try{
-                if (!root.dataset.toggleAttached){
-                    const bar = root.querySelector('.search-bar');
-                    const collapseBtn = root.querySelector('#search-collapse-btn');
-                    if (bar){
-                        // On desktop the indicator is static and should not toggle; attach toggle only on non-desktop
-                        if (root.dataset.desktop !== '1'){
-                            bar.addEventListener('click', ()=>{ const expanded = bar.getAttribute('aria-expanded') === 'true'; _toggleSearchExpanded(root, !expanded); });
+                    if (!root.dataset.toggleAttached){
+                        const bar = root.querySelector('.search-bar');
+                        const collapseBtn = root.querySelector('#search-collapse-btn');
+                        if (bar){
+                            // Always attach handler, but only toggle in mobile view (so mobile click works).
+                            bar.addEventListener('click', ()=>{
+                                const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
+                                if (!isMobileNow) return; // desktop: do not toggle (static)
+                                const expanded = bar.getAttribute('aria-expanded') === 'true'; _toggleSearchExpanded(root, !expanded);
+                            });
                             bar.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); bar.click(); } });
                         }
+                        if (collapseBtn) collapseBtn.addEventListener('click', ()=>{ _toggleSearchExpanded(root, false); });
+                        root.dataset.toggleAttached = '1';
                     }
-                    if (collapseBtn) collapseBtn.addEventListener('click', ()=>{ _toggleSearchExpanded(root, false); });
-                    root.dataset.toggleAttached = '1';
-                }
             }catch(e){}
         }
 
@@ -1081,7 +1083,14 @@
             if (root){
                 try{ _toggleSearchExpanded(root, false); }catch(e){}
                 try{ root.style.display = 'none'; }catch(e){}
-                try{ root.dataset.desktop = ''; const exp = root.querySelector('.search-expanded'); if (exp) exp.style.display = 'none'; }catch(e){}
+                try{ 
+                    // clear desktop anchoring and restore defaults
+                    root.dataset.desktop = '';
+                    const exp = root.querySelector('.search-expanded'); 
+                    if (exp){ exp.classList.remove('expanded'); exp.style.position = ''; exp.style.bottom = ''; exp.style.left = ''; exp.style.right = ''; exp.style.transform = ''; exp.style.opacity = ''; exp.style.pointerEvents = ''; exp.style.display = 'none'; exp.style.maxHeight = ''; }
+                    // reset search-bar styles
+                    try{ const bar = root.querySelector('.search-bar'); if (bar){ bar.style.background=''; bar.style.color=''; bar.style.justifyContent=''; } }catch(e){}
+                }catch(e){}
             }
             // reset any per-card buttons searching state
             try{ document.querySelectorAll('.card-play-btn').forEach(b=>{ b.dataset.searching='0'; b.textContent='Играть'; b.classList.remove('danger'); b.classList.add('primary'); }); }catch(e){}
