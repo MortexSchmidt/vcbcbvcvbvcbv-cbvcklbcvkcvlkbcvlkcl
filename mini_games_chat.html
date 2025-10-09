@@ -465,17 +465,8 @@
     // expose to window for diagnostic monkeypatches
     try{ window.socket = socket; }catch(e){}
 
-    // ensure outgoing emits are logged for easier debugging
-    try{
-        if (socket && !socket.__emit_logged){
-            const _emit = socket.emit.bind(socket);
-            socket.__emit_logged = true;
-            socket.emit = function(eventName, payload){
-                try{ if (typeof appendDebugLine === 'function') appendDebugLine('EMIT -> ' + eventName + ' payload=' + JSON.stringify(payload || {})); }catch(e){}
-                return _emit(eventName, payload);
-            }
-        }
-    }catch(e){ console.warn('emit monkeypatch failed', e); }
+    // debug monkeypatch removed in production
+    try{ /* emit monkeypatch disabled */ }catch(e){}
 
     // Добавляем обработчик ошибок подключения
     socket.on('connect_error', (error) => {
@@ -529,85 +520,9 @@
 
         // --- Debug panel (visible in mini-app) ---
         function createDebugPanel(){
-            if (document.getElementById('debug-panel')) return;
-            const dp = document.createElement('div'); dp.id = 'debug-panel'; dp.className = 'allow-select';
-        dp.style.position='fixed'; dp.style.right='12px'; dp.style.bottom='120px'; dp.style.width='320px'; dp.style.maxHeight='360px'; dp.style.background='rgba(0,0,0,0.6)'; dp.style.color='#e6eef8'; dp.style.border='1px solid rgba(255,255,255,0.06)'; dp.style.borderRadius='10px'; dp.style.zIndex='1600'; dp.style.display='flex'; dp.style.flexDirection='column'; dp.style.overflow='hidden'; dp.style.fontSize='12px';
-            const header = document.createElement('div'); header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center'; header.style.padding='8px'; header.style.borderBottom='1px solid rgba(255,255,255,0.03)'; header.style.background='linear-gradient(180deg, rgba(255,255,255,0.02), transparent)';
-            const title = document.createElement('div'); title.textContent='Logs'; title.style.fontWeight='700'; title.style.color='var(--text)';
-            const controls = document.createElement('div'); controls.style.display='flex'; controls.style.gap='6px';
-            const copyBtn = document.createElement('button'); copyBtn.className='menu-btn'; copyBtn.textContent='Копировать'; copyBtn.style.padding='6px 8px'; copyBtn.style.fontSize='12px';
-            const clr = document.createElement('button'); clr.className='menu-btn'; clr.textContent='Очистить'; clr.style.padding='6px 8px'; clr.style.fontSize='12px';
-            controls.appendChild(copyBtn); controls.appendChild(clr);
-            header.appendChild(title); header.appendChild(controls);
-            const list = document.createElement('div'); list.id='debug-log-list'; list.style.padding='8px'; list.style.overflowY='auto'; list.style.maxHeight='300px'; list.style.display='flex'; list.style.flexDirection='column'; list.style.gap='6px'; list.style.userSelect='text'; list.style.webkitUserSelect='text';
-            dp.appendChild(header); dp.appendChild(list);
-            document.body.appendChild(dp);
-
-            copyBtn.addEventListener('click', async ()=>{
-                const text = Array.from(list.children).map(n=>n.textContent).join('\n');
-                // Try modern clipboard API first
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    try{
-                        await navigator.clipboard.writeText(text);
-                        copyBtn.textContent = 'Скопировано';
-                        setTimeout(()=>{ copyBtn.textContent = 'Копировать'; }, 1500);
-                        return;
-                    }catch(e){
-                        // fallthrough to legacy method
-                    }
-                }
-                // Fallback: create textarea, select and execCommand
-                try{
-                    const ta = document.createElement('textarea');
-                    ta.value = text;
-                    // keep it off-screen
-                    ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
-                    document.body.appendChild(ta);
-                    ta.focus(); ta.select();
-                    const ok = document.execCommand('copy');
-                    document.body.removeChild(ta);
-                    if (ok) {
-                        copyBtn.textContent = 'Скопировано';
-                        setTimeout(()=>{ copyBtn.textContent = 'Копировать'; }, 1500);
-                    } else {
-                        throw new Error('execCommand failed');
-                    }
-                }catch(e){
-                    copyBtn.textContent = 'Ошибка';
-                    setTimeout(()=>{ copyBtn.textContent = 'Копировать'; }, 1500);
-                }
-            });
-            clr.addEventListener('click', ()=>{ list.innerHTML=''; });
-
-            // debug toggle removed to avoid visible Log controls in production
+            // debug panel disabled in production
         }
-
-        function appendDebugLine(msg){
-            try{
-                createDebugPanel();
-                // prefer dynamic debug-log-list (created by createDebugPanel), fallback to static debug-log
-                let list = document.getElementById('debug-log-list');
-                let useStatic = false;
-                if (!list) {
-                    list = document.getElementById('debug-log');
-                    useStatic = true;
-                }
-                if (!list) return;
-                const el = document.createElement('div'); el.style.padding='6px'; el.style.background='rgba(255,255,255,0.02)'; el.style.borderRadius='8px'; el.style.border='1px solid rgba(255,255,255,0.02)'; el.style.fontSize='12px'; el.textContent = (new Date()).toLocaleTimeString() + ' — ' + msg;
-                if (useStatic) {
-                    // append to bottom for static area
-                    list.appendChild(el);
-                    // ensure panel is visible
-                    try{ document.getElementById('debug-panel').style.display = 'flex'; }catch(e){}
-                    // limit size by removing oldest
-                    while(list.children.length > 500) list.removeChild(list.firstChild);
-                } else {
-                    list.insertBefore(el, list.firstChild);
-                    // keep last 200
-                    while(list.children.length > 200) list.removeChild(list.lastChild);
-                }
-            }catch(e){ console.warn('appendDebugLine err', e); }
-        }
+            function appendDebugLine(msg){ /* disabled */ }
 
         // navigation lock helpers (used during quick-match searching/confirmation)
         function disableNavigation(){
@@ -710,7 +625,7 @@
             document.querySelectorAll('.view').forEach(v=>{ v.style.display = v.dataset.view===name ? 'block' : 'none'; v.classList.remove('view-enter'); });
             const enter = document.querySelector(`[data-view="${name}"]`);
             if (enter) { enter.classList.add('view-enter'); }
-            try{ appendDebugLine('view_change: ' + name); }catch(e){}
+            try{ /* view changed: '" + name + "' */ }catch(e){}
             // update bottom nav active state (optional)
         }
 
@@ -884,7 +799,7 @@
         socket.on('lobby_started', (lobby)=>{
             try{
                 console.debug('socket:lobby_started', lobby);
-                try{ appendDebugLine('lobby_started: ' + JSON.stringify({ id: lobby?.id, status: lobby?.status, hasPlayers: Array.isArray(lobby?.players) ? lobby.players.length : 0 })); }catch(e){}
+                try{ console.debug('lobby_started: ' + JSON.stringify({ id: lobby?.id, status: lobby?.status, hasPlayers: Array.isArray(lobby?.players) ? lobby.players.length : 0 })); }catch(e){}
                 if (!lobby) return;
 
                 // If server sent only minimal data (id/status) without players/board, request a fuller update
@@ -892,20 +807,20 @@
                 let hasPlayers = Array.isArray(lobby.players) && lobby.players.length;
                 const hasBoard = !!lobby.board;
                 if (!hasPlayers && lobby.id && lastMatchStarts && lastMatchStarts[lobby.id]){
-                    try{ appendDebugLine('lobby_started: merging players from recent match_starting cache'); }catch(e){}
+                    try{ /* merging players from recent match_starting cache */ }catch(e){}
                     const cached = lastMatchStarts[lobby.id];
                     try{ lobby.players = Array.isArray(cached) ? cached.map(p => (typeof p==='string' ? { name: p } : p)) : lobby.players; }catch(e){}
                     // recompute after merge
                     hasPlayers = Array.isArray(lobby.players) && lobby.players.length;
                 }
                 if (!hasPlayers && !hasBoard) {
-                    try{ appendDebugLine('lobby_started: incomplete payload — waiting briefly for match_starting then requesting lobbies update'); }catch(e){}
+                    try{ /* incomplete payload — waiting briefly for match_starting then requesting lobbies update */ }catch(e){}
                     // wait a short moment for a concurrent match_starting to arrive, then request lobbies if still incomplete
                     setTimeout(()=>{
                         if (!(Array.isArray(lobby.players) && lobby.players.length) && !lobby.board) {
-                            try{ socket.emit('get_lobbies'); appendDebugLine('lobby_started: requested get_lobbies after delay'); }catch(e){}
+                            try{ socket.emit('get_lobbies'); }catch(e){}
                         } else {
-                            try{ appendDebugLine('lobby_started: received additional data during wait'); }catch(e){}
+                            try{ /* received additional data during wait */ }catch(e){}
                         }
                     }, 350);
                     // keep confirm modal visible until we receive a proper update
@@ -913,32 +828,28 @@
                 }
 
                 // we have a full lobby payload — proceed to transition
-                try{ appendDebugLine('lobby_started: full payload: ' + JSON.stringify(lobby)); }catch(e){}
-                try{ hideSearchIndicator(); }catch(e){ try{ appendDebugLine('lobby_started: hideSearchIndicator threw: '+(e&&e.message)); }catch(_){} }
-                try{ document.getElementById('confirm-modal').style.display = 'none'; }catch(e){ try{ appendDebugLine('lobby_started: hide confirm-modal threw: '+(e&&e.message)); }catch(_){} }
+                try{ console.debug('lobby_started: full payload: ' + JSON.stringify(lobby)); }catch(e){}
+                try{ hideSearchIndicator(); }catch(e){ console.warn('lobby_started: hideSearchIndicator threw: '+(e&&e.message)); }
+                try{ document.getElementById('confirm-modal').style.display = 'none'; }catch(e){ console.warn('lobby_started: hide confirm-modal threw: '+(e&&e.message)); }
                 if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
-                try{ if (playButton) playButton.style.pointerEvents = ''; }catch(e){ try{ appendDebugLine('lobby_started: restoring playButton threw: '+(e&&e.message)); }catch(_){} }
+                try{ if (playButton) playButton.style.pointerEvents = ''; }catch(e){ console.warn('lobby_started: restoring playButton threw: '+(e&&e.message)); }
                 searching = false;
-                try{ enableNavigation(); }catch(e){ try{ appendDebugLine('lobby_started: enableNavigation threw: '+(e&&e.message)); }catch(_){} }
+                try{ enableNavigation(); }catch(e){ console.warn('lobby_started: enableNavigation threw: '+(e&&e.message)); }
 
                 // set active lobby and show game
                 try{
-                    appendDebugLine('lobby_started: about to set activeLobby and call showLobby/showView');
+                    /* about to set activeLobby and call showLobby/showView */
                 }catch(e){}
                 try{
                     activeLobby = lobby;
                 }catch(e){ try{ appendDebugLine('lobby_started: set activeLobby failed: '+(e&&e.message)); }catch(_){} }
                 try{
-                    appendDebugLine('lobby_started: calling showLobby');
                     showLobby(activeLobby);
-                    appendDebugLine('lobby_started: showLobby returned');
-                }catch(e){ try{ appendDebugLine('lobby_started: showLobby threw: '+(e&&e.message)); }catch(_){} }
+                }catch(e){ console.warn('lobby_started: showLobby threw: '+(e&&e.message)); }
                 try{
-                    appendDebugLine('lobby_started: calling showView("game")');
                     showView('game');
-                    appendDebugLine('lobby_started: showView("game") returned');
-                }catch(e){ try{ appendDebugLine('lobby_started: showView("game") threw: '+(e&&e.message)); }catch(_){} }
-                try{ SoundEngine.lobbyCreated(); }catch(e){ try{ appendDebugLine('lobby_started: SoundEngine.lobbyCreated threw: '+(e&&e.message)); }catch(_){} }
+                }catch(e){ console.warn('lobby_started: showView("game") threw: '+(e&&e.message)); }
+                try{ SoundEngine.lobbyCreated(); }catch(e){ console.warn('lobby_started: SoundEngine.lobbyCreated threw: '+(e&&e.message)); }
             }catch(e){ console.error(e); }
         });
             // Diagnostic handlers: match lifecycle events
@@ -958,7 +869,7 @@
             socket.on('match_starting', (payload)=>{
             try{
                 console.info('socket:match_starting', payload);
-                try{ appendDebugLine('match_starting: ' + JSON.stringify({ match_id: payload?.match_id, lobby_id: payload?.lobby_id, players: (payload?.players||[]).map(p=>p?.name||p?.user_id||p?.sid) })); }catch(e){}
+                try{ /* match_starting received */ }catch(e){}
                     // store raw players array (could be array of strings)
                         try{ if (payload && payload.lobby_id) lastMatchStarts[payload.lobby_id] = payload.players || payload.lobby?.players || null; }catch(e){}
                 // if confirm modal is open, update players with normalized payload
@@ -983,11 +894,11 @@
         });
 
         socket.on('match_ack', (data)=>{
-            try{ console.info('socket:match_ack', data); try{ appendDebugLine('match_ack: ' + JSON.stringify(data)); }catch(e){} }catch(e){}
+            try{ console.info('socket:match_ack', data); }catch(e){}
         });
 
         socket.on('match_cancelled', (data)=>{
-            try{ console.info('socket:match_cancelled', data); try{ appendDebugLine('match_cancelled: ' + JSON.stringify(data)); }catch(e){} hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } enableNavigation(); }catch(e){}
+            try{ console.info('socket:match_cancelled', data); hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } enableNavigation(); }catch(e){}
         });
     // inline search indicator and play button toggle state
     let searching = false;
@@ -1143,7 +1054,7 @@
     socket.on('lobby_waiting', (data)=>{
         try{
             console.log('Game search in progress:', data);
-            try{ appendDebugLine('lobby_waiting: ' + JSON.stringify({lobby_id: data?.lobby_id, message: data?.message, found: (data && Array.isArray(data.players) ? data.players.length : data?.foundCount)})); }catch(e){}
+            try{ /* lobby_waiting */ }catch(e){}
             const found = (data && Array.isArray(data.players) ? data.players.length : (typeof data?.foundCount !== 'undefined' ? Number(data.foundCount) : 1));
             const opts = { game: data?.game || data?.name || null, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: found };
             showSearchIndicator(opts);
@@ -1155,7 +1066,7 @@
     socket.on('lobby_cancelled', (data)=>{
         try{
             console.debug('socket:lobby_cancelled', data);
-            try{ appendDebugLine('lobby_cancelled: ' + JSON.stringify({lobby_id: data?.lobby_id, message: data?.message})); }catch(e){}
+            try{ /* lobby_cancelled */ }catch(e){}
             try{ if (data && data.lobby_id) delete lastMatchStarts[data.lobby_id]; }catch(e){}
             lastSearchStart = 0; lastSearchGame = null;
             processedMatchIds.clear();
@@ -1166,13 +1077,13 @@
     // Добавляем обработчик для подтверждения получения сервером события quick_match
     socket.on('quick_match_received', (data) => {
         console.log('Server received quick_match event:', data);
-        try{ appendDebugLine('quick_match_received: ' + JSON.stringify(data)); }catch(e){}
+    try{ /* quick_match_received */ }catch(e){}
     });
 
     // server notifies when a player forfeits — show end screen immediately
     socket.on('player_forfeited', (data)=>{
         try{
-            appendDebugLine('player_forfeited: ' + JSON.stringify(data));
+            /* player_forfeited */
             // if we have an activeLobby, mark it finished and show end screen
             if (activeLobby && activeLobby.id){
                 activeLobby.status = 'finished';
@@ -1189,7 +1100,7 @@
                 showLobby(activeLobby);
                 showEndScreen({ winner: winnerSym, name: winnerName, avatar: winnerAvatar, board: activeLobby.board });
             } else {
-                appendDebugLine('player_forfeited: no activeLobby, ignoring');
+                /* player_forfeited: no activeLobby, ignoring */
             }
         }catch(e){ console.warn('player_forfeited handler err', e); }
     });
@@ -1214,8 +1125,8 @@
                     // avoid processing stale or duplicate match events
                     const mid = payload && payload.match_id;
                     const recentSearch = (Date.now() - (lastSearchStart || 0)) < 60000;
-                    if (mid && processedMatchIds.has(mid)) { appendDebugLine('match_found: duplicate match_id ignored'); return; }
-                    if (!recentSearch) { appendDebugLine('match_found: ignoring stale match event (no recent search)'); return; }
+                    if (mid && processedMatchIds.has(mid)) { return; }
+                    if (!recentSearch) { return; }
                     if (mid) processedMatchIds.add(mid);
                     // show blocking confirm modal (keep it on top)
                     document.getElementById('confirm-modal').style.display = 'flex';
@@ -1297,7 +1208,7 @@
                 }catch(e){ console.error(e); }
         });
 
-    socket.on('match_cancelled', (data)=>{ try{ console.debug('socket:match_cancelled', data); try{ appendDebugLine('match_cancelled: ' + JSON.stringify(data)); }catch(e){}
+    socket.on('match_cancelled', (data)=>{ try{ console.debug('socket:match_cancelled', data);
         // clear related caches and UI
         try{ if (data && data.lobby_id) delete lastMatchStarts[data.lobby_id]; }catch(e){}
         lastSearchStart = 0; lastSearchGame = null;
@@ -1934,41 +1845,7 @@
                 }
             }
 
-            // --- Diagnostic helpers: delegated listeners and emit logger ---
-            // These help determine whether pointer events reach the button and whether socket.emit is called
-            try{
-                document.addEventListener('pointerdown', (ev)=>{
-                    try{
-                        const btn = ev.target.closest?.('.card-play-btn');
-                        if (btn) {
-                            ev.stopPropagation();
-                            appendDebugLine('DOC pointerdown -> ' + (btn.textContent||'') + ' searching=' + btn.dataset.searching);
-                            // highlight briefly for visual confirmation
-                            btn.style.outline = '3px solid rgba(108,140,255,0.9)';
-                            setTimeout(()=>{ btn.style.outline=''; }, 800);
-                        }
-                    }catch(e){}
-                }, { capture: true, passive: true });
-
-                document.addEventListener('click', (ev)=>{
-                    try{
-                        const btn = ev.target.closest?.('.card-play-btn');
-                        if (btn) {
-                            appendDebugLine('DOC click -> ' + (btn.textContent||'') + ' searching=' + btn.dataset.searching);
-                        }
-                    }catch(e){}
-                }, { capture: true });
-
-                // monkeypatch socket.emit to log outgoing events for easier tracing
-                if (window.socket && !socket.__emit_logged){
-                    const _emit = socket.emit.bind(socket);
-                    socket.__emit_logged = true;
-                    socket.emit = function(eventName, payload){
-                        try{ appendDebugLine('EMIT -> ' + eventName + ' payload=' + JSON.stringify(payload || {})); }catch(e){}
-                        return _emit(eventName, payload);
-                    }
-                }
-            }catch(e){ console.warn('diagnostic hooks failed', e); }
+            // diagnostic hooks removed in production — logging kept minimal
 
             // hide selection when tapping outside — but DO NOT clear selection while searching for opponent
             document.addEventListener('click', (ev)=>{
