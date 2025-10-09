@@ -1854,11 +1854,24 @@ def handle_quick_match(data):
                 except ValueError:
                     pass
                 continue
-            # ensure not the same socket joining itself
+            # ensure not the same socket joining itself, but allow same user from different devices
             logger.info(f"quick_match: checking lobby {hid} with players: {[p.get('sid') for p in other['players']]}")
             if any(p.get('sid') == request.sid for p in other['players']):
                 logger.info(f"quick_match: skipping self-match for lobby {hid}")
                 continue
+
+            # Check if this is the same user from different device (allow this for testing)
+            current_user_id = user_id
+            other_user_id = other['players'][0].get('user_id') if other['players'] else None
+
+            logger.info(f"quick_match: current_user_id={current_user_id}, other_user_id={other_user_id}")
+
+            # If same user from different devices, this might be intentional for testing
+            # but let's log it clearly
+            if current_user_id and other_user_id and current_user_id == other_user_id:
+                logger.info(f"quick_match: same user {current_user_id} from different devices trying to match")
+                # Allow this for testing purposes - user might be testing from multiple devices
+                logger.info(f"quick_match: allowing match between same user devices for {current_user_id}")
 
             logger.info(f"quick_match: found match! Matching {lobby_id} with {hid}")
             # match: append second player and start game
