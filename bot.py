@@ -1959,13 +1959,24 @@ def handle_quick_match(data):
                 try:
                     p0_sid = p0.get('sid') if isinstance(p0, dict) else p0
                     p1_sid = p1.get('sid') if isinstance(p1, dict) else p1
-                    logger.info(f"quick_match: sending match_found to p0_sid={p0_sid}, p1_sid={p1_sid}")
+                    logger.info(f"quick_match: MATCH FOUND! Sending to p0_sid={p0_sid}, p1_sid={p1_sid}")
                     logger.info(f"quick_match: payload={json.dumps(payload, ensure_ascii=False)}")
+    
+                    # Send match_found event to both players
                     socketio.emit('match_found', payload, room=p0_sid)
                     socketio.emit('match_found', payload, room=p1_sid)
-                    logger.info(f"quick_match: match_found emitted for match {match_id} to {p0_sid} and {p1_sid}")
+                    logger.info(f"quick_match: match_found emitted successfully for match {match_id}")
+    
+                    # Also try to send directly to sid if room doesn't work
+                    try:
+                        socketio.emit('match_found', payload, room=p0_sid)
+                        logger.info(f"quick_match: direct emit to {p0_sid}")
+                    except Exception as e:
+                        logger.warning(f"quick_match: direct emit failed for {p0_sid}: {e}")
+    
                 except Exception as e:
-                    logger.warning(f"quick_match: failed to emit match_found for {match_id}: {e}")
+                    logger.error(f"quick_match: CRITICAL ERROR emitting match_found for {match_id}: {e}")
+                    logger.error(f"quick_match: p0_sid={p0.get('sid') if isinstance(p0, dict) else p0}, p1_sid={p1.get('sid') if isinstance(p1, dict) else p1}")
             # start timeout timer (30s)
             def match_timeout(m_id=match_id):
                 m = pending_matches.get(m_id)
