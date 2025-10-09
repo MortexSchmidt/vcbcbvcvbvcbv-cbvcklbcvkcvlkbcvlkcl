@@ -242,6 +242,8 @@
 
             /* Play button / card button highlight for long search */
             .menu-btn.long-search { transition: background-color 600ms; background: #ffd166 !important; color: #07102a !important; border-color: rgba(0,0,0,0.06) !important; }
+
+        #search-long-text { transition: transform 420ms cubic-bezier(.2,.9,.2,1), opacity 420ms; transform: translateY(6px); opacity: 0; }
         /* Desktop anchored variant: compact card inside sidebar area. Keep limited height so it doesn't cover content. */
         #search-indicator[data-desktop="1"] {
             border-radius: 12px; box-shadow: 0 12px 40px rgba(2,6,23,0.6); background: linear-gradient(90deg,#0f1720, #0b1220); padding: 6px; z-index: 60; overflow: visible;
@@ -1235,14 +1237,17 @@
             // update found count
             try{ const fc = Math.max(1, Number(opts.foundCount) || 0); const ff = root.querySelector('#search-found-text'); if (ff) ff.textContent = 'Игроков найдено: ' + fc; }catch(e){}
             // reset long-search label and start 15s timer to show it with animation
-            try{ const lt = root.querySelector('#search-long-text'); if (lt) { lt.style.display = 'none'; lt.style.opacity = '0'; lt.style.transform = ''; } }catch(e){}
+            try{ const lt = root.querySelector('#search-long-text'); if (lt) { lt.style.display = 'none'; lt.style.opacity = '0'; lt.style.transform = 'translateY(6px)'; } }catch(e){}
             try{ if (searchLongTimer) clearTimeout(searchLongTimer); }catch(e){}
             searchLongTimer = setTimeout(()=>{ try{
                     const bar = root.querySelector('.search-bar'); if (bar) bar.classList.add('long-search');
-                    // highlight play button and any per-card play buttons
-                    try{ if (playButton) playButton.classList.add('long-search'); }catch(e){}
-                    try{ document.querySelectorAll('.card-play-btn').forEach(b=>b.classList.add('long-search')); }catch(e){}
-                    const lt = root.querySelector('#search-long-text'); if (lt){ lt.style.display='block'; lt.style.opacity='1'; }
+                    // highlight only active per-card play buttons (those with data-searching='1')
+                    try{
+                        const activeBtns = Array.from(document.querySelectorAll('.card-play-btn')).filter(b=>b && b.dataset && b.dataset.searching === '1');
+                        if (activeBtns && activeBtns.length){ activeBtns.forEach(b=>b.classList.add('long-search')); }
+                    }catch(e){}
+                    // reveal expanded 'Долгий поиск' text
+                    const lt = root.querySelector('#search-long-text'); if (lt){ lt.style.display='block'; lt.style.opacity='1'; lt.style.transform='translateY(0)'; }
                 }catch(e){} }, 15000);
             playButton.textContent = 'Отменить';
             playButton.classList.add('visible');
