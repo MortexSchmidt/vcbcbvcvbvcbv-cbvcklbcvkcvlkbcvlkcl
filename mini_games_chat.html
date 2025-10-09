@@ -226,6 +226,11 @@
         #search-indicator[data-desktop="1"] .search-bar { border-radius: 10px; padding: 8px 12px; font-weight:700; display:flex; align-items:center }
         #search-indicator[data-desktop="1"] .search-expanded { position: relative; bottom: auto; transform: none; opacity: 1; pointer-events: auto; margin-top:8px; max-height: 140px; overflow: auto; }
         #search-indicator[data-desktop="1"] #search-player-row { justify-content: flex-start; }
+        /* Desktop: make the search elements transparent so they don't visually block the sidebar; buttons will be hidden instead */
+        #search-indicator[data-desktop="1"],
+        #search-indicator[data-desktop="1"] .search-bar,
+        #search-indicator[data-desktop="1"] .search-expanded {
+            background: transparent !important; box-shadow: none !important; }
     /* End-game modal styles */
     .end-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2,6,23,0.8); z-index: 1300 }
     .end-card { width: 92%; max-width: 520px; background: linear-gradient(180deg, rgba(20,30,60,0.9), rgba(10,14,26,0.95)); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 18px 60px rgba(2,6,23,0.8); transform: translateY(12px) scale(.98); opacity: 0; animation: popIn 420ms cubic-bezier(.2,.9,.2,1) forwards; display:flex; flex-direction:column; align-items:center; gap:12px }
@@ -1017,7 +1022,9 @@
                                 root.style.height = desiredHeight + 'px';
                                 // hide the menu-buttons visually while searching (we'll restore later)
                                 menuButtons.dataset._wasHiddenBySearch = '1';
-                                menuButtons.style.visibility = 'hidden';
+                                // hide completely so it doesn't take space
+                                menuButtons.dataset._prevDisplay = menuButtons.style.display || '';
+                                menuButtons.style.display = 'none';
                                 // ensure content fits inside the small area
                                 const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.maxHeight = (Math.max(56, Math.floor(mbRect.height) + extraDown) - 8) + 'px'; exp.style.overflow = 'auto'; }
                             }
@@ -1105,7 +1112,7 @@
                 try{ 
                     // clear desktop anchoring and restore defaults
                     // restore menu-buttons visibility if we hid it earlier
-                    try{ const sidebar = document.querySelector('.app-sidebar'); if (sidebar){ const menuButtons = sidebar.querySelector('.menu-buttons'); if (menuButtons && menuButtons.dataset._wasHiddenBySearch){ menuButtons.style.visibility='visible'; delete menuButtons.dataset._wasHiddenBySearch; } } }catch(e){}
+                    try{ const sidebar = document.querySelector('.app-sidebar'); if (sidebar){ const menuButtons = sidebar.querySelector('.menu-buttons'); if (menuButtons && menuButtons.dataset._wasHiddenBySearch){ menuButtons.style.display = menuButtons.dataset._prevDisplay || ''; delete menuButtons.dataset._wasHiddenBySearch; delete menuButtons.dataset._prevDisplay; } } }catch(e){}
                     root.dataset.desktop = '';
                     const exp = root.querySelector('.search-expanded'); 
                     if (exp){ exp.classList.remove('expanded'); exp.style.position = ''; exp.style.bottom = ''; exp.style.left = ''; exp.style.right = ''; exp.style.transform = ''; exp.style.opacity = ''; exp.style.pointerEvents = ''; exp.style.display = 'none'; exp.style.maxHeight = ''; exp.style.overflow = ''; }
