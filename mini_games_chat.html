@@ -1026,10 +1026,17 @@
                             const menuButtons = sidebar.querySelector('.menu-buttons');
                             if (menuButtons){
                                 const mbRect = menuButtons.getBoundingClientRect();
-                                // place root aligned to menuButtons top and match its height + small extra so it extends a bit downward
+                                // Prefer to position the search card below the profile row so profile (avatar/ID) stays visible
+                                const profileRow = sidebar.querySelector('.profile-row');
+                                const gap = 8; // small gap under profile
+                                let topStart = mbRect.top;
+                                try{
+                                    if (profileRow){ const pr = profileRow.getBoundingClientRect(); topStart = pr.bottom + gap; }
+                                }catch(e){}
+                                // compute height so the card covers the area of menuButtons but starts under profile
                                 const extraDown = 36; // ~3 clicks height
-                                root.style.top = (mbRect.top) + 'px';
-                                const desiredHeight = Math.max(56, Math.floor(mbRect.height) + extraDown);
+                                root.style.top = (topStart) + 'px';
+                                const desiredHeight = Math.max(56, Math.floor(mbRect.bottom - topStart + extraDown));
                                 root.style.height = desiredHeight + 'px';
                                 // hide the menu-buttons visually while searching (we'll restore later)
                                 menuButtons.dataset._wasHiddenBySearch = '1';
