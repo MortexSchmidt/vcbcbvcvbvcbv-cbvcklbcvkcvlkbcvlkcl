@@ -465,23 +465,27 @@
     </div>
 
     <!-- Custom loading modal shown before game starts -->
-    <div id="preload-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.85);z-index:1300;pointer-events:auto">
-        <div style="position:absolute;inset:0;background:transparent;z-index:1300"></div>
+    <!-- Preload modal: full-screen solid dark-blue background -->
+    <div id="preload-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#07102a;z-index:1300;pointer-events:auto;color:var(--text)">
+        <div style="position:absolute;inset:0;background:#07102a;z-index:1300"></div>
     <!-- fullscreen box: covers entire viewport with centered animation -->
         <div id="preload-box" style="width:100%;max-width:none;height:100%;background:transparent;border-radius:0;padding:0;border:0;box-shadow:none;z-index:1301;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto">
             <!-- Center animation (user will upload loading.tgs to this path) - animation constrained to 480px -->
             <div id="preload-center" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center">
                 <div style="width:480px;max-width:90%;height:auto;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px">
                     <!-- Container where .tgs will be decoded and played via lottie-web -->
-                    <div id="preload-lottie" style="width:100%;height:480px;display:block"></div>
+                    <div id="preload-lottie" style="width:100%;height:480px;display:flex;align-items:center;justify-content:center;"> </div>
                     <!-- Image fallback (if someone uploaded a gif/png instead) -->
                     <img id="preload-tgs" src="/assets/loading.tgs" alt="loading animation" style="width:100%;height:auto;object-fit:contain;display:none" onerror="this.style.display='none'">
                     <!-- Fallback simple SVG animation if .tgs cannot be decoded -->
-                    <svg id="preload-fallback" viewBox="0 0 100 100" width="120" height="120" style="display:none">
+                    <div id="preload-fallback-wrap" style="display:none;flex-direction:column;align-items:center;gap:8px">
+                        <svg id="preload-fallback" viewBox="0 0 100 100" width="120" height="120" style="display:block">
                         <circle cx="50" cy="50" r="40" stroke="rgba(108,140,255,0.9)" stroke-width="6" fill="none" stroke-linecap="round">
                             <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="1s" repeatCount="indefinite" />
                         </circle>
-                    </svg>
+                        </svg>
+                        <div id="preload-fallback-text" style="color:var(--muted);font-weight:700">Анимация недоступна</div>
+                    </div>
                 </div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:18px">
@@ -604,9 +608,17 @@
                 _preloadPlayer = lottie.loadAnimation({ container: container, renderer: 'svg', loop: true, autoplay: true, animationData: json });
                 console.info('playLoadingTgs: lottie player created');
                 // ensure fallbacks hidden
-                if (imgFallback) imgFallback.style.display = 'none';
-                if (svgFallback) svgFallback.style.display = 'none';
-                container.style.display = 'block';
+                try{ if (imgFallback) imgFallback.style.display = 'none'; }catch(e){}
+                try{ if (svgFallback) svgFallback.style.display = 'none'; }catch(e){}
+                try{ const wrap = document.getElementById('preload-fallback-wrap'); if (wrap) wrap.style.display = 'none'; }catch(e){}
+                container.style.display = 'flex';
+                // quick check: if player created but hasn't rendered within 300ms, show fallback
+                setTimeout(()=>{
+                    try{
+                        const playerSvg = container.querySelector('svg');
+                        if (!playerSvg){ console.warn('playLoadingTgs: no svg in container after lottie init, showing fallback'); try{ const wrap = document.getElementById('preload-fallback-wrap'); if (wrap) wrap.style.display = 'flex'; container.style.display='none'; }catch(e){} }
+                    }catch(e){ }
+                }, 300);
                 return;
             }catch(e){
                 console.warn('TGS inflate/parse failed, falling back to image/SVG', e);
