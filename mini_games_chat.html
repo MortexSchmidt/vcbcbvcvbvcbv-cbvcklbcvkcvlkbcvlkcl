@@ -91,9 +91,9 @@
             .app-sidebar { display:none }
             .app-main { padding:18px 14px 92px 14px }
 
-            /* make game cards horizontally scrollable */
-            .game-selection { flex-direction:row; overflow-x:auto; -webkit-overflow-scrolling:touch; gap:12px; padding-bottom:12px }
-            .game-card { min-width:220px; flex:0 0 auto }
+            /* show cards as two columns on phones (no horizontal swipe) */
+            .game-selection { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; padding-bottom:12px }
+            .game-card { width:100%; box-shadow: 0 6px 18px rgba(2,6,23,0.45); }
 
             /* bottom nav */
             .bottom-nav { position:fixed; left:0; right:0; bottom:0; height:74px; display:flex; gap:4px; align-items:center; justify-content:space-around; padding:8px calc(12px + env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(15,20,32,0.85), rgba(8,10,14,0.95)); border-top:1px solid rgba(255,255,255,0.04); backdrop-filter: blur(8px); z-index:50 }
