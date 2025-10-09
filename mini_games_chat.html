@@ -305,17 +305,19 @@
     <div id="search-indicator" style="position:fixed;left:50%;bottom:140px;transform:translateX(-50%);display:none;z-index:1002;padding:8px 12px;border-radius:10px;background:rgba(2,6,23,0.9);border:1px solid rgba(255,255,255,0.03);font-weight:700;color:var(--text)"></div>
 
     <!-- Blocking match confirmation modal (appears when match found) -->
-    <div id="confirm-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.8);z-index:220">
-        <div style="width:92%;max-width:520px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)">
+    <div id="confirm-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.85);z-index:1201;pointer-events:auto">
+        <div style="position:absolute;inset:0;background:transparent;z-index:1201"></div>
+        <div id="confirm-box" style="width:92%;max-width:520px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6);z-index:1202;pointer-events:auto">
             <h3 id="confirm-title" style="margin:0 0 8px 0">Матч найден</h3>
             <p id="confirm-desc" style="margin:0 0 12px 0;color:var(--muted)">Подтвердите участие. Выйдя — вы получите временный бан.</p>
-            <div style="display:flex;gap:8px;justify-content:space-between;align-items:center">
+            <div id="confirm-actions-row" style="display:flex;gap:8px;justify-content:space-between;align-items:center">
                 <div id="confirm-timer" style="font-weight:700;color:var(--accent)">15</div>
-                <div style="display:flex;gap:8px;justify-content:flex-end">
+                <div id="confirm-buttons" style="display:flex;gap:8px;justify-content:flex-end">
                     <button id="btn-decline" class="menu-btn">Отказаться</button>
                     <button id="btn-accept" class="menu-btn primary">Подтвердить</button>
                 </div>
             </div>
+            <div id="confirm-waiting" style="display:none;margin-top:12px;color:var(--muted);font-weight:700">Ждём подтверждения других игроков...</div>
         </div>
     </div>
 
@@ -461,6 +463,12 @@
         // wire navigation buttons
         document.querySelectorAll('[data-action]').forEach(btn=>btn.addEventListener('click', e=>{
             const a = e.currentTarget.dataset.action;
+            // if in an active game, prevent navigating away
+            if (activeLobby && activeLobby.status === 'playing') {
+                // optionally show a toast / do nothing
+                console.debug('navigation blocked: game in progress');
+                return;
+            }
             if (a==='go-home') showView('home');
             if (a==='go-lobby') { showView('lobby'); socket.emit('get_lobbies'); }
             if (a==='go-settings') showView('settings');
@@ -623,43 +631,50 @@
         // match found confirmation flow
         let confirmCountdown = null;
     socket.on('match_found', (payload)=>{
-            try{
-        console.debug('socket:match_found', payload);
-                // show blocking confirm modal
-                document.getElementById('confirm-modal').style.display = 'flex';
-                // while waiting for confirmation, ensure navigation is disabled
-                disableNavigation();
-                let timeLeft = 15;
-                document.getElementById('confirm-timer').textContent = String(timeLeft);
-                // start countdown
-                if (confirmCountdown) clearInterval(confirmCountdown);
-                confirmCountdown = setInterval(()=>{
-                    timeLeft -= 1;
+                try{
+                    console.debug('socket:match_found', payload);
+                    // show blocking confirm modal (keep it on top)
+                    document.getElementById('confirm-modal').style.display = 'flex';
+                    // while waiting for confirmation, ensure navigation is disabled
+                    disableNavigation();
+                    // disable play button interactions underneath modal
+                    try{ if (playButton) playButton.style.pointerEvents = 'none'; }catch(e){}
+                    let timeLeft = 15;
                     document.getElementById('confirm-timer').textContent = String(timeLeft);
-                    if (timeLeft <= 0){
-                        clearInterval(confirmCountdown); confirmCountdown = null;
-                        // auto-decline if not confirmed
+                    // start countdown
+                    if (confirmCountdown) clearInterval(confirmCountdown);
+                    confirmCountdown = setInterval(()=>{
+                        timeLeft -= 1;
+                        document.getElementById('confirm-timer').textContent = String(timeLeft);
+                        if (timeLeft <= 0){
+                            clearInterval(confirmCountdown); confirmCountdown = null;
+                            // auto-decline if not confirmed
+                            socket.emit('match_decline', { match_id: payload.match_id });
+                            // close modal and re-enable navigation
+                            document.getElementById('confirm-modal').style.display = 'none';
+                            try{ if (playButton) playButton.style.pointerEvents = ''; }catch(e){}
+                            enableNavigation();
+                        }
+                    }, 1000);
+
+                    // accept/decline handlers
+                    document.getElementById('btn-accept').onclick = ()=>{
+                        // Send accept but KEEP the modal visible; hide buttons and show waiting text
+                        socket.emit('match_accept', { match_id: payload.match_id });
+                        // Hide action buttons and show waiting message
+                        try{ document.getElementById('confirm-buttons').style.display = 'none'; }catch(e){}
+                        try{ document.getElementById('confirm-waiting').style.display = 'block'; }catch(e){}
+                        // keep timer visible but make it non-interactive (it's behind the modal now)
+                    };
+                    document.getElementById('btn-decline').onclick = ()=>{
                         socket.emit('match_decline', { match_id: payload.match_id });
                         document.getElementById('confirm-modal').style.display = 'none';
-                    }
-                }, 1000);
-
-                // accept/decline handlers
-                document.getElementById('btn-accept').onclick = ()=>{
-                    socket.emit('match_accept', { match_id: payload.match_id });
-                    document.getElementById('confirm-modal').style.display = 'none';
-                    if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
-                    // allow navigation again once accepted
-                    enableNavigation();
-                };
-                document.getElementById('btn-decline').onclick = ()=>{
-                    socket.emit('match_decline', { match_id: payload.match_id });
-                    document.getElementById('confirm-modal').style.display = 'none';
-                    if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
-                    // re-enable navigation after decline
-                    enableNavigation();
-                };
-            }catch(e){ console.error(e); }
+                        if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
+                        // re-enable navigation after decline and restore play button
+                        try{ if (playButton) playButton.style.pointerEvents = ''; }catch(e){}
+                        enableNavigation();
+                    };
+                }catch(e){ console.error(e); }
         });
 
     socket.on('match_cancelled', (data)=>{ try{ console.debug('socket:match_cancelled', data); hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } enableNavigation(); }catch(e){} });
@@ -745,7 +760,14 @@
         }
 
         // leave / forfeit
-        document.getElementById('btn-leave').addEventListener('click', ()=>{ activeLobby=null; showView('home'); socket.emit('get_lobbies'); });
+        document.getElementById('btn-leave').addEventListener('click', ()=>{
+            // prevent leaving if game already started
+            if (activeLobby && activeLobby.status === 'playing') {
+                console.debug('leave blocked: game already started');
+                return;
+            }
+            activeLobby=null; showView('home'); socket.emit('get_lobbies');
+        });
         document.getElementById('btn-forfeit').addEventListener('click', ()=>{ if (activeLobby && activeLobby.id) socket.emit('make_move',{ lobby_id: activeLobby.id, position: -1, forfeit:true }); });
 
         // safe html
