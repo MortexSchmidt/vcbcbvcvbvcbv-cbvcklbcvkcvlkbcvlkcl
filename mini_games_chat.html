@@ -481,7 +481,9 @@
                 return;
             }
 
-            list.forEach(lobby=>{
+            // limit visible lobbies to first 10
+            const visible = list.slice(0, 10);
+            visible.forEach(lobby=>{
                 const el = document.createElement('div');
                 el.className = 'lobby-card';
 
@@ -512,6 +514,9 @@
                 if (lobby.players && lobby.players.length>=2) join.disabled = true;
                 join.addEventListener('click', ()=>{
                     if (!currentUser || !currentUser.user_id) { openAuthModal(); return; }
+                    // prevent joining own lobby
+                    const youIn = (lobby.players||[]).some(p=>p.user_id === currentUser.user_id || p.sid === socket.id);
+                    if (youIn) { alert('Вы уже в этом лобби'); return; }
                     socket.emit('join_lobby', { lobby_id: lobby.id, player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id });
                 });
 
@@ -527,6 +532,16 @@
         }
 
         socket.on('lobbies_list', (list)=>{ renderLobbies(list); });
+        // when a quick-match hidden lobby is started, server emits 'lobby_started' with lobby data
+        socket.on('lobby_started', (lobby)=>{
+            try{
+                if (!lobby) return;
+                activeLobby = lobby;
+                showLobby(activeLobby);
+                showView('game');
+                try{ SoundEngine.lobbyCreated(); }catch(e){}
+            }catch(e){ console.error(e); }
+        });
         socket.on('lobby_created', (data)=>{
             // server returns lobby_id and lobby
             const lobby = data.lobby || data;
@@ -782,12 +797,13 @@
                 }
             });
 
-            // clicking floating Play triggers inner hidden button (preserves existing flow)
+            // clicking floating Play triggers quick-match (fast play) for selected game
             playButton.addEventListener('click', (ev)=>{
                 ev.stopPropagation();
                 if (!selected) return;
-                // open modal for creating/joining lobby for selected game
-                openGameModal(selected);
+                // quick match: emit 'quick_match' to server (hidden lobby)
+                if (!currentUser || !currentUser.user_id) { openAuthModal(); return; }
+                socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id });
                 try{ SoundEngine.modalOpen(); }catch(e){}
             });
 

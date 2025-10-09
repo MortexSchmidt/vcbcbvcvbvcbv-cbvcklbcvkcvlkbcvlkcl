@@ -116,6 +116,11 @@ lobbies = {}
 telegram_profiles = {}
 # Временное сопоставление code -> socket.sid для авторизации из Mini-App
 pending_auths = {}  # { code: { 'sid': sid, 'ts': datetime } }
+# Limits (can be configured via env)
+MAX_LOBBIES = int(os.environ.get('MAX_LOBBIES', 10))
+MAX_PLAYERS_PER_LOBBY = int(os.environ.get('MAX_PLAYERS_PER_LOBBY', 10))
+# queue for hidden quick-match lobbies
+hidden_waiting = []  # list of lobby_id
 
 # Функции модерации
 async def add_warning(user_id: int, violation_type: str, context: ContextTypes.DEFAULT_TYPE):
@@ -683,7 +688,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Вызвал: {user_mention}"""
     
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=admin_help_msg, parse_mode='HTML')
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=help_message, parse_mode='HTML')
 
 # административные команды
 async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1661,6 +1666,7 @@ def handle_disconnect():
 def handle_create_lobby(data):
     logger.info(f"create_lobby received: {data}")
     name = data.get('name', 'Лобби')
+    hidden = bool(data.get('hidden', False))
     player_name = data.get('player_name', '')
     player_avatar = data.get('player_avatar', '')
     user_id = data.get('user_id')
@@ -1693,11 +1699,18 @@ def handle_create_lobby(data):
             except Exception:
                 pass
 
-    lobby_id = str(len(lobbies) + 1)
+    # enforce global lobby limit
+    if len(lobbies) >= MAX_LOBBIES:
+        emit('error', {'message': 'Достигнуто максимальное количество лобби. Попробуйте позже.'})
+        return
+
+    # use stable unique id
+    lobby_id = uuid.uuid4().hex[:8]
     lobbies[lobby_id] = {
         'id': lobby_id,
         'name': name,
-        'players': [{'sid': request.sid, 'name': player_name or 'Игрок', 'symbol': 'X', 'avatar': player_avatar or ''}],
+        'players': [{'sid': request.sid, 'user_id': user_id, 'name': player_name or 'Игрок', 'symbol': 'X', 'avatar': player_avatar or ''}],
+        'hidden': hidden,
         'status': 'waiting',
         'board': ['', '', '', '', '', '', '', '', ''],
         'current_player': 'X'
@@ -1705,6 +1718,11 @@ def handle_create_lobby(data):
 
     join_room(lobby_id)
     emit('lobby_created', {'lobby_id': lobby_id, 'lobby': lobbies[lobby_id]})
+    # broadcast updated lobby list to all clients (hidden lobbies will be filtered on client if desired)
+    try:
+        socketio.emit('lobbies_list', [l for l in list(lobbies.values()) if not l.get('hidden')])
+    except Exception:
+        pass
 
 @socketio.on('join_lobby')
 def handle_join_lobby(data):
@@ -1749,18 +1767,107 @@ def handle_join_lobby(data):
         return
 
     lobby = lobbies[lobby_id]
-    if len(lobby['players']) >= 2:
-        emit('error', {'message': 'Лобби полное'})
+    # prevent same socket joining twice
+    # prevent same socket joining twice
+    if any(p.get('sid') == request.sid for p in lobby['players']):
+        emit('error', {'message': 'Вы уже в этом лобби'})
+        return
+
+    # prevent same user account joining twice
+    if user_id and any(p.get('user_id') == user_id for p in lobby['players']):
+        emit('error', {'message': 'Пользователь уже присутствует в лобби'})
+        return
+
+    # enforce per-lobby player limit
+    if len(lobby['players']) >= MAX_PLAYERS_PER_LOBBY:
+        emit('error', {'message': 'Лобби заполнено (достигнут максимум игроков).'})
         return
 
     symbol = 'O' if len(lobby['players']) == 1 else 'X'
-    lobby['players'].append({'sid': request.sid, 'name': player_name, 'symbol': symbol, 'avatar': player_avatar})
+    lobby['players'].append({'sid': request.sid, 'user_id': user_id, 'name': player_name, 'symbol': symbol, 'avatar': player_avatar})
 
     if len(lobby['players']) == 2:
         lobby['status'] = 'playing'
 
     join_room(lobby_id)
     emit('update_lobby', lobby, room=lobby_id)
+    # broadcast updated lobbies list (visible only)
+    try:
+        socketio.emit('lobbies_list', [l for l in list(lobbies.values()) if not l.get('hidden')])
+    except Exception:
+        pass
+
+
+@socketio.on('quick_match')
+def handle_quick_match(data):
+    """Creates a hidden lobby and attempts to match two waiting players automatically."""
+    logger.info(f"quick_match received from sid={request.sid}")
+    player_name = data.get('player_name', '')
+    player_avatar = data.get('player_avatar', '')
+    user_id = data.get('user_id')
+
+    tp = telegram_profiles.get(request.sid)
+    if tp:
+        if not player_name:
+            player_name = tp.get('name') or player_name or 'Игрок'
+        if not player_avatar:
+            player_avatar = tp.get('avatar', '')
+
+    # create a hidden lobby
+    if len(lobbies) >= MAX_LOBBIES:
+        emit('error', {'message': 'Достигнуто максимальное количество лобби. Попробуйте позже.'})
+        return
+
+    lobby_id = uuid.uuid4().hex[:8]
+    lobbies[lobby_id] = {
+        'id': lobby_id,
+        'name': 'Quick Match',
+        'players': [{'sid': request.sid, 'user_id': user_id, 'name': player_name or 'Игрок', 'symbol': 'X', 'avatar': player_avatar or ''}],
+        'hidden': True,
+        'status': 'waiting',
+        'board': ['', '', '', '', '', '', '', '', ''],
+        'current_player': 'X'
+    }
+    hidden_waiting.append(lobby_id)
+
+    # try to match with another waiting hidden lobby (not the same sid)
+    matched = None
+    for hid in list(hidden_waiting):
+        if hid == lobby_id:
+            continue
+        other = lobbies.get(hid)
+        if not other:
+            hidden_waiting.remove(hid)
+            continue
+        # ensure not the same user joining themselves (by user_id or sid)
+        if any(p.get('user_id') == user_id for p in other['players']):
+            continue
+        # match: append second player and start game
+        other['players'].append({'sid': request.sid, 'user_id': user_id, 'name': player_name, 'symbol': 'O', 'avatar': player_avatar})
+        other['status'] = 'playing'
+        # remove both from waiting queue
+        try:
+            hidden_waiting.remove(hid)
+        except ValueError:
+            pass
+        try:
+            hidden_waiting.remove(lobby_id)
+        except ValueError:
+            pass
+        matched = other
+        break
+
+    if matched:
+        # notify both players in their rooms (rooms are lobby_id and sid rooms are joined earlier via join_room)
+        join_room(matched['id'])
+        # emit update to participants only
+        try:
+            socketio.emit('lobby_started', matched, room=matched['id'])
+        except Exception:
+            pass
+    else:
+        # no match yet — keep waiting; notify creator that search is ongoing
+        emit('lobby_waiting', {'lobby_id': lobby_id, 'message': 'Поиск соперника...'}, room=request.sid)
 
 @socketio.on('make_move')
 def handle_make_move(data):
