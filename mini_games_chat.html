@@ -1921,8 +1921,9 @@
                         hidden: true // Create hidden lobby for quick match
                     };
 
-                    try{ if (typeof appendDebugLine === 'function') appendDebugLine('about to emit create_lobby for ' + gameName); }catch(e){}
-                    socket.emit('create_lobby', lobbyData);
+                    try{ if (typeof appendDebugLine === 'function') appendDebugLine('about to emit quick_match for ' + gameName); }catch(e){}
+                    // Emit quick_match for a fast matchmaking flow (server will create hidden lobby and match)
+                    try{ socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id, game: gameName }); }catch(e){ console.warn('emit quick_match failed', e); }
 
                     // show search indicator
                     try { showSearchIndicator({ game: gameName, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: 1, originCard: card }); } catch(e) { console.warn('Failed to show search indicator:', e); }
