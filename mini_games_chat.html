@@ -1108,6 +1108,27 @@
         function showLobby(lobby){
             activeLobby = lobby;
             try{ appendDebugLine('showLobby: received lobby ' + JSON.stringify({ id: lobby?.id, status: lobby?.status, playersType: Array.isArray(lobby?.players)? typeof (lobby.players[0]) : 'none' })); }catch(e){}
+            // Defensive normalization: ensure players array, symbols, board and current_player are present so UI can render reliably
+            try{
+                if (!lobby || typeof lobby !== 'object') lobby = { id: lobby && lobby.id ? lobby.id : null };
+                // normalize players to objects
+                lobby.players = (lobby.players || []).map(p => (typeof p === 'string' ? { name: p } : (p || {})));
+                // ensure two-player array for UI (do not mutate server authoritative state beyond UI safety)
+                if (lobby.players.length < 2){
+                    // pad with placeholders
+                    while (lobby.players.length < 2) lobby.players.push({ name: 'Ожидание' });
+                }
+                // assign symbols if missing
+                if (lobby.players[0] && !lobby.players[0].symbol) lobby.players[0].symbol = 'X';
+                if (lobby.players[1] && !lobby.players[1].symbol) lobby.players[1].symbol = 'O';
+                // ensure board exists
+                if (!Array.isArray(lobby.board) || lobby.board.length !== 9) lobby.board = ['', '', '', '', '', '', '', '', ''];
+                // ensure current_player set
+                if (!lobby.current_player) lobby.current_player = lobby.current_player || (lobby.players[0] && lobby.players[0].symbol) || 'X';
+                // write back to activeLobby as well
+                activeLobby = lobby;
+                appendDebugLine('showLobby: normalized lobby for UI (players:' + (lobby.players||[]).length + ', board:' + (Array.isArray(lobby.board)?lobby.board.length:0) + ', current:' + lobby.current_player + ')');
+            }catch(err){ try{ appendDebugLine('showLobby: normalization error: '+(err&&err.message)); }catch(e){} }
             // players row
             const pr = document.getElementById('players-row'); pr.innerHTML = '';
             const playersArr = (lobby.players||[]).map(p => (typeof p === 'string' ? { name: p } : p));
