@@ -2129,6 +2129,19 @@ def handle_match_accept(data):
                 logger.warning(f"match_accept: error cancelling other hidden lobbies: {e}")
         else:
             logger.warning(f"match_accept: lobby {lobby_id} missing when starting match {match_id}")
+        # ensure both sockets join the lobby room so they receive room broadcasts
+        for psid in m.get('players', []):
+            try:
+                try:
+                    join_room(lobby_id, sid=psid)
+                except Exception:
+                    # fallback: attempt socketio.server.enter_room if available
+                    try:
+                        socketio.server.enter_room(psid, lobby_id)
+                    except Exception:
+                        pass
+            except Exception as e:
+                logger.warning(f"match_accept: failed to add psid {psid} to room {lobby_id}: {e}")
         # notify both players
         for psid in m.get('players', []):
             try:

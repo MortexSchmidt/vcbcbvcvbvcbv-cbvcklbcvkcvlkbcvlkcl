@@ -735,7 +735,15 @@
             });
 
             const status = document.getElementById('game-status');
-            status.textContent = lobby.status==='playing' ? 'Игра в процессе' : 'Ожидание игроков...';
+            if (lobby.status === 'playing'){
+                // determine current player symbol and name
+                const curSym = lobby.current_player || 'X';
+                const cur = (lobby.players || []).find(pl => (pl.symbol||'') === curSym) || null;
+                const curName = cur ? cur.name : 'Игрок';
+                status.textContent = `Сейчас ход: ${curSym} — ${curName}`;
+            } else {
+                status.textContent = 'Ожидание игроков...';
+            }
 
             // render board if present
             if (lobby.board) renderBoard(lobby);
@@ -760,11 +768,16 @@
                 cell.style.border = '1px solid rgba(255,255,255,0.04)';
                 cell.textContent = board[i] || '';
                 if (!board[i] && lobby.status==='playing'){
-                    cell.addEventListener('click', ()=>{
-                        // emit make_move
-                        if (!activeLobby || !activeLobby.id) return;
-                        socket.emit('make_move', { lobby_id: activeLobby.id, position: i });
-                    });
+                    // allow click only if this client is the current player
+                    const mySid = socket.id;
+                    const curSym = lobby.current_player || 'X';
+                    const amICurrent = (lobby.players || []).some(p => p.sid === mySid && p.symbol === curSym);
+                    if (amICurrent){
+                        cell.addEventListener('click', ()=>{
+                            if (!activeLobby || !activeLobby.id) return;
+                            socket.emit('make_move', { lobby_id: activeLobby.id, position: i });
+                        });
+                    }
                 }
                 boardEl.appendChild(cell);
             }
