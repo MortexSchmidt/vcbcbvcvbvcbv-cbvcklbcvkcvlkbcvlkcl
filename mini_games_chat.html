@@ -1460,7 +1460,7 @@
         // --- Game selection: mobile-friendly selection + floating Play button ---
         (function(){
             const isMobile = window.matchMedia && window.matchMedia('(max-width: 720px)').matches;
-            if (!isMobile) return; // only change behaviour on small screens
+            // allow floating Play button behaviour on desktop as well
 
             // create floating play button if not present
             playButton = document.querySelector('.play-button');
