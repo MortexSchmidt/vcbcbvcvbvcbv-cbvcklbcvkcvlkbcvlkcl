@@ -810,18 +810,32 @@
                 }
 
                 // we have a full lobby payload — proceed to transition
-                try{ hideSearchIndicator(); }catch(e){}
-                try{ document.getElementById('confirm-modal').style.display = 'none'; }catch(e){}
+                try{ appendDebugLine('lobby_started: full payload: ' + JSON.stringify(lobby)); }catch(e){}
+                try{ hideSearchIndicator(); }catch(e){ try{ appendDebugLine('lobby_started: hideSearchIndicator threw: '+(e&&e.message)); }catch(_){} }
+                try{ document.getElementById('confirm-modal').style.display = 'none'; }catch(e){ try{ appendDebugLine('lobby_started: hide confirm-modal threw: '+(e&&e.message)); }catch(_){} }
                 if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
-                try{ if (playButton) playButton.style.pointerEvents = ''; }catch(e){}
+                try{ if (playButton) playButton.style.pointerEvents = ''; }catch(e){ try{ appendDebugLine('lobby_started: restoring playButton threw: '+(e&&e.message)); }catch(_){} }
                 searching = false;
-                enableNavigation();
+                try{ enableNavigation(); }catch(e){ try{ appendDebugLine('lobby_started: enableNavigation threw: '+(e&&e.message)); }catch(_){} }
 
                 // set active lobby and show game
-                activeLobby = lobby;
-                showLobby(activeLobby);
-                showView('game');
-                try{ SoundEngine.lobbyCreated(); }catch(e){}
+                try{
+                    appendDebugLine('lobby_started: about to set activeLobby and call showLobby/showView');
+                }catch(e){}
+                try{
+                    activeLobby = lobby;
+                }catch(e){ try{ appendDebugLine('lobby_started: set activeLobby failed: '+(e&&e.message)); }catch(_){} }
+                try{
+                    appendDebugLine('lobby_started: calling showLobby');
+                    showLobby(activeLobby);
+                    appendDebugLine('lobby_started: showLobby returned');
+                }catch(e){ try{ appendDebugLine('lobby_started: showLobby threw: '+(e&&e.message)); }catch(_){} }
+                try{
+                    appendDebugLine('lobby_started: calling showView("game")');
+                    showView('game');
+                    appendDebugLine('lobby_started: showView("game") returned');
+                }catch(e){ try{ appendDebugLine('lobby_started: showView("game") threw: '+(e&&e.message)); }catch(_){} }
+                try{ SoundEngine.lobbyCreated(); }catch(e){ try{ appendDebugLine('lobby_started: SoundEngine.lobbyCreated threw: '+(e&&e.message)); }catch(_){} }
             }catch(e){ console.error(e); }
         });
         // Diagnostic handlers: match lifecycle events
@@ -1061,6 +1075,7 @@
 
         socket.on('update_lobby', (lobby)=>{
             // update activeLobby if matches
+            try{ appendDebugLine('update_lobby: ' + JSON.stringify({ id: lobby?.id, status: lobby?.status, players: Array.isArray(lobby?.players) ? lobby.players.length : 0 })); }catch(e){}
             if (!lobby) return;
             // if lobby object contains id
             if (activeLobby && lobby.id && activeLobby.id===lobby.id) {
@@ -1081,8 +1096,11 @@
                     if (pl){ winnerName = pl.name || 'Игрок'; winnerAvatar = pl.avatar || ''; }
                 }
                 showEndScreen({ winner: winner, name: winnerName, avatar: winnerAvatar });
-            } else if (lobby.status==='playing') { showLobby(lobby); showView('game'); }
-            else { showLobby(lobby); }
+            } else if (lobby.status==='playing') {
+                try{ showLobby(lobby); showView('game'); }catch(e){ try{ appendDebugLine('update_lobby: showLobby/showView threw: '+(e&&e.message)); }catch(_){} }
+            } else {
+                showLobby(lobby);
+            }
         });
 
         socket.on('update_lobbies', (data)=>{ renderLobbies(data); });
