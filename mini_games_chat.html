@@ -237,6 +237,23 @@
         </main>
     </div>
 
+    <!-- Auth modal (blocks UI until authorized) -->
+    <div id="auth-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:200">
+        <div style="width:92%;max-width:420px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)">
+            <h3 style="margin:0 0 8px 0">Авторизация</h3>
+            <p style="margin:0 0 12px 0;color:var(--muted)">Чтобы играть в мини‑игры и использовать профиль Telegram, авторизуйтесь через бота. Это быстро и безопасно.</p>
+            <div id="auth-state" style="margin-bottom:12px;color:var(--muted)">Нажмите «Получить код» и отправьте его боту командой <code>/start auth:&lt;код&gt;</code>.</div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <button id="btn-get-code" class="menu-btn">Получить код</button>
+                <input id="auth-code" readonly style="flex:1;padding:8px;border-radius:10px;border:1px solid var(--glass);background:transparent;color:var(--text);min-width:0">
+                <button id="btn-copy-code" class="menu-btn">Копировать</button>
+            </div>
+            <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+                <button id="btn-auth-close" class="menu-btn" style="display:none">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Bottom nav для телефонов -->
     <nav class="bottom-nav" aria-hidden="false">
         <button class="bottom-play" data-action="go-home" title="Играть">
@@ -274,7 +291,59 @@
             if (currentUser) socket.emit('identify', currentUser);
             // refresh lobbies list when connect
             socket.emit('get_lobbies');
+            // show auth modal if no init data from Telegram
+            setTimeout(()=>{
+                if (!(tg && tg.initDataUnsafe && tg.initDataUnsafe.user)) {
+                    openAuthModal();
+                }
+            }, 250);
         });
+
+        // --- Authorization modal flow ---
+        function openAuthModal(){
+            document.getElementById('auth-modal').style.display = 'flex';
+        }
+
+        function closeAuthModal(){
+            document.getElementById('auth-modal').style.display = 'none';
+        }
+
+        document.getElementById('btn-get-code').addEventListener('click', async ()=>{
+            const sid = socket.id;
+            try{
+                const resp = await fetch('/auth_code', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ sid }) });
+                const j = await resp.json();
+                if (j.code){
+                    document.getElementById('auth-code').value = j.code;
+                    document.getElementById('auth-state').textContent = 'Код сгенерирован. Отправьте в бота: /start auth:' + j.code;
+                    document.getElementById('btn-auth-close').style.display = 'inline-flex';
+                } else if (j.error) {
+                    document.getElementById('auth-state').textContent = 'Ошибка: ' + j.error;
+                }
+            }catch(e){
+                document.getElementById('auth-state').textContent = 'Ошибка сети при запросе кода';
+            }
+        });
+
+        document.getElementById('btn-copy-code').addEventListener('click', ()=>{
+            const code = document.getElementById('auth-code').value;
+            if (!code) return;
+            navigator.clipboard?.writeText(code).then(()=>{ document.getElementById('auth-state').textContent = 'Код скопирован в буфер обмена'; }).catch(()=>{ document.getElementById('auth-state').textContent = 'Не удалось скопировать'; });
+        });
+
+        // server will emit 'telegram_profile' when user authorizes via bot
+        socket.on('telegram_profile', (profile)=>{
+            try{
+                if (profile && profile.user_id){
+                    currentUser = { user_id: profile.user_id, name: profile.name || ('User' + profile.user_id), avatar: profile.avatar || '' };
+                    updateProfile(currentUser);
+                    document.getElementById('auth-state').textContent = 'Авторизация прошла успешно!';
+                    setTimeout(()=>{ closeAuthModal(); }, 800);
+                }
+            }catch(e){ console.error('profile handle err', e) }
+        });
+
+        document.getElementById('btn-auth-close').addEventListener('click', ()=>{ closeAuthModal(); });
 
         // --- View routing ---
         function showView(name){
