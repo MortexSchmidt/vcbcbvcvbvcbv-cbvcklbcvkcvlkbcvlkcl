@@ -23,6 +23,15 @@
 
         * { box-sizing: border-box; }
         html, body { height: 100%; }
+    /* allow children to shrink properly inside flex/grid */
+    .app-container, .app-main, .game-selection, .game-card, .view { min-width: 0 }
+
+    /* ensure long text wraps instead of overflowing */
+    .game-card, .menu-btn, .game-card button, .menu-btn, input, .bottom-nav button { word-break: break-word; white-space: normal }
+
+    /* responsive tic-tac-toe board */
+    #board { grid-template-columns: repeat(3, minmax(0, 1fr)); gap:8px; width:100%; max-width:520px }
+    .ttt-cell { aspect-ratio: 1 / 1; width:100%; min-width:0; padding:0; }
         /* Disable default blue tap highlight and browser focus outlines on mobile */
         html, body, button, a, input, textarea, select {
             -webkit-tap-highlight-color: transparent;
@@ -114,6 +123,11 @@
             .bottom-nav { position:fixed; left:0; right:0; bottom:0; height:74px; display:flex; gap:4px; align-items:center; justify-content:space-around; padding:8px calc(12px + env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(15,20,32,0.85), rgba(8,10,14,0.95)); border-top:1px solid rgba(255,255,255,0.04); backdrop-filter: blur(8px); z-index:50 }
             .bottom-nav button { background:transparent; border:none; color:var(--text); display:flex; flex-direction:column; align-items:center; gap:6px; font-weight:600; font-size:12px; padding:6px 8px; cursor:pointer }
             .bottom-nav svg { width:22px; height:22px; opacity:0.95 }
+
+            /* Lobby header: stack input + button on very small screens */
+            #view-lobby > div { align-items: flex-start }
+            #view-lobby input { flex: 1 1 auto; min-width: 0; margin-bottom:8px }
+            #view-lobby > div > div { display:flex; flex-direction:column; gap:8px }
         }
     </style>
 </head>
@@ -363,12 +377,12 @@
                 const cell = document.createElement('button');
                 cell.className = 'ttt-cell';
                 cell.dataset.pos = i;
-                cell.style.height = '84px';
+                // use CSS aspect-ratio for square cells, set visual styles
                 cell.style.borderRadius = '12px';
                 cell.style.display = 'flex';
                 cell.style.alignItems = 'center';
                 cell.style.justifyContent = 'center';
-                cell.style.fontSize = '28px';
+                cell.style.fontSize = window.innerWidth < 420 ? '22px' : '28px';
                 cell.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent)';
                 cell.style.border = '1px solid rgba(255,255,255,0.04)';
                 cell.textContent = board[i] || '';
