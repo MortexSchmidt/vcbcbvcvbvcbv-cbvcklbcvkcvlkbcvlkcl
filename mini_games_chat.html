@@ -844,27 +844,43 @@
                 try{ SoundEngine.lobbyCreated(); }catch(e){ try{ appendDebugLine('lobby_started: SoundEngine.lobbyCreated threw: '+(e&&e.message)); }catch(_){} }
             }catch(e){ console.error(e); }
         });
-        // Diagnostic handlers: match lifecycle events
+            // Diagnostic handlers: match lifecycle events
             // cache last match_starting per lobby to help when lobby_started is minimal
             const lastMatchStarts = {};
+            // client-side search tracking to avoid stale events updating confirm UI
+            let lastSearchStart = 0; // timestamp ms when client started quick_match
+            let lastSearchGame = null;
+            const processedMatchIds = new Set();
+
+            function _normalizePlayer(p){
+                if (!p) return null;
+                // accept only if contains a visible identifier
+                if ((p.name && String(p.name).trim() !== '') || (p.avatar && String(p.avatar).trim() !== '') || p.user_id || p.sid) return p;
+                return null;
+            }
             socket.on('match_starting', (payload)=>{
             try{
                 console.info('socket:match_starting', payload);
                 try{ appendDebugLine('match_starting: ' + JSON.stringify({ match_id: payload?.match_id, lobby_id: payload?.lobby_id, players: (payload?.players||[]).map(p=>p?.name||p?.user_id||p?.sid) })); }catch(e){}
                     // store raw players array (could be array of strings)
-                    try{ if (payload && payload.lobby_id) lastMatchStarts[payload.lobby_id] = payload.players || payload.lobby?.players || null; }catch(e){}
+                        try{ if (payload && payload.lobby_id) lastMatchStarts[payload.lobby_id] = payload.players || payload.lobby?.players || null; }catch(e){}
                 // if confirm modal is open, update players with normalized payload
-                if (payload && payload.players && payload.players.length){
+                    // Only update the confirm modal when this client recently initiated a search
+                    const recentSearch = (Date.now() - (lastSearchStart || 0)) < 60000; // 60s window
+                    if (payload && payload.players && payload.players.length && recentSearch){
                     const players = payload.players;
                     // try to place current user on left
                     const meIdx = players.findIndex(p => p.user_id === currentUser?.user_id || p.sid === socket.id);
                     let a = null, b = null;
                     if (meIdx === -1){ a = { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '' }; b = players[0]; }
                     else { a = players[meIdx]; b = players[(meIdx===0?1:0)] || null; }
-                    try{ const ava = document.getElementById('confirm-avatar-a'); ava.innerHTML=''; if (a && a.avatar){ const img=document.createElement('img'); img.src=a.avatar; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; ava.appendChild(img); } else { ava.textContent = (a && a.name? (a.name||'').slice(0,1).toUpperCase() : '—'); } }catch(e){}
-                    try{ document.getElementById('confirm-name-a').textContent = a && a.name ? a.name : 'Вы'; }catch(e){}
-                    try{ const bv = document.getElementById('confirm-avatar-b'); bv.innerHTML=''; if (b && b.avatar){ const img2=document.createElement('img'); img2.src=b.avatar; img2.style.width='100%'; img2.style.height='100%'; img2.style.objectFit='cover'; bv.appendChild(img2); } else { bv.textContent = (b && b.name? (b.name||'').slice(0,1).toUpperCase() : '—'); } }catch(e){}
-                    try{ document.getElementById('confirm-name-b').textContent = b && b.name ? b.name : 'Ожидание'; }catch(e){}
+                        // normalize players to avoid showing empty/unknown opponent
+                        a = _normalizePlayer(a) || { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '' };
+                        b = _normalizePlayer(b) || null;
+                        try{ const ava = document.getElementById('confirm-avatar-a'); ava.innerHTML=''; if (a && a.avatar){ const img=document.createElement('img'); img.src=a.avatar; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; ava.appendChild(img); } else { ava.textContent = (a && a.name? (a.name||'').slice(0,1).toUpperCase() : '—'); } }catch(e){}
+                        try{ document.getElementById('confirm-name-a').textContent = a && a.name ? a.name : 'Вы'; }catch(e){}
+                        try{ const bv = document.getElementById('confirm-avatar-b'); bv.innerHTML=''; if (b && b.avatar){ const img2=document.createElement('img'); img2.src=b.avatar; img2.style.width='100%'; img2.style.height='100%'; img2.style.objectFit='cover'; bv.appendChild(img2); } else { bv.textContent = (b && b.name? (b.name||'').slice(0,1).toUpperCase() : '—'); } }catch(e){}
+                        try{ document.getElementById('confirm-name-b').textContent = b && b.name ? b.name : 'Ожидание'; }catch(e){}
                 }
             }catch(e){ console.warn('match_starting handler err', e); }
         });
@@ -963,6 +979,9 @@
         try{ 
             console.debug('socket:lobby_cancelled', data); 
             try{ appendDebugLine('lobby_cancelled: ' + JSON.stringify({lobby_id: data?.lobby_id, message: data?.message})); }catch(e){}
+            try{ if (data && data.lobby_id) delete lastMatchStarts[data.lobby_id]; }catch(e){}
+            lastSearchStart = 0; lastSearchGame = null;
+            processedMatchIds.clear();
             hideSearchIndicator(); 
         }catch(e){} 
     });
@@ -984,6 +1003,12 @@
     socket.on('match_found', (payload)=>{
                 try{
                     console.debug('socket:match_found', payload);
+                    // avoid processing stale or duplicate match events
+                    const mid = payload && payload.match_id;
+                    const recentSearch = (Date.now() - (lastSearchStart || 0)) < 60000;
+                    if (mid && processedMatchIds.has(mid)) { appendDebugLine('match_found: duplicate match_id ignored'); return; }
+                    if (!recentSearch) { appendDebugLine('match_found: ignoring stale match event (no recent search)'); return; }
+                    if (mid) processedMatchIds.add(mid);
                     // show blocking confirm modal (keep it on top)
                     document.getElementById('confirm-modal').style.display = 'flex';
                 try{ SoundEngine.matchFound(); }catch(e){}
@@ -1064,12 +1089,19 @@
                 }catch(e){ console.error(e); }
         });
 
-    socket.on('match_cancelled', (data)=>{ try{ console.debug('socket:match_cancelled', data); hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } enableNavigation(); }catch(e){} });
+    socket.on('match_cancelled', (data)=>{ try{ console.debug('socket:match_cancelled', data); try{ appendDebugLine('match_cancelled: ' + JSON.stringify(data)); }catch(e){}
+        // clear related caches and UI
+        try{ if (data && data.lobby_id) delete lastMatchStarts[data.lobby_id]; }catch(e){}
+        lastSearchStart = 0; lastSearchGame = null;
+        processedMatchIds.clear();
+        hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } enableNavigation(); }catch(e){} });
         socket.on('lobby_created', (data)=>{
             // server returns lobby_id and lobby
             const lobby = data.lobby || data;
             // show lobby view and join room locally by id
             // We already are creator; server registered player
+            try{ if (lobby && lobby.id) delete lastMatchStarts[lobby.id]; }catch(e){}
+            lastSearchStart = 0; lastSearchGame = null; processedMatchIds.clear();
             activeLobby = lobby;
             showLobby(activeLobby);
             showView('game');
@@ -1544,9 +1576,14 @@
                     hideSearchIndicator();
                     return;
                 }
-
                 // immediate emit: start quick match now and show indicator
                 const gameName = selected ? (selected.dataset.game || (selected.querySelector('h3')?.textContent || '')) : null;
+                // reset any previous confirm modal state before starting a fresh search
+                try{ document.getElementById('confirm-modal').style.display = 'none'; }catch(e){}
+                try{ if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown = null; } }catch(e){}
+                try{ document.getElementById('confirm-waiting').style.display = 'none'; document.getElementById('confirm-buttons').style.display = 'flex'; }catch(e){}
+                // mark search start timestamp so we ignore stale server events
+                lastSearchStart = Date.now(); lastSearchGame = gameName;
                 socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id, game: gameName });
                 try{ showSearchIndicator({ game: gameName, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: 1 }); }catch(e){}
                 try{ SoundEngine.modalOpen(); }catch(e){}
