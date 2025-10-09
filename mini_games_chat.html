@@ -831,8 +831,8 @@
             if (enter) { enter.classList.add('view-enter'); }
             try{ /* view changed: '" + name + "' */ }catch(e){}
             // if search is active, reposition the floating/search indicator so it remains visible across view switches
-            try{ if (searching){ const root = document.getElementById('search-indicator'); if (root && root.style.display !== 'none'){ /* re-run position logic: */
-                        try{ const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches; if (isMobileNow){ /* keep current options */ } else { /* desktop: reposition under settings */ showSearchIndicator({}); } }catch(e){} }
+            try{ if (searching){ const root = document.getElementById('search-indicator'); if (root && root.style.display !== 'none'){ /* re-run position logic with preserved data: */
+                        try{ showSearchIndicator(lastSearchOpts || {}); }catch(e){} }
                 }
             }catch(e){}
             // update bottom nav active state (optional)
@@ -1115,6 +1115,8 @@
     let searchTimer = null;
     // long-search UI timer
     let searchLongTimer = null;
+    // store last search options to preserve data across view switches
+    let lastSearchOpts = null;
 
         // helper to expand/collapse the extra panel
         function _toggleSearchExpanded(root, expand){
@@ -1138,6 +1140,8 @@
         function showSearchIndicator(opts = {}){
                 // opts: { game, player: { name, avatar }, foundCount }
             if (!searching){ searching = true; searchStart = Date.now(); }
+            // store options for view switches
+            lastSearchOpts = { ...opts };
             const root = document.getElementById('search-indicator');
             if (!root) return;
             root.style.display = 'block';
@@ -1301,6 +1305,7 @@
 
         function hideSearchIndicator(){
             searching = false;
+            lastSearchOpts = null;
             const root = document.getElementById('search-indicator');
             if (root){
                 try{ _toggleSearchExpanded(root, false); }catch(e){}
