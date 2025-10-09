@@ -976,12 +976,19 @@
                         root.querySelector('.search-bar').style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)';
                     }
                 } else {
-                    // desktop: place roughly near top-right after settings; use bottom nav area position after settings
+                    // desktop: position the indicator to the right of the settings button (same row)
                     const settingsBtn = document.querySelector('.bottom-settings');
                     if (settingsBtn){
                         const rect = settingsBtn.getBoundingClientRect();
-                        root.style.position = 'fixed'; root.style.left = (rect.right + 12) + 'px'; root.style.top = (rect.top - 4) + 'px'; root.style.width = '260px'; root.style.transform = 'none';
-                        root.querySelector('.search-bar').style.background = 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent)';
+                        root.style.position = 'fixed';
+                        // place in same horizontal row as settings; a small offset to the right
+                        root.style.left = (rect.right + 12) + 'px';
+                        // align vertically to the same top as settings button
+                        root.style.top = (rect.top) + 'px';
+                        root.style.width = '260px';
+                        root.style.transform = 'none';
+                        // dark blue semi-transparent background for desktop
+                        try{ const bar = root.querySelector('.search-bar'); if (bar) { bar.style.background = 'rgba(6,18,46,0.88)'; bar.style.color = 'var(--text)'; } }catch(e){}
                         // expand details by default on desktop
                         _toggleSearchExpanded(root, true);
                     }
