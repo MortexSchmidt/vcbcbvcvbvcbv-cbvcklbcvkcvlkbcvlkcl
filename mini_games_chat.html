@@ -688,7 +688,7 @@
                     disableNavigation();
                     // disable play button interactions underneath modal
                     try{ if (playButton) playButton.style.pointerEvents = 'none'; }catch(e){}
-                    let timeLeft = 15;
+                    let timeLeft = 30;
                     document.getElementById('confirm-timer').textContent = String(timeLeft);
                     // start countdown
                     if (confirmCountdown) clearInterval(confirmCountdown);
@@ -697,9 +697,8 @@
                         document.getElementById('confirm-timer').textContent = String(timeLeft);
                         if (timeLeft <= 0){
                             clearInterval(confirmCountdown); confirmCountdown = null;
-                            // auto-decline if not confirmed
-                            socket.emit('match_decline', { match_id: payload.match_id });
-                            // close modal and re-enable navigation
+                            // Time expired on client — close modal and re-enable navigation.
+                            // Server-side timeout will decide requeue/cancel and notify clients.
                             document.getElementById('confirm-modal').style.display = 'none';
                             try{ if (playButton) playButton.style.pointerEvents = ''; }catch(e){}
                             enableNavigation();

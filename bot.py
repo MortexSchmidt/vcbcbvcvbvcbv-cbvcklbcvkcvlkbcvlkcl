@@ -1938,7 +1938,7 @@ def handle_quick_match(data):
                 except Exception:
                     pass
 
-            t = threading.Timer(15.0, match_timeout)
+            t = threading.Timer(30.0, match_timeout)
             pending_matches[match_id]['timer'] = t
             t.start()
     else:
