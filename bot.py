@@ -1913,7 +1913,17 @@ def handle_quick_match(data):
             p1_entry = {'sid': p1.get('sid'), 'user_id': p1.get('user_id'), 'user_key': make_user_key(p1.get('sid'), p1.get('user_id'))}
             pending_matches[match_id] = {'lobby_id': other['id'], 'players': [p0_entry, p1_entry], 'confirmed': set(), 'timer': None}
 
-            payload = {'match_id': match_id, 'lobby': other}
+            # prepare richer payload so clients can render accept/decline UI reliably
+            try:
+                players_meta = []
+                for p in pending_matches[match_id].get('players', []):
+                    if isinstance(p, dict):
+                        players_meta.append({'sid': p.get('sid'), 'user_id': p.get('user_id'), 'name': p.get('name'), 'avatar': p.get('avatar'), 'symbol': p.get('symbol'), 'user_key': p.get('user_key')})
+                    else:
+                        players_meta.append({'sid': p, 'user_id': None, 'name': '', 'avatar': '', 'symbol': ''})
+                payload = {'match_id': match_id, 'lobby': other, 'players': players_meta, 'confirmed': list(pending_matches[match_id].get('confirmed', set())), 'expires_in': 30}
+            except Exception:
+                payload = {'match_id': match_id, 'lobby': other}
             try:
                 p0_sid = p0.get('sid') if isinstance(p0, dict) else p0
                 p1_sid = p1.get('sid') if isinstance(p1, dict) else p1
