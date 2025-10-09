@@ -245,498 +245,25 @@
     .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
     .section-title i{color:var(--accent)}
 
-    .lobby-grid{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:flex-end;overflow:auto;padding-top:6px}
-    .lobby-card{
-        background: var(--card);
-        border: 1px solid var(--glass);
-        border-radius: var(--radius-sm);
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .lobby-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .lobby-name {
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: var(--text);
-    }
-    .lobby-status {
-        font-size: 0.9rem;
-        color: var(--muted);
-    }
-    .lobby-players {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-    .player-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .player-avatar-img {
-        width: 36px;
-        height: 36px;
-        border-radius: var(--radius-sm);
-        object-fit: cover;
-    }
-    .player-details {
-        display: flex;
-        flex-direction: column;
-    }
-    .player-name {
-        font-weight: 600;
-        color: var(--text);
-    }
-    .player-symbol {
-        font-size: 0.85rem;
-        color: var(--muted);
-    }
-    .empty-slot {
-        font-style: italic;
-        color: var(--muted);
+    .play-button {
+        position: fixed;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--accent);
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-1);
+        display: none;
+        z-index: 1000;
     }
 
-    .profile-info{display:flex;flex-direction:column}
-    .profile-name{font-weight:600}
-    .profile-sub{font-size:0.9rem;color:var(--muted)}
-
-    .menu-buttons{display:flex;flex-direction:column;gap:10px;margin-top:0}
-    /* Menu buttons: allow wrapping, prevent icon wrap, consistent min height */
-    .menu-btn{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);cursor:pointer;transition:all var(--transition);font-weight:600;white-space:normal;word-break:break-word;text-align:left;min-height:48px;line-height:1.15;overflow-wrap:anywhere}
-    .menu-btn i{width:28px;text-align:center;color:var(--accent);flex-shrink:0;flex-basis:28px}
-    .menu-btn.primary{background:var(--accent);color:#07102a;border:0}
-    .menu-btn.primary svg {
-        margin-right: 6px; /* Уменьшаем отступ для лучшего отображения */
-    }
-    .menu-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,0.55)}
-
-    /* Main area */
-    .app-main{padding:22px;display:flex;flex-direction:column;gap:18px;background:transparent;height:100%}
-    /* Sections keep the card background to ensure consistent dark surfaces */
-    .section{background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--glass)}
-    .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
-    .section-title i{color:var(--accent)}
-
-    .lobby-grid{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:flex-end;overflow:auto;padding-top:6px}
-    .lobby-card{
-        background: var(--card);
-        border: 1px solid var(--glass);
-        border-radius: var(--radius-sm);
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .lobby-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .lobby-name {
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: var(--text);
-    }
-    .lobby-status {
-        font-size: 0.9rem;
-        color: var(--muted);
-    }
-    .lobby-players {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-    .player-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .player-avatar-img {
-        width: 36px;
-        height: 36px;
-        border-radius: var(--radius-sm);
-        object-fit: cover;
-    }
-    .player-details {
-        display: flex;
-        flex-direction: column;
-    }
-    .player-name {
-        font-weight: 600;
-        color: var(--text);
-    }
-    .player-symbol {
-        font-size: 0.85rem;
-        color: var(--muted);
-    }
-    .empty-slot {
-        font-style: italic;
-        color: var(--muted);
-    }
-
-    .profile-info{display:flex;flex-direction:column}
-    .profile-name{font-weight:600}
-    .profile-sub{font-size:0.9rem;color:var(--muted)}
-
-    .menu-buttons{display:flex;flex-direction:column;gap:10px;margin-top:0}
-    /* Menu buttons: allow wrapping, prevent icon wrap, consistent min height */
-    .menu-btn{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);cursor:pointer;transition:all var(--transition);font-weight:600;white-space:normal;word-break:break-word;text-align:left;min-height:48px;line-height:1.15;overflow-wrap:anywhere}
-    .menu-btn i{width:28px;text-align:center;color:var(--accent);flex-shrink:0;flex-basis:28px}
-    .menu-btn.primary{background:var(--accent);color:#07102a;border:0}
-    .menu-btn.primary svg {
-        margin-right: 6px; /* Уменьшаем отступ для лучшего отображения */
-    }
-    .menu-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,0.55)}
-
-    /* Main area */
-    .app-main{padding:22px;display:flex;flex-direction:column;gap:18px;background:transparent;height:100%}
-    /* Sections keep the card background to ensure consistent dark surfaces */
-    .section{background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--glass)}
-    .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
-    .section-title i{color:var(--accent)}
-
-    .lobby-grid{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:flex-end;overflow:auto;padding-top:6px}
-    .lobby-card{
-        background: var(--card);
-        border: 1px solid var(--glass);
-        border-radius: var(--radius-sm);
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .lobby-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .lobby-name {
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: var(--text);
-    }
-    .lobby-status {
-        font-size: 0.9rem;
-        color: var(--muted);
-    }
-    .lobby-players {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-    .player-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .player-avatar-img {
-        width: 36px;
-        height: 36px;
-        border-radius: var(--radius-sm);
-        object-fit: cover;
-    }
-    .player-details {
-        display: flex;
-        flex-direction: column;
-    }
-    .player-name {
-        font-weight: 600;
-        color: var(--text);
-    }
-    .player-symbol {
-        font-size: 0.85rem;
-        color: var(--muted);
-    }
-    .empty-slot {
-        font-style: italic;
-        color: var(--muted);
-    }
-
-    .profile-info{display:flex;flex-direction:column}
-    .profile-name{font-weight:600}
-    .profile-sub{font-size:0.9rem;color:var(--muted)}
-
-    .menu-buttons{display:flex;flex-direction:column;gap:10px;margin-top:0}
-    /* Menu buttons: allow wrapping, prevent icon wrap, consistent min height */
-    .menu-btn{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);cursor:pointer;transition:all var(--transition);font-weight:600;white-space:normal;word-break:break-word;text-align:left;min-height:48px;line-height:1.15;overflow-wrap:anywhere}
-    .menu-btn i{width:28px;text-align:center;color:var(--accent);flex-shrink:0;flex-basis:28px}
-    .menu-btn.primary{background:var(--accent);color:#07102a;border:0}
-    .menu-btn.primary svg {
-        margin-right: 6px; /* Уменьшаем отступ для лучшего отображения */
-    }
-    .menu-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,0.55)}
-
-    /* Main area */
-    .app-main{padding:22px;display:flex;flex-direction:column;gap:18px;background:transparent;height:100%}
-    /* Sections keep the card background to ensure consistent dark surfaces */
-    .section{background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--glass)}
-    .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
-    .section-title i{color:var(--accent)}
-
-    .lobby-grid{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:flex-end;overflow:auto;padding-top:6px}
-    .lobby-card{
-        background: var(--card);
-        border: 1px solid var(--glass);
-        border-radius: var(--radius-sm);
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .lobby-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .lobby-name {
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: var(--text);
-    }
-    .lobby-status {
-        font-size: 0.9rem;
-        color: var(--muted);
-    }
-    .lobby-players {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-    .player-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .player-avatar-img {
-        width: 36px;
-        height: 36px;
-        border-radius: var(--radius-sm);
-        object-fit: cover;
-    }
-    .player-details {
-        display: flex;
-        flex-direction: column;
-    }
-    .player-name {
-        font-weight: 600;
-        color: var(--text);
-    }
-    .player-symbol {
-        font-size: 0.85rem;
-        color: var(--muted);
-    }
-    .empty-slot {
-        font-style: italic;
-        color: var(--muted);
-    }
-
-    .profile-info{display:flex;flex-direction:column}
-    .profile-name{font-weight:600}
-    .profile-sub{font-size:0.9rem;color:var(--muted)}
-
-    .menu-buttons{display:flex;flex-direction:column;gap:10px;margin-top:0}
-    /* Menu buttons: allow wrapping, prevent icon wrap, consistent min height */
-    .menu-btn{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);cursor:pointer;transition:all var(--transition);font-weight:600;white-space:normal;word-break:break-word;text-align:left;min-height:48px;line-height:1.15;overflow-wrap:anywhere}
-    .menu-btn i{width:28px;text-align:center;color:var(--accent);flex-shrink:0;flex-basis:28px}
-    .menu-btn.primary{background:var(--accent);color:#07102a;border:0}
-    .menu-btn.primary svg {
-        margin-right: 6px; /* Уменьшаем отступ для лучшего отображения */
-    }
-    .menu-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,0.55)}
-
-    /* Main area */
-    .app-main{padding:22px;display:flex;flex-direction:column;gap:18px;background:transparent;height:100%}
-    /* Sections keep the card background to ensure consistent dark surfaces */
-    .section{background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--glass)}
-    .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
-    .section-title i{color:var(--accent)}
-
-
-
-    .profile-info{display:flex;flex-direction:column}
-    .profile-name{font-weight:600}
-    .profile-sub{font-size:0.9rem;color:var(--muted)}
-
-    .menu-buttons{display:flex;flex-direction:column;gap:10px;margin-top:0}
-    /* Menu buttons: allow wrapping, prevent icon wrap, consistent min height */
-    .menu-btn{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);cursor:pointer;transition:all var(--transition);font-weight:600;white-space:normal;word-break:break-word;text-align:left;min-height:48px;line-height:1.15;overflow-wrap:anywhere}
-    .menu-btn i{width:28px;text-align:center;color:var(--accent);flex-shrink:0;flex-basis:28px}
-    .menu-btn.primary{background:var(--accent);color:#07102a;border:0}
-    .menu-btn.primary svg {
-        margin-right: 6px; /* Уменьшаем отступ для лучшего отображения */
-    }
-    .menu-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,0.55)}
-
-    /* Main area */
-    .app-main{padding:22px;display:flex;flex-direction:column;gap:18px;background:transparent;height:100%}
-    /* Sections keep the card background to ensure consistent dark surfaces */
-    .section{background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--glass)}
-    .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
-    .section-title i{color:var(--accent)}
-
-    .lobby-grid{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:flex-end;overflow:auto;padding-top:6px}
-    .lobby-card{
-        background: var(--card);
-        border: 1px solid var(--glass);
-        border-radius: var(--radius-sm);
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .lobby-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .lobby-name {
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: var(--text);
-    }
-    .lobby-status {
-        font-size: 0.9rem;
-        color: var(--muted);
-    }
-    .lobby-players {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-    .player-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .player-avatar-img {
-        width: 36px;
-        height: 36px;
-        border-radius: var(--radius-sm);
-        object-fit: cover;
-    }
-    .player-details {
-        display: flex;
-        flex-direction: column;
-    }
-    .player-name {
-        font-weight: 600;
-        color: var(--text);
-    }
-    .player-symbol {
-        font-size: 0.85rem;
-        color: var(--muted);
-    }
-    .empty-slot {
-        font-style: italic;
-        color: var(--muted);
-    }
-
-    .profile-info{display:flex;flex-direction:column}
-    .profile-name{font-weight:600}
-    .profile-sub{font-size:0.9rem;color:var(--muted)}
-
-    .menu-buttons{display:flex;flex-direction:column;gap:10px;margin-top:0}
-    /* Menu buttons: allow wrapping, prevent icon wrap, consistent min height */
-    .menu-btn{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);cursor:pointer;transition:all var(--transition);font-weight:600;white-space:normal;word-break:break-word;text-align:left;min-height:48px;line-height:1.15;overflow-wrap:anywhere}
-    .menu-btn i{width:28px;text-align:center;color:var(--accent);flex-shrink:0;flex-basis:28px}
-    .menu-btn.primary{background:var(--accent);color:#07102a;border:0}
-    .menu-btn.primary svg {
-        margin-right: 6px; /* Уменьшаем отступ для лучшего отображения */
-    }
-    .menu-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,0.55)}
-
-    /* Main area */
-    .app-main{padding:22px;display:flex;flex-direction:column;gap:18px;background:transparent;height:100%}
-    /* Sections keep the card background to ensure consistent dark surfaces */
-    .section{background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--glass)}
-    .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
-    .section-title i{color:var(--accent)}
-
-    .lobby-grid{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:flex-end;overflow:auto;padding-top:6px}
-    .lobby-card{
-        background: var(--card);
-        border: 1px solid var(--glass);
-        border-radius: var(--radius-sm);
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .lobby-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .lobby-name {
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: var(--text);
-    }
-    .lobby-status {
-        font-size: 0.9rem;
-        color: var(--muted);
-    }
-    .lobby-players {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-    .player-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .player-avatar-img {
-        width: 36px;
-        height: 36px;
-        border-radius: var(--radius-sm);
-        object-fit: cover;
-    }
-    .player-details {
-        display: flex;
-        flex-direction: column;
-    }
-    .player-name {
-        font-weight: 600;
-        color: var(--text);
-    }
-    .player-symbol {
-        font-size: 0.85rem;
-        color: var(--muted);
-    }
-    .empty-slot {
-        font-style: italic;
-        color: var(--muted);
-    }
-
-    .profile-info{display:flex;flex-direction:column}
-    .profile-name{font-weight:600}
-    .profile-sub{font-size:0.9rem;color:var(--muted)}
-
-    .menu-buttons{display:flex;flex-direction:column;gap:10px;margin-top:0}
-    /* Menu buttons: allow wrapping, prevent icon wrap, consistent min height */
-    .menu-btn{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);cursor:pointer;transition:all var(--transition);font-weight:600;white-space:normal;word-break:break-word;text-align:left;min-height:48px;line-height:1.15;overflow-wrap:anywhere}
-    .menu-btn i{width:28px;text-align:center;color:var(--accent);flex-shrink:0;flex-basis:28px}
-    .menu-btn.primary{background:var(--accent);color:#07102a;border:0}
-    .menu-btn.primary svg {
-        margin-right: 6px; /* Уменьшаем отступ для лучшего отображения */
-    }
-    .menu-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,0.55)}
-
-    /* Исправление лишнего пространства */
-    .menu-buttons {
-        margin-top: 0; /* Убираем лишний отступ */
-    }
-
-    /* Исправление отображения иконки на кнопке "Создать лобби" */
-    .menu-btn.primary svg {
-        margin-right: 6px; /* Уменьшаем отступ для лучшего отображения */
+    /* Скрыть кнопки на мобильных устройствах */
+    @media (max-width: 768px) {
+        .menu-btn {
+            display: none;
+        }
     }
     </style>
 </head>
@@ -815,6 +342,39 @@
         // Обработка отключения
         socket.on('disconnect', () => {
             console.log('Отключено от сервера');
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const lobbyCards = document.querySelectorAll('.lobby-card');
+            const playButton = document.createElement('button');
+            playButton.className = 'play-button';
+            playButton.textContent = 'Играть';
+            document.body.appendChild(playButton);
+
+            let selectedCard = null;
+
+            lobbyCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    if (selectedCard === card) {
+                        // Если нажали на уже выбранный блок, снимаем выделение
+                        selectedCard = null;
+                        playButton.style.display = 'none';
+                    } else {
+                        // Выделяем новый блок
+                        selectedCard = card;
+                        const rect = card.getBoundingClientRect();
+                        playButton.style.display = 'block';
+                    }
+                });
+            });
+
+            // Скрыть кнопку при клике вне блоков
+            document.addEventListener('click', (event) => {
+                if (!event.target.closest('.lobby-card')) {
+                    selectedCard = null;
+                    playButton.style.display = 'none';
+                }
+            });
         });
     </script>
     <div class="app-container">
