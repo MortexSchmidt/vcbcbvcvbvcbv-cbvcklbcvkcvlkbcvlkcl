@@ -2453,6 +2453,15 @@ def serve_tictactoe_app():
 def serve_mini_games_chat():
     return app.send_static_file('mini_games_chat.html')
 
+# Serve index at root to avoid 404s on the base URL
+@app.route('/')
+def serve_index():
+    try:
+        return app.send_static_file('mini_games_chat.html')
+    except Exception as e:
+        logger.warning(f"serve_index: failed to serve mini_games_chat.html: {e}")
+        return (json.dumps({'error': 'not found'}), 404)
+
 
 # Serve files placed in the assets/ folder (e.g. /assets/trophy.tgs)
 @app.route('/assets/<path:filename>')
