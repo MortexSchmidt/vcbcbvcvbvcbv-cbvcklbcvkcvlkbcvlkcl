@@ -2052,6 +2052,7 @@ def _cancel_pending_match_internal(match_id, reason='cancelled', decliner_sid=No
 def handle_match_accept(data):
     match_id = data.get('match_id')
     logger.info(f"handle_match_accept: received accept for match {match_id} from sid={request.sid}")
+    logger.debug(f"pending_matches before accept: { {k: {'players': [(p if isinstance(p,str) else p.get('sid')) for p in v.get('players',[])], 'confirmed': list(v.get('confirmed', set()))} for k,v in pending_matches.items()} }")
     m = pending_matches.get(match_id)
     if not m:
         emit('error', {'message': 'Матч не найден или уже обработан'})
@@ -2097,6 +2098,7 @@ def handle_match_accept(data):
     # add to confirmed set
     m.setdefault('confirmed', set()).add(sid)
     logger.info(f"handle_match_accept: match {match_id} confirmed set now={m.get('confirmed')}")
+    logger.debug(f"pending_matches after accept: { {k: {'players': [(p if isinstance(p,str) else p.get('sid')) for p in v.get('players',[])], 'confirmed': list(v.get('confirmed', set()))} for k,v in pending_matches.items()} }")
 
     # notify counterpart(s) that this side accepted (optional ack)
     try:
@@ -2184,24 +2186,30 @@ def handle_match_accept(data):
         else:
             logger.warning(f"match_accept: lobby {lobby_id} missing when starting match {match_id}")
         # ensure both sockets join the lobby room so they receive room broadcasts
-        for psid in m.get('players', []):
+        for p in m.get('players', []):
             try:
+                target_sid = p if isinstance(p, str) else p.get('sid')
+                if not target_sid:
+                    continue
                 try:
-                    join_room(lobby_id, sid=psid)
+                    join_room(lobby_id, sid=target_sid)
                 except Exception:
-                    # fallback: attempt socketio.server.enter_room if available
+                    # fallback: attempt socketio.server.enter_room if available (different server adapters)
                     try:
-                        socketio.server.enter_room(psid, lobby_id)
+                        socketio.server.enter_room(target_sid, lobby_id)
                     except Exception:
-                        pass
+                        logger.warning(f"match_accept: unable to add sid {target_sid} to room {lobby_id}")
             except Exception as e:
-                logger.warning(f"match_accept: failed to add psid {psid} to room {lobby_id}: {e}")
-        # notify both players
-        for psid in m.get('players', []):
+                logger.warning(f"match_accept: failed to add player {p} to room {lobby_id}: {e}")
+        # notify both players (use raw sid)
+        for p in m.get('players', []):
             try:
-                socketio.emit('lobby_started', lobby or {'id': lobby_id}, room=psid)
+                target_sid = p if isinstance(p, str) else p.get('sid')
+                if not target_sid:
+                    continue
+                socketio.emit('lobby_started', lobby or {'id': lobby_id}, room=target_sid)
             except Exception as e:
-                logger.warning(f"match_accept: failed to emit lobby_started to {psid}: {e}")
+                logger.warning(f"match_accept: failed to emit lobby_started to {p}: {e}")
         try:
             del pending_matches[match_id]
         except Exception:
