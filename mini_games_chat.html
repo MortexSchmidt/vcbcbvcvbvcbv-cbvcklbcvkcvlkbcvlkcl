@@ -573,7 +573,16 @@
         function createDebugPanel(){
             // debug panel disabled in production
         }
-            function appendDebugLine(msg){ /* disabled */ }
+            // safe debug logger: no-op in production but callable from many places
+            function appendDebugLine(msg){
+                try{
+                    // keep minimal: only log to console when devtools available
+                    if (window && window.console && typeof window.console.debug === 'function') {
+                        // prefix so logs are easy to find
+                        window.console.debug('[DBG] ' + String(msg));
+                    }
+                }catch(e){ /* swallow */ }
+            }
 
         // navigation lock helpers (used during quick-match searching/confirmation)
         function disableNavigation(){
@@ -1016,7 +1025,6 @@
                     root.dataset.desktop = '';
                     // ensure expanded area is collapsed for desktop (static pill)
                     try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.classList.remove('expanded'); exp.style.position = ''; exp.style.bottom = 'calc(100% + 10px)'; exp.style.left = ''; exp.style.right = ''; exp.style.transform = 'translateY(8px)'; exp.style.opacity = '0'; exp.style.pointerEvents = 'none'; exp.style.display = 'block'; exp.style.maxHeight = ''; exp.style.overflow = ''; } }catch(e){}
-                }
                 }
             }catch(e){}
             // update game text
