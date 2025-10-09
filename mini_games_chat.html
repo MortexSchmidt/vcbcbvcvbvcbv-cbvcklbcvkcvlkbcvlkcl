@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -21,14 +21,8 @@
             --transition: 180ms cubic-bezier(.2,.9,.2,1);
         }
 
-        * {
-            box-sizing: border-box;
-        }
-
-        html, body {
-            height: 100%;
-        }
-
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
         body {
             margin: 0;
             font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
@@ -37,12 +31,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px 16px;
+            padding: env(safe-area-inset-top) 12px env(safe-area-inset-bottom);
+            -webkit-font-smoothing: antialiased;
         }
 
         .app-container {
             width: 100%;
-            max-width: 920px;
+            max-width: 980px;
             border-radius: 16px;
             overflow: hidden;
             box-shadow: var(--shadow-1);
@@ -50,9 +45,10 @@
             display: grid;
             grid-template-columns: 320px 1fr;
             gap: 22px;
-            height: calc(100vh - 44px);
+            height: calc(100vh - 28px);
         }
 
+        /* Sidebar */
         .app-sidebar {
             padding: 18px;
             background: transparent;
@@ -63,251 +59,53 @@
             height: 100%;
         }
 
-        .profile-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .profile-row { display:flex; align-items:center; gap:12px; }
+        .avatar { width:56px; height:56px; border-radius:12px; overflow:hidden; background:var(--glass); display:flex; align-items:center; justify-content:center; }
+        .avatar img{ width:100%; height:100%; object-fit:cover }
+        .profile-info { display:flex; flex-direction:column }
+        .profile-name { font-weight:600 }
+        .profile-sub { font-size:0.9rem; color:var(--muted) }
 
-        .avatar {
-            width: 56px;
-            height: 56px;
-            border-radius: 12px;
-            overflow: hidden;
-            background: var(--glass);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        .menu-buttons { display:flex; flex-direction:column; gap:10px; margin-top:6px }
+        .menu-btn { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); background:transparent; color:var(--text); cursor:pointer; transition:all var(--transition); font-weight:600; text-align:left; min-height:48px }
+        .menu-btn.primary { background:var(--accent); color:#07102a; border:0 }
+        .menu-btn.disabled { background:var(--muted); color:var(--card); cursor:not-allowed }
+        .menu-btn:hover:not(.disabled){ transform:translateY(-1px); box-shadow:0 6px 18px rgba(2,6,23,0.55) }
 
-        .avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+        .app-main { padding:22px; display:flex; flex-direction:column; gap:18px; background:transparent; height:100%; overflow:auto }
 
-        .profile-info {
-            display: flex;
-            flex-direction: column;
-        }
+        /* Game selection — on desktop column, on mobile horizontal cards */
+        .game-selection { display:flex; flex-direction:column; gap:12px }
+        .game-card { background:var(--card); border:1px solid var(--glass); border-radius:var(--radius); padding:16px; display:flex; flex-direction:column; gap:8px; }
+        .game-card h3 { font-weight:600; color:var(--text); margin:0 }
+        .game-card button { padding:12px 16px; border-radius:var(--radius-sm); border:1px solid var(--glass); background:var(--accent); color:#07102a; font-weight:700; cursor:pointer; transition:all var(--transition); }
+        .game-card button.disabled { background:var(--muted); color:var(--card); cursor:not-allowed }
+        .game-card button:hover:not(.disabled){ transform:translateY(-2px); box-shadow:0 8px 20px rgba(2,6,23,0.55) }
 
-        .profile-name {
-            font-weight: 600;
-        }
+        /* Bottom navigation for mobile */
+        .bottom-nav { display:none }
 
-        .profile-sub {
-            font-size: 0.9rem;
-            color: var(--muted);
-        }
+        /* Responsive adjustments for small screens (phones) */
+        @media (max-width: 720px) {
+            .app-container { grid-template-columns: 1fr; max-width:100%; border-radius:0; height:100vh }
+            .app-sidebar { display:none }
+            .app-main { padding:18px 14px 92px 14px }
 
-        .menu-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 6px;
-        }
+            /* make game cards horizontally scrollable */
+            .game-selection { flex-direction:row; overflow-x:auto; -webkit-overflow-scrolling:touch; gap:12px; padding-bottom:12px }
+            .game-card { min-width:220px; flex:0 0 auto }
 
-        .menu-btn {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.03);
-            background: transparent;
-            color: var(--text);
-            cursor: pointer;
-            transition: all var(--transition);
-            font-weight: 600;
-            text-align: left;
-            min-height: 48px;
-        }
-
-        .menu-btn.primary {
-            background: var(--accent);
-            color: #07102a;
-            border: 0;
-        }
-
-        .menu-btn.disabled {
-            background: var(--muted);
-            color: var(--card);
-            cursor: not-allowed;
-        }
-
-        .menu-btn:hover:not(.disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(2,6,23,0.55);
-        }
-
-        .app-main {
-            padding: 22px;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            background: transparent;
-            height: 100%;
-        }
-
-        .game-selection {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .game-card {
-            background: var(--card);
-            border: 1px solid var(--glass);
-            border-radius: var(--radius);
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .game-card h3 {
-            font-weight: 600;
-            color: var(--text);
-            margin: 0;
-        }
-
-        .game-card button {
-            padding: 10px 14px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--glass);
-            background: var(--accent);
-            color: #07102a;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all var(--transition);
-        }
-
-        .game-card button.disabled {
-            background: var(--muted);
-            color: var(--card);
-            cursor: not-allowed;
-        }
-
-        .game-card button:hover:not(.disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(2,6,23,0.55);
+            /* bottom nav */
+            .bottom-nav { position:fixed; left:0; right:0; bottom:0; height:74px; display:flex; gap:4px; align-items:center; justify-content:space-around; padding:8px calc(12px + env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(15,20,32,0.85), rgba(8,10,14,0.95)); border-top:1px solid rgba(255,255,255,0.04); backdrop-filter: blur(8px); z-index:50 }
+            .bottom-nav button { background:transparent; border:none; color:var(--text); display:flex; flex-direction:column; align-items:center; gap:6px; font-weight:600; font-size:12px; padding:6px 8px; cursor:pointer }
+            .bottom-nav svg { width:22px; height:22px; opacity:0.95 }
         }
     </style>
 </head>
 <body>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script>
-        // Инициализация Telegram WebApp
-        const tg = window.Telegram.WebApp;
-        tg.expand();
 
-        // Инициализация SocketIO клиента
-        const socket = io('https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app');
-
-        let currentUser = null;
-        let currentGame = null;
-
-        // Авторизация при загрузке страницы
-        tg.ready();
-
-        // Обработка подключения к серверу
-        socket.on('connect', () => {
-            console.log('Подключено к серверу мини-игр');
-
-            // Получаем данные пользователя из Telegram
-            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                currentUser = {
-                    user_id: tg.initDataUnsafe.user.id,
-                    name: tg.initDataUnsafe.user.first_name || tg.initDataUnsafe.user.username || 'Игрок',
-                    avatar: ''
-                };
-
-                // Отправляем данные на сервер
-                socket.emit('identify', currentUser);
-
-                // Обновляем интерфейс профиля
-                updateProfile(currentUser);
-            }
-        });
-
-        // Обновление профиля пользователя
-        function updateProfile(user) {
-            const profileName = document.querySelector('.profile-name');
-            const profileSub = document.querySelector('.profile-sub');
-            const avatarImg = document.querySelector('.avatar img');
-
-            if (profileName) profileName.textContent = user.name;
-            if (profileSub) profileSub.textContent = 'Авторизован';
-            if (avatarImg) {
-                avatarImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=5865f2&color=ffffff&size=128`;
-            }
-        }
-
-        // Включаем кнопки после авторизации
-        function enableGameButtons() {
-            const playBtn = document.querySelector('.menu-btn.primary');
-            const selectBtn = document.querySelector('.game-card button');
-
-            if (playBtn) {
-                playBtn.classList.remove('disabled');
-                playBtn.style.cursor = 'pointer';
-                playBtn.addEventListener('click', () => {
-                    tg.showAlert('Ищем игру для вас...');
-                    socket.emit('find_game', { game_type: 'tictactoe' });
-                });
-            }
-
-            if (selectBtn) {
-                selectBtn.classList.remove('disabled');
-                selectBtn.style.cursor = 'pointer';
-                selectBtn.addEventListener('click', () => {
-                    tg.showAlert('Запуск игры крестики-нолики...');
-                    socket.emit('start_game', { game_type: 'tictactoe' });
-                });
-            }
-        }
-
-        // Обработка событий SocketIO
-        socket.on('game_found', (data) => {
-            console.log('Игра найдена:', data);
-            tg.showAlert('Игра найдена! Начинаем...');
-        });
-
-        socket.on('game_started', (data) => {
-            console.log('Игра начата:', data);
-            currentGame = data.game_id;
-            tg.showAlert('Игра крестики-нолики начата!');
-        });
-
-        socket.on('game_update', (data) => {
-            console.log('Обновление игры:', data);
-            // Здесь можно обновить игровое поле
-        });
-
-        socket.on('game_ended', (data) => {
-            console.log('Игра завершена:', data);
-            currentGame = null;
-            tg.showAlert(`Игра завершена! Результат: ${data.result}`);
-        });
-
-        socket.on('error', (error) => {
-            console.error('Ошибка:', error);
-            tg.showAlert('Ошибка: ' + error.message);
-        });
-
-        // Включаем кнопки после успешной авторизации
-        setTimeout(() => {
-            if (currentUser) {
-                enableGameButtons();
-            }
-        }, 1000);
-
-        // Обработка отключения
-        socket.on('disconnect', () => {
-            console.log('Отключено от сервера');
-        });
-    </script>
     <div class="app-container">
         <aside class="app-sidebar">
             <div class="profile-row">
@@ -321,20 +119,267 @@
             </div>
 
             <div class="menu-buttons">
-                <button class="menu-btn primary">Играть</button>
-                <button class="menu-btn">Настройки</button>
-                <button class="menu-btn">Лобби</button>
+                <button class="menu-btn primary" data-action="go-home">Играть</button>
+                <button class="menu-btn" data-action="go-lobby">Лобби</button>
+                <button class="menu-btn" data-action="go-settings">Настройки</button>
             </div>
         </aside>
 
         <main class="app-main">
-            <div class="game-selection">
-                <div class="game-card">
-                    <h3>Крестики-Нолики</h3>
-                    <button>Выбрать</button>
+            <!-- Views: home, lobby, game, settings -->
+            <section id="view-home" class="view" data-view="home">
+                <h2 style="margin:0 0 6px 0">Мини‑игры</h2>
+                <p style="margin:0 0 12px 0;color:var(--muted)">Выберите игру и запустите. На телефоне — свайпните карточки.</p>
+
+                <div class="game-selection" role="list">
+                    <article class="game-card" data-game="tictactoe" role="listitem">
+                        <h3>Крестики‑Нолики</h3>
+                        <p style="margin:0;color:var(--muted);font-size:13px">Быстрая игра 1 на 1 в реальном времени.</p>
+                        <div style="height:6px"></div>
+                        <div style="display:flex;gap:8px">
+                            <button class="game-choose" data-game="tictactoe">Играть</button>
+                            <button class="game-lobby" data-game="tictactoe">Создать лобби</button>
+                        </div>
+                    </article>
+
+                    <article class="game-card" data-game="memory" aria-disabled="true">
+                        <h3>Мемо (скоро)</h3>
+                        <p style="margin:0;color:var(--muted);font-size:13px">Карточная память — в разработке.</p>
+                        <div style="height:6px"></div>
+                        <button class="disabled">Скоро</button>
+                    </article>
+
+                    <article class="game-card" data-game="quiz" aria-disabled="true">
+                        <h3>Quiz (скоро)</h3>
+                        <p style="margin:0;color:var(--muted);font-size:13px">Викторина против друзей.</p>
+                        <div style="height:6px"></div>
+                        <button class="disabled">Скоро</button>
+                    </article>
                 </div>
-            </div>
+            </section>
+
+            <section id="view-lobby" class="view" data-view="lobby" style="display:none">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+                    <h2 style="margin:0">Лобби</h2>
+                    <div style="display:flex;gap:8px">
+                        <input id="lobby-name" placeholder="Название лобби" style="padding:8px;border-radius:10px;border:1px solid var(--glass);background:transparent;color:var(--text)">
+                        <button id="btn-create-lobby" class="menu-btn">Создать</button>
+                    </div>
+                </div>
+
+                <div id="lobbies-list" style="margin-top:12px;display:flex;flex-direction:column;gap:10px"></div>
+            </section>
+
+            <section id="view-game" class="view" data-view="game" style="display:none">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <h2 style="margin:0" id="game-title">Крестики‑Нолики</h2>
+                    <div id="game-status" style="color:var(--muted);font-size:13px">Ожидание игрока...</div>
+                </div>
+
+                <div id="players-row" style="display:flex;gap:12px;align-items:center;margin-top:8px"></div>
+
+                <div id="board" style="margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:360px">
+                    <!-- cells injected here -->
+                </div>
+
+                <div style="margin-top:12px;display:flex;gap:8px">
+                    <button id="btn-leave" class="menu-btn">Выйти из игры</button>
+                    <button id="btn-forfeit" class="menu-btn">Сдаться</button>
+                </div>
+            </section>
+
+            <section id="view-settings" class="view" data-view="settings" style="display:none">
+                <h2 style="margin:0 0 10px 0">Настройки</h2>
+                <p style="color:var(--muted)">Здесь будут настройки звука и уведомлений.</p>
+            </section>
         </main>
     </div>
+
+    <!-- Bottom nav для телефонов -->
+    <nav class="bottom-nav" aria-hidden="false">
+        <button class="bottom-play" data-action="go-home" title="Играть">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 3v18l15-9L5 3z" fill="currentColor"/></svg>
+            <span>Играть</span>
+        </button>
+        <button class="bottom-lobby" data-action="go-lobby" title="Лобби">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5zm0 2c-3.86 0-7 3.14-7 7h2c0-2.761 2.239-5 5-5s5 2.239 5 5h2c0-3.86-3.14-7-7-7z" fill="currentColor"/></svg>
+            <span>Лобби</span>
+        </button>
+        <button class="bottom-settings" data-action="go-settings" title="Настройки">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.14 12.936a7.072 7.072 0 0 0 0-1.872l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a6.987 6.987 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 14.5 2h-4a.5.5 0 0 0-.5.42l-.36 2.54c-.57.22-1.11.52-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.87a.5.5 0 0 0 .12.64l2.03 1.58c-.05.31-.08.63-.08.95s.03.64.08.95L2.83 14.5a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.44.34.69.22l2.39-.96c.5.42 1.05.72 1.62.94l.36 2.54c.05.28.28.48.56.48h4c.28 0 .51-.2.56-.48l.36-2.54c.57-.22 1.11-.52 1.62-.94l2.39.96c.25.1.55.02.69-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z" fill="currentColor"/></svg>
+            <span>Настройки</span>
+        </button>
+    </nav>
+
+    <script>
+        // --- Helpers & state ---
+        const tg = window.Telegram?.WebApp || {};
+        try{ tg.expand?.() }catch(e){}
+        try{ tg.ready?.() }catch(e){}
+
+        const socket = io('https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app');
+        let currentUser = null;
+        let activeLobby = null; // { id, lobby }
+
+        // init user from tg
+        if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            currentUser = { user_id: tg.initDataUnsafe.user.id, name: tg.initDataUnsafe.user.first_name || tg.initDataUnsafe.user.username || 'Игрок', avatar: '' };
+            // notify server when connected
+        }
+
+        socket.on('connect', ()=>{
+            console.log('socket connected');
+            if (currentUser) socket.emit('identify', currentUser);
+            // refresh lobbies list when connect
+            socket.emit('get_lobbies');
+        });
+
+        // --- View routing ---
+        function showView(name){
+            document.querySelectorAll('.view').forEach(v=>{ v.style.display = v.dataset.view===name ? 'block' : 'none'; v.classList.remove('view-enter'); });
+            const enter = document.querySelector(`[data-view="${name}"]`);
+            if (enter) { enter.classList.add('view-enter'); }
+            // update bottom nav active state (optional)
+        }
+
+        // wire navigation buttons
+        document.querySelectorAll('[data-action]').forEach(btn=>btn.addEventListener('click', e=>{
+            const a = e.currentTarget.dataset.action;
+            if (a==='go-home') showView('home');
+            if (a==='go-lobby') { showView('lobby'); socket.emit('get_lobbies'); }
+            if (a==='go-settings') showView('settings');
+        }));
+
+        // Home actions: choose game or create lobby
+        document.body.addEventListener('click', (e)=>{
+            const choose = e.target.closest('.game-choose');
+            const lobbyBtn = e.target.closest('.game-lobby');
+            if (choose){
+                const game = choose.dataset.game;
+                if (game==='tictactoe') {
+                    // quick create and wait for opponent: create lobby and stay
+                    document.getElementById('lobby-name').value = `${currentUser?.name || 'Игрок'}'s lobby`;
+                    showView('lobby');
+                    // set focus to create button
+                }
+            }
+            if (lobbyBtn){
+                const game = lobbyBtn.dataset.game;
+                showView('lobby');
+            }
+        });
+
+        // Create lobby
+        document.getElementById('btn-create-lobby').addEventListener('click', ()=>{
+            const name = document.getElementById('lobby-name').value || `${currentUser?.name || 'Игрок'}'s lobby`;
+            socket.emit('create_lobby', { name, player_name: currentUser?.name || 'Игрок', player_avatar: currentUser?.avatar || '', user_id: currentUser?.user_id });
+        });
+
+        // render lobbies
+        function renderLobbies(list){
+            const root = document.getElementById('lobbies-list');
+            root.innerHTML = '';
+            if (!list || list.length===0) { root.innerHTML = '<div style="color:var(--muted)">Лобби ещё нет. Создайте своё!</div>'; return; }
+            list.forEach(lobby=>{
+                const el = document.createElement('div');
+                el.className = 'game-card';
+                el.style.display = 'flex';
+                el.style.justifyContent = 'space-between';
+                el.style.alignItems = 'center';
+                el.innerHTML = `<div style="flex:1;min-width:0"><div style="font-weight:600">${escapeHtml(lobby.name || 'Лобби')}</div><div style='color:var(--muted);font-size:13px'>Игроков: ${lobby.players?.length||0} — ${lobby.status||'—'}</div></div>`;
+                const join = document.createElement('button'); join.className='menu-btn'; join.textContent = lobby.players && lobby.players.length>=2 ? 'Полное' : 'Войти';
+                if (lobby.players && lobby.players.length>=2) join.disabled = true;
+                join.addEventListener('click', ()=>{ socket.emit('join_lobby', { lobby_id: lobby.id, player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id }); });
+                el.appendChild(join);
+                root.appendChild(el);
+            });
+        }
+
+        socket.on('lobbies_list', (list)=>{ renderLobbies(list); });
+        socket.on('lobby_created', (data)=>{
+            // server returns lobby_id and lobby
+            const lobby = data.lobby || data;
+            // show lobby view and join room locally by id
+            // We already are creator; server registered player
+            activeLobby = lobby;
+            showLobby(activeLobby);
+            showView('game');
+        });
+
+        socket.on('update_lobby', (lobby)=>{
+            // update activeLobby if matches
+            if (!lobby) return;
+            // if lobby object contains id
+            if (activeLobby && lobby.id && activeLobby.id===lobby.id) {
+                activeLobby = lobby;
+            } else {
+                // if not our lobby, but server sends update while in game view, swap
+                activeLobby = lobby;
+            }
+            // if game started — show game
+            if (lobby.status==='playing') { showLobby(lobby); showView('game'); }
+            else { showLobby(lobby); }
+        });
+
+        socket.on('update_lobbies', (data)=>{ renderLobbies(data); });
+
+        function showLobby(lobby){
+            activeLobby = lobby;
+            // players row
+            const pr = document.getElementById('players-row'); pr.innerHTML = '';
+            (lobby.players||[]).forEach(p=>{
+                const d = document.createElement('div'); d.style.display='flex'; d.style.alignItems='center'; d.style.gap='8px'; d.innerHTML = `<div style="width:40px;height:40px;border-radius:8px;background:var(--glass);display:flex;align-items:center;justify-content:center;font-weight:600">${escapeHtml((p.name||'Игрок').slice(0,1))}</div><div><div style='font-weight:600'>${escapeHtml(p.name||'Игрок')}</div><div style='color:var(--muted);font-size:12px'>${escapeHtml(p.symbol||'')}</div></div>`;
+                pr.appendChild(d);
+            });
+
+            const status = document.getElementById('game-status');
+            status.textContent = lobby.status==='playing' ? 'Игра в процессе' : 'Ожидание игроков...';
+
+            // render board if present
+            if (lobby.board) renderBoard(lobby);
+        }
+
+        // Board rendering for tictactoe
+        function renderBoard(lobby){
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            const board = lobby.board || ['', '', '', '', '', '', '', '', ''];
+            for (let i=0;i<9;i++){
+                const cell = document.createElement('button');
+                cell.className = 'ttt-cell';
+                cell.dataset.pos = i;
+                cell.style.height = '84px';
+                cell.style.borderRadius = '12px';
+                cell.style.display = 'flex';
+                cell.style.alignItems = 'center';
+                cell.style.justifyContent = 'center';
+                cell.style.fontSize = '28px';
+                cell.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent)';
+                cell.style.border = '1px solid rgba(255,255,255,0.04)';
+                cell.textContent = board[i] || '';
+                if (!board[i] && lobby.status==='playing'){
+                    cell.addEventListener('click', ()=>{
+                        // emit make_move
+                        if (!activeLobby || !activeLobby.id) return;
+                        socket.emit('make_move', { lobby_id: activeLobby.id, position: i });
+                    });
+                }
+                boardEl.appendChild(cell);
+            }
+        }
+
+        // leave / forfeit
+        document.getElementById('btn-leave').addEventListener('click', ()=>{ activeLobby=null; showView('home'); socket.emit('get_lobbies'); });
+        document.getElementById('btn-forfeit').addEventListener('click', ()=>{ if (activeLobby && activeLobby.id) socket.emit('make_move',{ lobby_id: activeLobby.id, position: -1, forfeit:true }); });
+
+        // safe html
+        function escapeHtml(s){ return String(s||'').replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+        // After initial load show home
+        showView('home');
+
+        // small UX: animate view enter
+        const style = document.createElement('style'); style.textContent = `.view-enter{animation:fadeIn .22s ease both}@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}`; document.head.appendChild(style);
+    </script>
 </body>
 </html>
