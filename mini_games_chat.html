@@ -1005,18 +1005,19 @@
                         root.dataset.desktop = '1';
                         // ensure expanded view is visible and rendered inline (full data under the pill)
                         try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.classList.add('expanded'); exp.style.position = 'relative'; exp.style.bottom = 'auto'; exp.style.left='0'; exp.style.right='0'; exp.style.transform='none'; exp.style.opacity = '1'; exp.style.pointerEvents='auto'; exp.style.display = 'block'; exp.style.maxHeight = '140px'; exp.style.overflow = 'auto'; } }catch(e){}
-                        // try to hide the sidebar's main play button so it visually appears covered by the search card
+                        // position the indicator to exactly cover the menu-buttons area (so it doesn't touch the profile)
                         try{
-                            const playBtn = sidebar.querySelector('.menu-buttons .menu-btn.primary') || sidebar.querySelector('.menu-buttons .menu-btn');
-                            if (playBtn){
-                                // compute height so root ends at the top of this play button
-                                const pbRect = playBtn.getBoundingClientRect();
-                                const topMargin = 8; // small gap
-                                const desiredHeight = Math.max(80, Math.floor(pbRect.top - (sbRect.top + 12) - topMargin));
-                                root.style.height = desiredHeight + 'px';
-                                // hide the button while searching
-                                playBtn.dataset._wasHiddenBySearch = '1';
-                                playBtn.style.visibility = 'hidden';
+                            const menuButtons = sidebar.querySelector('.menu-buttons');
+                            if (menuButtons){
+                                const mbRect = menuButtons.getBoundingClientRect();
+                                // place root aligned to menuButtons top and match its height
+                                root.style.top = (mbRect.top) + 'px';
+                                root.style.height = Math.max(56, Math.floor(mbRect.height)) + 'px';
+                                // hide the menu-buttons visually while searching (we'll restore later)
+                                menuButtons.dataset._wasHiddenBySearch = '1';
+                                menuButtons.style.visibility = 'hidden';
+                                // ensure content fits inside the small area
+                                const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.maxHeight = (mbRect.height - 8) + 'px'; exp.style.overflow = 'auto'; }
                             }
                         }catch(e){}
                     } else {
@@ -1101,8 +1102,8 @@
                 try{ root.style.display = 'none'; }catch(e){}
                 try{ 
                     // clear desktop anchoring and restore defaults
-                    // restore play button visibility if we hid it earlier
-                    try{ const sidebar = document.querySelector('.app-sidebar'); if (sidebar){ const playBtn = sidebar.querySelector('.menu-buttons .menu-btn.primary') || sidebar.querySelector('.menu-buttons .menu-btn'); if (playBtn && playBtn.dataset._wasHiddenBySearch){ playBtn.style.visibility='visible'; delete playBtn.dataset._wasHiddenBySearch; } } }catch(e){}
+                    // restore menu-buttons visibility if we hid it earlier
+                    try{ const sidebar = document.querySelector('.app-sidebar'); if (sidebar){ const menuButtons = sidebar.querySelector('.menu-buttons'); if (menuButtons && menuButtons.dataset._wasHiddenBySearch){ menuButtons.style.visibility='visible'; delete menuButtons.dataset._wasHiddenBySearch; } } }catch(e){}
                     root.dataset.desktop = '';
                     const exp = root.querySelector('.search-expanded'); 
                     if (exp){ exp.classList.remove('expanded'); exp.style.position = ''; exp.style.bottom = ''; exp.style.left = ''; exp.style.right = ''; exp.style.transform = ''; exp.style.opacity = ''; exp.style.pointerEvents = ''; exp.style.display = 'none'; exp.style.maxHeight = ''; exp.style.overflow = ''; }
