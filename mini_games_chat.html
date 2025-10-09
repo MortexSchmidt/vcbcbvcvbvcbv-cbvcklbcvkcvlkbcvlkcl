@@ -1330,8 +1330,8 @@
             playButton.setAttribute('aria-hidden','true');
             enableNavigation();
             // reset dynamic fields
-            try{ const titleEl = root.querySelector('#search-title'); if (titleEl) titleEl.textContent = 'Поиск'; }catch(e){}
-            try{ const altEl = root.querySelector('#search-alt-title'); if (altEl) altEl.style.display = ''; }catch(e){}
+            try{ const titleEl = root.querySelector('#search-title'); if (titleEl) { titleEl.textContent = 'Поиск'; titleEl.style.transform = ''; titleEl.style.opacity = ''; } }catch(e){}
+            try{ const altEl = root.querySelector('#search-alt-title'); if (altEl) { altEl.style.display = ''; altEl.style.transform = ''; altEl.style.opacity = '0'; } }catch(e){}
         }
 
     socket.on('lobby_waiting', (data)=>{
