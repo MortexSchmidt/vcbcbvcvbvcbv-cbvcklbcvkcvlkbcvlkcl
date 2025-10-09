@@ -787,11 +787,23 @@
                 // If server sent only minimal data (id/status) without players/board, request a fuller update
                 const hasPlayers = Array.isArray(lobby.players) && lobby.players.length;
                 const hasBoard = !!lobby.board;
+                // attempt to use cached match_starting players if lobby_started lacks players
+                if (!hasPlayers && lobby.id && lastMatchStarts && lastMatchStarts[lobby.id]){
+                    try{ appendDebugLine('lobby_started: merging players from recent match_starting cache'); }catch(e){}
+                    const cached = lastMatchStarts[lobby.id];
+                    try{ lobby.players = Array.isArray(cached) ? cached.map(p => (typeof p==='string' ? { name: p } : p)) : lobby.players; }catch(e){}
+                }
                 if (!hasPlayers && !hasBoard) {
-                    try{ appendDebugLine('lobby_started: incomplete payload — requesting lobbies update'); }catch(e){}
-                    // ask server for freshest lobby data; server will emit update_lobby or lobbies_list
-                    try{ socket.emit('get_lobbies'); }catch(e){}
-                    // keep confirm modal visible until we receive a proper update to avoid the modal disappearing without UI transition
+                    try{ appendDebugLine('lobby_started: incomplete payload — waiting briefly for match_starting then requesting lobbies update'); }catch(e){}
+                    // wait a short moment for a concurrent match_starting to arrive, then request lobbies if still incomplete
+                    setTimeout(()=>{
+                        if (!(Array.isArray(lobby.players) && lobby.players.length) && !lobby.board) {
+                            try{ socket.emit('get_lobbies'); appendDebugLine('lobby_started: requested get_lobbies after delay'); }catch(e){}
+                        } else {
+                            try{ appendDebugLine('lobby_started: received additional data during wait'); }catch(e){}
+                        }
+                    }, 350);
+                    // keep confirm modal visible until we receive a proper update
                     return;
                 }
 
@@ -811,10 +823,14 @@
             }catch(e){ console.error(e); }
         });
         // Diagnostic handlers: match lifecycle events
-        socket.on('match_starting', (payload)=>{
+            // cache last match_starting per lobby to help when lobby_started is minimal
+            const lastMatchStarts = {};
+            socket.on('match_starting', (payload)=>{
             try{
                 console.info('socket:match_starting', payload);
                 try{ appendDebugLine('match_starting: ' + JSON.stringify({ match_id: payload?.match_id, lobby_id: payload?.lobby_id, players: (payload?.players||[]).map(p=>p?.name||p?.user_id||p?.sid) })); }catch(e){}
+                    // store raw players array (could be array of strings)
+                    try{ if (payload && payload.lobby_id) lastMatchStarts[payload.lobby_id] = payload.players || payload.lobby?.players || null; }catch(e){}
                 // if confirm modal is open, update players with normalized payload
                 if (payload && payload.players && payload.players.length){
                     const players = payload.players;
