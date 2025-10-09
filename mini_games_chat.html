@@ -455,15 +455,54 @@
         // --- Debug panel (visible in mini-app) ---
         function createDebugPanel(){
             if (document.getElementById('debug-panel')) return;
-            const dp = document.createElement('div'); dp.id = 'debug-panel';
+            const dp = document.createElement('div'); dp.id = 'debug-panel'; dp.className = 'allow-select';
             dp.style.position='fixed'; dp.style.right='12px'; dp.style.bottom='120px'; dp.style.width='320px'; dp.style.maxHeight='360px'; dp.style.background='rgba(0,0,0,0.6)'; dp.style.color='#e6eef8'; dp.style.border='1px solid rgba(255,255,255,0.06)'; dp.style.borderRadius='10px'; dp.style.zIndex='1600'; dp.style.display='none'; dp.style.flexDirection='column'; dp.style.overflow='hidden'; dp.style.fontSize='12px';
             const header = document.createElement('div'); header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center'; header.style.padding='8px'; header.style.borderBottom='1px solid rgba(255,255,255,0.03)'; header.style.background='linear-gradient(180deg, rgba(255,255,255,0.02), transparent)';
             const title = document.createElement('div'); title.textContent='Logs'; title.style.fontWeight='700'; title.style.color='var(--text)';
-            const clr = document.createElement('button'); clr.className='menu-btn'; clr.textContent='Очистить'; clr.style.padding='6px 8px'; clr.style.fontSize='12px'; clr.addEventListener('click', ()=>{ list.innerHTML=''; });
-            header.appendChild(title); header.appendChild(clr);
-            const list = document.createElement('div'); list.id='debug-log-list'; list.style.padding='8px'; list.style.overflowY='auto'; list.style.maxHeight='300px'; list.style.display='flex'; list.style.flexDirection='column'; list.style.gap='6px';
+            const controls = document.createElement('div'); controls.style.display='flex'; controls.style.gap='6px';
+            const copyBtn = document.createElement('button'); copyBtn.className='menu-btn'; copyBtn.textContent='Копировать'; copyBtn.style.padding='6px 8px'; copyBtn.style.fontSize='12px';
+            const clr = document.createElement('button'); clr.className='menu-btn'; clr.textContent='Очистить'; clr.style.padding='6px 8px'; clr.style.fontSize='12px';
+            controls.appendChild(copyBtn); controls.appendChild(clr);
+            header.appendChild(title); header.appendChild(controls);
+            const list = document.createElement('div'); list.id='debug-log-list'; list.style.padding='8px'; list.style.overflowY='auto'; list.style.maxHeight='300px'; list.style.display='flex'; list.style.flexDirection='column'; list.style.gap='6px'; list.style.userSelect='text'; list.style.webkitUserSelect='text';
             dp.appendChild(header); dp.appendChild(list);
             document.body.appendChild(dp);
+
+            copyBtn.addEventListener('click', async ()=>{
+                const text = Array.from(list.children).map(n=>n.textContent).join('\n');
+                // Try modern clipboard API first
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    try{
+                        await navigator.clipboard.writeText(text);
+                        copyBtn.textContent = 'Скопировано';
+                        setTimeout(()=>{ copyBtn.textContent = 'Копировать'; }, 1500);
+                        return;
+                    }catch(e){
+                        // fallthrough to legacy method
+                    }
+                }
+                // Fallback: create textarea, select and execCommand
+                try{
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    // keep it off-screen
+                    ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '0';
+                    document.body.appendChild(ta);
+                    ta.focus(); ta.select();
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    if (ok) {
+                        copyBtn.textContent = 'Скопировано';
+                        setTimeout(()=>{ copyBtn.textContent = 'Копировать'; }, 1500);
+                    } else {
+                        throw new Error('execCommand failed');
+                    }
+                }catch(e){
+                    copyBtn.textContent = 'Ошибка';
+                    setTimeout(()=>{ copyBtn.textContent = 'Копировать'; }, 1500);
+                }
+            });
+            clr.addEventListener('click', ()=>{ list.innerHTML=''; });
 
             const btn = document.createElement('button'); btn.id='debug-toggle'; btn.textContent='Log'; btn.style.position='fixed'; btn.style.right='12px'; btn.style.bottom='80px'; btn.style.zIndex='1601'; btn.className='menu-btn'; btn.addEventListener('click', ()=>{ dp.style.display = dp.style.display==='none' ? 'flex' : 'none'; });
             document.body.appendChild(btn);
