@@ -1869,7 +1869,20 @@ def auth_code():
         # Генерируем уникальный код
         code = uuid.uuid4().hex[:8]
         pending_auths[code] = {'sid': sid, 'ts': datetime.now()}
-        return json.dumps({'code': code}), 200
+
+        # Попытаемся вернуть username бота, чтобы Mini‑App могла сформировать прямую ссылку
+        bot_username = os.environ.get('BOT_USERNAME')
+        if not bot_username and token:
+            try:
+                resp = requests.get(f"https://api.telegram.org/bot{token}/getMe", timeout=4)
+                if resp.status_code == 200:
+                    j = resp.json()
+                    if j.get('ok') and j.get('result') and j['result'].get('username'):
+                        bot_username = j['result']['username']
+            except Exception:
+                bot_username = None
+
+        return json.dumps({'code': code, 'bot_username': bot_username}), 200
     except Exception as e:
         logger.error(f"Ошибка /auth_code: {e}")
         return json.dumps({'error': 'server error'}), 500

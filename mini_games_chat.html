@@ -357,7 +357,19 @@
                 const j = await resp.json();
                 if (j.code){
                     document.getElementById('auth-code').value = j.code;
-                    document.getElementById('auth-state').textContent = 'Код сгенерирован. Отправьте в бота: /start auth:' + j.code;
+                    let msg = 'Код сгенерирован. Отправьте в бота: /start auth:' + j.code + '.';
+                    if (j.bot_username){
+                        const tlink = 'https://t.me/' + j.bot_username + '?start=auth:' + j.code;
+                        msg += ' Или нажмите ссылку ниже, чтобы открыть чат с ботом.';
+                        // render link button if not present
+                        if (!document.getElementById('auth-open-tg')){
+                            const wrap = document.createElement('div'); wrap.style.marginTop='8px';
+                            const a = document.createElement('a'); a.id='auth-open-tg'; a.href = tlink; a.target='_blank'; a.className='menu-btn'; a.textContent = 'Открыть в Telegram'; a.style.display='inline-flex'; a.style.alignItems='center'; a.style.gap='8px';
+                            wrap.appendChild(a);
+                            document.getElementById('auth-modal').querySelector('div').appendChild(wrap);
+                        }
+                    }
+                    document.getElementById('auth-state').textContent = msg;
                     document.getElementById('btn-auth-close').style.display = 'inline-flex';
                 } else if (j.error) {
                     document.getElementById('auth-state').textContent = 'Ошибка: ' + j.error;
@@ -402,6 +414,17 @@
             if (a==='go-lobby') { showView('lobby'); socket.emit('get_lobbies'); }
             if (a==='go-settings') showView('settings');
         }));
+
+        // reauth button in settings
+        (function(){
+            const root = document.getElementById('view-settings');
+            if (root){
+                const btn = document.createElement('button'); btn.id='btn-reauth'; btn.className='menu-btn'; btn.textContent='Повторная авторизация';
+                btn.style.marginTop='12px';
+                btn.addEventListener('click', ()=>{ openAuthModal(); });
+                root.appendChild(btn);
+            }
+        })();
 
         // Home actions: choose game or create lobby
         document.body.addEventListener('click', (e)=>{
