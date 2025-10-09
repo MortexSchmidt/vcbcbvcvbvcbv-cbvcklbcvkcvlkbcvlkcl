@@ -1925,15 +1925,23 @@ def handle_quick_match(data):
                         players_meta.append({'sid': p, 'user_id': None, 'name': '', 'avatar': '', 'symbol': ''})
                 payload = {'match_id': match_id, 'lobby': other, 'players': players_meta, 'confirmed': list(pending_matches[match_id].get('confirmed', set())), 'expires_in': 30}
             except Exception:
-                payload = {'match_id': match_id, 'lobby': other}
-            try:
-                p0_sid = p0.get('sid') if isinstance(p0, dict) else p0
-                p1_sid = p1.get('sid') if isinstance(p1, dict) else p1
-                socketio.emit('match_found', payload, room=p0_sid)
-                socketio.emit('match_found', payload, room=p1_sid)
-                logger.info(f"quick_match: match_found emitted for match {match_id} to {p0_sid} and {p1_sid}")
-            except Exception as e:
-                logger.warning(f"quick_match: failed to emit match_found for {match_id}: {e}")
+                # Create payload with correct player positioning
+                payload = {
+                    'match_id': match_id,
+                    'lobby': other,
+                    'current_player_sid': request.sid,  # The player who initiated the search
+                    'opponent_sid': p0.get('sid') if isinstance(p0, dict) else p0
+                }
+                try:
+                    p0_sid = p0.get('sid') if isinstance(p0, dict) else p0
+                    p1_sid = p1.get('sid') if isinstance(p1, dict) else p1
+                    logger.info(f"quick_match: sending match_found to p0_sid={p0_sid}, p1_sid={p1_sid}")
+                    logger.info(f"quick_match: payload={json.dumps(payload, ensure_ascii=False)}")
+                    socketio.emit('match_found', payload, room=p0_sid)
+                    socketio.emit('match_found', payload, room=p1_sid)
+                    logger.info(f"quick_match: match_found emitted for match {match_id} to {p0_sid} and {p1_sid}")
+                except Exception as e:
+                    logger.warning(f"quick_match: failed to emit match_found for {match_id}: {e}")
             # start timeout timer (30s)
             def match_timeout(m_id=match_id):
                 m = pending_matches.get(m_id)
@@ -2228,6 +2236,7 @@ def handle_match_accept(data):
     # add to confirmed set
     m.setdefault('confirmed', set()).add(sid)
     logger.info(f"handle_match_accept: match {match_id} confirmed set now={m.get('confirmed')}")
+    logger.info(f"handle_match_accept: players in match: {[p.get('sid') if isinstance(p, dict) else p for p in m.get('players', [])]}")
     logger.debug(f"pending_matches after accept: { {k: {'players': [(p if isinstance(p,str) else p.get('sid')) for p in v.get('players',[])], 'confirmed': list(v.get('confirmed', set()))} for k,v in pending_matches.items()} }")
 
     # notify counterpart(s) that this side accepted (optional ack)
