@@ -1021,7 +1021,79 @@
             // init muted default false
             (function(){ muted = false; })();
 
-            return { init, resume, uiClick, select, modalOpen, create, lobbyCreated, matchFound };
+            // Background music controls: HTMLAudioElement + WebAudio gain for ducking
+            let _musicAudio = null;
+            let _musicSource = null;
+            let _musicGain = null;
+            let _musicPlaying = false;
+
+            function _ensureAudioContext(){ if (!ac) init(); }
+
+            function playMusic(url, opts){
+                opts = Object.assign({ loop: true, volume: 0.15, autoplayOnGesture: true }, opts || {});
+                _ensureAudioContext();
+                try{
+                    // create or reuse audio element
+                    if (!_musicAudio){
+                        _musicAudio = new Audio();
+                        _musicAudio.crossOrigin = 'anonymous';
+                        _musicAudio.loop = !!opts.loop;
+                        _musicAudio.preload = 'auto';
+                    }
+                    if (_musicAudio.src !== url) _musicAudio.src = url;
+
+                    // connect through WebAudio for volume/ducking control
+                    if (!_musicSource){
+                        try{ _musicSource = ac.createMediaElementSource(_musicAudio); }catch(e){ _musicSource = null; }
+                    }
+                    if (!_musicGain){ _musicGain = ac.createGain(); _musicGain.gain.setValueAtTime(opts.volume, ac.currentTime); }
+                    if (_musicSource){ _musicSource.connect(_musicGain); _musicGain.connect(ac.destination); }
+                    _musicAudio.volume = 1.0; // master handled by gain
+
+                    const startPlaying = ()=>{
+                        _musicAudio.play().catch(()=>{});
+                        _musicPlaying = true;
+                    };
+
+                    if (ac.state === 'suspended'){
+                        // wait for user gesture
+                        if (opts.autoplayOnGesture){
+                            const onFirst = ()=>{ resume().then(()=>{ startPlaying(); }); document.removeEventListener('click', onFirst); };
+                            document.addEventListener('click', onFirst, { once: true });
+                        }
+                    } else {
+                        startPlaying();
+                    }
+                }catch(e){ console.warn('playMusic err', e); }
+            }
+
+            function stopMusic(){
+                try{
+                    if (_musicAudio){ _musicAudio.pause(); _musicPlaying = false; }
+                    if (_musicSource && _musicGain){ try{ _musicSource.disconnect(); _musicGain.disconnect(); }catch(e){} }
+                    _musicSource = null; _musicGain = null; _musicAudio = null;
+                }catch(e){ console.warn('stopMusic err', e); }
+            }
+
+            function setMusicVolume(v){ try{ if (!_musicGain) return; _musicGain.gain.setTargetAtTime(Number(v)||0, ac.currentTime, 0.02); }catch(e){} }
+
+            function duckMusic(ducked){
+                try{
+                    if (!_musicGain) return;
+                    const now = ac.currentTime;
+                    if (ducked){ _musicGain.gain.cancelScheduledValues(now); _musicGain.gain.setValueAtTime(_musicGain.gain.value || 0.12, now); _musicGain.gain.linearRampToValueAtTime((_musicGain.gain.value || 0.12) * 0.28, now + 0.02); }
+                    else { _musicGain.gain.cancelScheduledValues(now); _musicGain.gain.linearRampToValueAtTime(0.12, now + 0.08); }
+                }catch(e){}
+            }
+
+            // auto-duck when matchFound plays
+            const origMatchFound = matchFound;
+            function matchFound(){
+                try{ duckMusic(true); setTimeout(()=>duckMusic(false), 420); }catch(e){}
+                origMatchFound();
+            }
+
+            return { init, resume, uiClick, select, modalOpen, create, lobbyCreated, matchFound, playMusic, stopMusic, setMusicVolume, duckMusic, isMusicPlaying: ()=>!!_musicPlaying };
         })();
 
         // --- Game selection: mobile-friendly selection + floating Play button ---
@@ -1194,6 +1266,60 @@
                 if (el.classList && el.classList.contains('primary')) kind = 'primary';
                 try{ SoundEngine.uiClick(kind); }catch(e){}
             });
+        })();
+    </script>
+    <script>
+        // Music toggle UI and persistence
+        (function(){
+            try{
+                const btn = document.createElement('button');
+                btn.id = 'music-toggle';
+                btn.className = 'menu-btn';
+                btn.style.position = 'fixed';
+                btn.style.right = '12px';
+                btn.style.top = '12px';
+                btn.style.zIndex = 1400;
+                btn.style.padding = '8px 10px';
+                btn.style.borderRadius = '10px';
+                btn.textContent = 'Музыка';
+                document.body.appendChild(btn);
+
+                function updateLabel(on){ btn.textContent = on ? 'Музыка: Вкл' : 'Музыка: Выкл'; }
+
+                // restore state
+                const stored = localStorage.getItem('bg_music');
+                const wantOn = stored === '1';
+
+                // small helper to start with safe defaults
+                function startMusic(){
+                    try{
+                        SoundEngine.playMusic('/static/ost.ogg', { volume: 0.12, loop:true, autoplayOnGesture:true });
+                    }catch(e){ console.warn('startMusic err', e); }
+                }
+
+                if (wantOn){
+                    // attempt to start; will wait for gesture if needed
+                    startMusic();
+                    updateLabel(true);
+                } else {
+                    updateLabel(false);
+                }
+
+                btn.addEventListener('click', ()=>{
+                    try{
+                        const isPlaying = SoundEngine && typeof SoundEngine.isMusicPlaying === 'function' && SoundEngine.isMusicPlaying();
+                        if (isPlaying){
+                            SoundEngine.stopMusic();
+                            localStorage.setItem('bg_music', '0');
+                            updateLabel(false);
+                        } else {
+                            startMusic();
+                            localStorage.setItem('bg_music', '1');
+                            updateLabel(true);
+                        }
+                    }catch(e){ console.warn('music toggle err', e); }
+                });
+            }catch(e){ console.warn('music UI init err', e); }
         })();
     </script>
 </body>
