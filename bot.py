@@ -2386,7 +2386,13 @@ def admin_reset_auth():
         telegram_profiles.clear()
         pending_auths.clear()
 
-        logger.info(f"Admin reset_auth called: cleared {profiles_count} profiles and {pending_count} pending codes")
+        # notify connected clients that their server-side profile store was cleared
+        try:
+            socketio.emit('force_logout', {'reason': 'admin_reset'})
+        except Exception as e:
+            logger.warning(f"admin_reset_auth: failed to emit force_logout: {e}")
+
+        logger.info(f"Admin reset_auth called: cleared {profiles_count} profiles and {pending_count} pending codes; emitted force_logout")
         return json.dumps({'cleared_profiles': profiles_count, 'cleared_pending_auths': pending_count}), 200
     except Exception as e:
         logger.error(f"Error in admin_reset_auth: {e}")

@@ -804,6 +804,16 @@
     socket.on('lobby_waiting', (data)=>{ try{ console.debug('socket:lobby_waiting', data); const found = (data && Array.isArray(data.players) ? data.players.length : (typeof data?.foundCount !== 'undefined' ? Number(data.foundCount) : 1)); const opts = { game: data?.game || data?.name || null, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: found }; showSearchIndicator(opts); }catch(e){} });
     socket.on('lobby_cancelled', (data)=>{ try{ console.debug('socket:lobby_cancelled', data); hideSearchIndicator(); }catch(e){} });
 
+        // server-side admin reset: force clients to clear local profile and show auth modal
+        socket.on('force_logout', (data)=>{
+            try{
+                console.info('socket:force_logout', data);
+                currentUser = null;
+                updateProfile({ name: 'Гость', avatar: '' });
+                openAuthModal();
+            }catch(e){ console.warn('force_logout handler error', e); }
+        });
+
         
 
         // match found confirmation flow
