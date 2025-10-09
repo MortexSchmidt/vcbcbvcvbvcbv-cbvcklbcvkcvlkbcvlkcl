@@ -208,8 +208,9 @@
     .end-actions { display:flex; gap:10px; margin-top:6px }
     /* board icons */
     .icon-x svg, .icon-o svg { width:100%; height:100%; display:block }
-    .icon-x svg line { stroke: #ffffff; stroke-width:12; stroke-linecap:round }
-    .icon-o svg circle { stroke: #ffffff; stroke-width:10; fill: none }
+    /* reduced stroke widths so icons fit better in small cells */
+    .icon-x svg line { stroke: #ffffff; stroke-width:3; stroke-linecap:round }
+    .icon-o svg circle { stroke: #ffffff; stroke-width:3; fill: none }
         .play-button.visible { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); pointer-events: auto; }
 
           /* Confirm modal responsive fixes: allow players area to wrap on small widths
@@ -1175,18 +1176,23 @@
                 cell.style.display = 'flex';
                 cell.style.alignItems = 'center';
                 cell.style.justifyContent = 'center';
-                cell.style.fontSize = window.innerWidth < 420 ? '22px' : '28px';
+                // slightly smaller icons for mobile and desktop
+                cell.style.fontSize = window.innerWidth < 420 ? '18px' : '22px';
                 cell.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent)';
                 cell.style.border = '1px solid rgba(255,255,255,0.04)';
                 // render icons for X/O
                 cell.innerHTML = '';
                 if (board[i] === 'X'){
-                    const wrap = document.createElement('div'); wrap.className='icon-x'; wrap.style.width='100%'; wrap.style.height='100%';
-                    wrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>`;
+                    const wrap = document.createElement('div'); wrap.className='icon-x'; wrap.style.width='60%'; wrap.style.height='60%'; wrap.style.display='flex'; wrap.style.alignItems='center'; wrap.style.justifyContent='center';
+                    wrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block" preserveAspectRatio="xMidYMid meet"><line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+                    // add second line separately to avoid duplicate stroke overlap issues on some engines
+                    const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+                    // fallback: append as innerHTML with both lines
+                    wrap.innerHTML = `<svg viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\" style=\"width:100%;height:100%;display:block\" preserveAspectRatio=\"xMidYMid meet\"><line x1=\"4\" y1=\"4\" x2=\"20\" y2=\"20\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\"/><line x1=\"20\" y1=\"4\" x2=\"4\" y2=\"20\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\"/></svg>`;
                     cell.appendChild(wrap);
                 } else if (board[i] === 'O'){
-                    const wrap = document.createElement('div'); wrap.className='icon-o'; wrap.style.width='100%'; wrap.style.height='100%';
-                    wrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8"/></svg>`;
+                    const wrap = document.createElement('div'); wrap.className='icon-o'; wrap.style.width='60%'; wrap.style.height='60%'; wrap.style.display='flex'; wrap.style.alignItems='center'; wrap.style.justifyContent='center';
+                    wrap.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block" preserveAspectRatio="xMidYMid meet"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2.2" fill="none"/></svg>`;
                     cell.appendChild(wrap);
                 } else {
                     cell.textContent = '';
@@ -1267,6 +1273,39 @@
         }
 
         // (previously attempted to wrap showLobby; wrapper removed to avoid recursion)
+
+        // display end-of-game modal with winner info and return-home action
+        function showEndScreen(payload){
+            try{
+                appendDebugLine('showEndScreen: payload=' + JSON.stringify(payload));
+                const modal = document.getElementById('end-modal');
+                const avatarEl = document.getElementById('winner-avatar');
+                const nameEl = document.getElementById('winner-name');
+                const subEl = document.getElementById('winner-sub');
+                const emojiEl = document.getElementById('winner-emoji');
+                const btn = document.getElementById('btn-return-home');
+
+                // payload may be (lobby) or { winner, name, avatar }
+                let winnerName = payload && payload.name ? payload.name : null;
+                let winnerAvatar = payload && payload.avatar ? payload.avatar : null;
+                if ((!winnerName || !winnerAvatar) && payload && payload.players){
+                    // try to infer from lobby players
+                    const w = payload.players.find(p => p.is_winner || (payload.winner && (p.symbol === payload.winner || p.user_id == payload.winner)));
+                    if (w){ winnerName = winnerName || w.name; winnerAvatar = winnerAvatar || w.avatar; }
+                }
+
+                // populate
+                if (avatarEl){ avatarEl.innerHTML = ''; if (winnerAvatar){ const img = document.createElement('img'); img.src = winnerAvatar; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; avatarEl.appendChild(img); } else { avatarEl.textContent = (winnerName||'').slice(0,1).toUpperCase(); } }
+                if (nameEl) nameEl.textContent = winnerName || 'Ничья';
+                if (subEl) subEl.textContent = winnerName ? 'Победитель' : 'Ничья';
+
+                // animate modal in (CSS already defines popIn on .end-card)
+                modal.style.display = 'flex';
+
+                // wire button
+                if (btn){ btn.onclick = function(){ appendDebugLine('end-modal: return home clicked'); modal.style.display='none'; activeLobby = null; showView('home'); try{ socket.emit('get_lobbies'); }catch(e){} }; }
+            }catch(e){ console.error('showEndScreen error', e); appendDebugLine('showEndScreen error: '+(e&&e.message)); }
+        }
 
         // safe html
         function escapeHtml(s){ return String(s||'').replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
