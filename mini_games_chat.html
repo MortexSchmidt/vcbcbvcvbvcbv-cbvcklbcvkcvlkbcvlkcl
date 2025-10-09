@@ -219,6 +219,29 @@
             opacity: 1;
             pointer-events: auto;
         }
+
+            /* Long-search animations: title slides up, alt title slides in from below, pill turns yellow */
+            .search-bar { transition: background-color 600ms cubic-bezier(.2,.9,.2,1), color 600ms; }
+            .search-bar .title-wrap { position:relative; display:inline-block; width:auto; height:20px; overflow:hidden; vertical-align:middle; }
+            #search-title, #search-alt-title { display:block; position:relative; width:100%; left:0; right:0; }
+            /* hidden by default: alt title sits below */
+            #search-alt-title { transform: translateY(100%); opacity: 0; }
+
+            @keyframes slideUpFade {
+                from { transform: translateY(0%); opacity: 1 }
+                to   { transform: translateY(-100%); opacity: 0 }
+            }
+            @keyframes slideInFromBelow {
+                from { transform: translateY(100%); opacity: 0 }
+                to   { transform: translateY(0%); opacity: 1 }
+            }
+
+            .search-bar.long-search #search-title { animation: slideUpFade 600ms forwards; }
+            .search-bar.long-search #search-alt-title { animation: slideInFromBelow 600ms forwards; }
+            .search-bar.long-search { background: linear-gradient(90deg,#ffd166,#ffd166); color: #07102a !important; }
+
+            /* Play button / card button highlight for long search */
+            .menu-btn.long-search { transition: background-color 600ms; background: #ffd166 !important; color: #07102a !important; border-color: rgba(0,0,0,0.06) !important; }
         /* Desktop anchored variant: compact card inside sidebar area. Keep limited height so it doesn't cover content. */
         #search-indicator[data-desktop="1"] {
             border-radius: 12px; box-shadow: 0 12px 40px rgba(2,6,23,0.6); background: linear-gradient(90deg,#0f1720, #0b1220); padding: 6px; z-index: 60; overflow: visible;
@@ -407,7 +430,7 @@
     <!-- Inline quick-match status (compact, expandable) -->
     <div id="search-indicator" class="search-indicator" style="position:fixed;left:50%;bottom:140px;transform:translateX(-50%);display:none;z-index:1002;min-width:180px">
         <div class="search-bar" role="button" aria-expanded="false" tabindex="0" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:linear-gradient(90deg, #6b8cff, #5a6bd8);border:1px solid rgba(255,255,255,0.03);font-weight:700;color:#07102a;text-align:center;cursor:pointer">
-            <div id="search-title" style="font-weight:800;color:#07102a">Поиск</div>
+            <div class="title-wrap"><div id="search-title" style="font-weight:800;color:#07102a">Поиск</div><div id="search-alt-title" style="font-weight:800;color:#07102a">Долгий поиск</div></div>
             <div id="search-timer-compact" style="margin-left:auto;font-weight:700;color:#07102a">00:00</div>
             <div id="search-arrow" style="margin-left:6px;transition:transform .18s ease;color:#07102a">▾</div>
         </div>
@@ -1211,10 +1234,16 @@
             }catch(e){}
             // update found count
             try{ const fc = Math.max(1, Number(opts.foundCount) || 0); const ff = root.querySelector('#search-found-text'); if (ff) ff.textContent = 'Игроков найдено: ' + fc; }catch(e){}
-            // reset long-search label and start 15s timer to show it
-            try{ const lt = root.querySelector('#search-long-text'); if (lt) lt.style.display = 'none'; }catch(e){}
+            // reset long-search label and start 15s timer to show it with animation
+            try{ const lt = root.querySelector('#search-long-text'); if (lt) { lt.style.display = 'none'; lt.style.opacity = '0'; lt.style.transform = ''; } }catch(e){}
             try{ if (searchLongTimer) clearTimeout(searchLongTimer); }catch(e){}
-            searchLongTimer = setTimeout(()=>{ try{ const lt = root.querySelector('#search-long-text'); if (lt) lt.style.display = 'block'; }catch(e){} }, 15000);
+            searchLongTimer = setTimeout(()=>{ try{
+                    const bar = root.querySelector('.search-bar'); if (bar) bar.classList.add('long-search');
+                    // highlight play button and any per-card play buttons
+                    try{ if (playButton) playButton.classList.add('long-search'); }catch(e){}
+                    try{ document.querySelectorAll('.card-play-btn').forEach(b=>b.classList.add('long-search')); }catch(e){}
+                    const lt = root.querySelector('#search-long-text'); if (lt){ lt.style.display='block'; lt.style.opacity='1'; }
+                }catch(e){} }, 15000);
             playButton.textContent = 'Отменить';
             playButton.classList.add('visible');
             playButton.setAttribute('aria-hidden','false');
@@ -1275,7 +1304,10 @@
             // reset any per-card buttons searching state
             try{ document.querySelectorAll('.card-play-btn').forEach(b=>{ b.dataset.searching='0'; b.textContent='Играть'; b.classList.remove('danger'); b.classList.add('primary'); }); }catch(e){}
             try{ if (searchLongTimer) clearTimeout(searchLongTimer); }catch(e){}
-            try{ const lt = document.getElementById('search-long-text'); if (lt) lt.style.display = 'none'; }catch(e){}
+            try{ const lt = document.getElementById('search-long-text'); if (lt) { lt.style.display = 'none'; lt.style.opacity='0'; } }catch(e){}
+            try{ const root = document.getElementById('search-indicator'); const bar = root && root.querySelector('.search-bar'); if (bar) bar.classList.remove('long-search'); }catch(e){}
+            try{ if (playButton) playButton.classList.remove('long-search'); }catch(e){}
+            try{ document.querySelectorAll('.card-play-btn').forEach(b=>b.classList.remove('long-search')); }catch(e){}
             if (searchTimer) { clearInterval(searchTimer); searchTimer = null; }
             playButton.textContent = 'Играть';
             playButton.classList.remove('visible');
