@@ -847,11 +847,6 @@
                 console.debug('navigation blocked: game in progress');
                 return;
             }
-            // if searching, cancel search before navigating
-            if (searching) {
-                try{ socket.emit('cancel_quick_match', {}); }catch(e){}
-                hideSearchIndicator();
-            }
             if (a==='go-home') showView('home');
             if (a==='go-lobby') { showView('lobby'); socket.emit('get_lobbies'); }
             if (a==='go-settings') showView('settings');
