@@ -245,14 +245,13 @@
     .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
     .section-title i{color:var(--accent)}
 
-    /* На мобильных: скрываем все кнопки внутри карточек лобби */
+    /* На мобильных: скрываем все кнопки вне сайдбара */
     @media (max-width: 768px) {
-        .lobby-card button,
-        .lobby-card .menu-btn {
-            display: none !important;
-        }
+        .app-main .menu-btn,
+        .app-main button,
+        .quick-actions { display: none !important; }
         .lobby-card { cursor: pointer; }
-        .lobby-card.selected { outline: 2px solid var(--accent); box-shadow: 0 6px 20px rgba(108,140,255,0.10); }
+        .lobby-card.selected { outline: 3px solid var(--accent); box-shadow: 0 6px 20px rgba(108,140,255,0.18); }
     }
     .play-button {
         position: fixed;
@@ -261,13 +260,14 @@
         transform: translateX(-50%);
         background: var(--accent);
         color: #fff;
-        padding: 14px 32px;
+        padding: 16px 36px;
         border-radius: var(--radius);
-        font-size: 1.1rem;
-        font-weight: 600;
+        font-size: 1.15rem;
+        font-weight: 700;
         box-shadow: var(--shadow-1);
         display: none;
         z-index: 1000;
+        border: none;
     }
 
     /* На мобильных: скрываем только кнопки внутри карточек лобби (не всю навигацию) */
@@ -396,7 +396,6 @@
                 });
                 playButton.addEventListener('click', () => {
                     if (!selectedCard) return;
-                    // Здесь можно добавить socket.emit('join_lobby', ...) или другую логику
                     const lobbyName = selectedCard.querySelector('.lobby-name')?.textContent || '';
                     if (window.Telegram && window.Telegram.WebApp) {
                         window.Telegram.WebApp.showAlert(lobbyName ? `Вы выбрали: ${lobbyName}` : 'Выбрана игра');
