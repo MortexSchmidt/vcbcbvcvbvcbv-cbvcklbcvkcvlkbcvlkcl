@@ -212,6 +212,15 @@
     .icon-o svg circle { stroke: #ffffff; stroke-width:10; fill: none }
         .play-button.visible { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); pointer-events: auto; }
 
+          /* Confirm modal responsive fixes: allow players area to wrap on small widths
+              and prevent name overflow with ellipsis. */
+          #confirm-box #confirm-players { flex-wrap: wrap; }
+          #confirm-box #confirm-player-a, #confirm-box #confirm-player-b { min-width: 0; flex: 1 1 180px; justify-content: flex-start; }
+          #confirm-box .confirm-avatar { flex: 0 0 52px; width:52px; height:52px; }
+          #confirm-box #confirm-player-a > div, #confirm-box #confirm-player-b > div { min-width: 0; overflow: hidden; }
+          #confirm-box #confirm-name-a, #confirm-box #confirm-name-b { display: block; max-width: calc(100% - 64px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          #confirm-box #confirm-meta-a, #confirm-box #confirm-meta-b { display:block; }
+
         @media (max-width: 720px) {
             /* hide action buttons inside game cards on phones (keep global nav) */
             .game-card .game-choose, .game-card .game-lobby, .game-card button { display: none !important; }
@@ -350,12 +359,12 @@
             <div id="confirm-players" style="display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px">
                 <div id="confirm-player-a" style="display:flex;align-items:center;gap:8px;flex:1;justify-content:center">
                     <div class="confirm-avatar" id="confirm-avatar-a" style="width:52px;height:52px;border-radius:10px;background:var(--glass);display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:700;color:var(--text)">—</div>
-                    <div style="text-align:left"><div id="confirm-name-a" style="font-weight:700">—</div><div id="confirm-meta-a" style="color:var(--muted);font-size:12px">Вы</div></div>
+                    <div style="text-align:left;min-width:0"><div id="confirm-name-a" style="font-weight:700">—</div><div id="confirm-meta-a" style="color:var(--muted);font-size:12px">Вы</div></div>
                 </div>
                 <div style="flex:0 0 8px;text-align:center;color:var(--muted);font-weight:700">VS</div>
                 <div id="confirm-player-b" style="display:flex;align-items:center;gap:8px;flex:1;justify-content:center">
                     <div class="confirm-avatar" id="confirm-avatar-b" style="width:52px;height:52px;border-radius:10px;background:var(--glass);display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:700;color:var(--text)">—</div>
-                    <div style="text-align:left"><div id="confirm-name-b" style="font-weight:700">—</div><div id="confirm-meta-b" style="color:var(--muted);font-size:12px">Ожидание</div></div>
+                    <div style="text-align:left;min-width:0"><div id="confirm-name-b" style="font-weight:700">—</div><div id="confirm-meta-b" style="color:var(--muted);font-size:12px">Ожидание</div></div>
                 </div>
             </div>
             <div id="confirm-actions-row" style="display:flex;gap:8px;justify-content:space-between;align-items:center">
@@ -828,23 +837,28 @@
 
                     // populate players info in modal
                     try{
-                        // payload may contain: players: [{name,avatar,user_id}], or player_a/player_b, or opponent
+                        // payload may contain: lobby.players: [{name,avatar,user_id,sid}], or payload.players, or player_a/player_b, or opponent
                         let a = null, b = null;
-                        if (Array.isArray(payload?.players) && payload.players.length >= 1){
-                            // assume current user is one of players; place currentUser on left if found
-                            const meIdx = payload.players.findIndex(p=>p.user_id === currentUser?.user_id || p.sid === socket.id);
-                            if (meIdx === -1){ a = { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '' }; b = payload.players[0]; }
-                            else {
-                                a = payload.players[meIdx]; b = payload.players[(meIdx === 0 ? 1 : 0)] || null;
+                        const playersArr = Array.isArray(payload?.lobby?.players) ? payload.lobby.players : (Array.isArray(payload?.players) ? payload.players : null);
+                        if (Array.isArray(playersArr) && playersArr.length >= 1){
+                            // find current user among players (by user_id or sid)
+                            const meIdx = playersArr.findIndex(p=>p.user_id === currentUser?.user_id || p.sid === socket.id);
+                            if (meIdx === -1){
+                                // if we don't see ourselves, prefer to show currentUser on left
+                                a = { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '', user_id: currentUser?.user_id };
+                                b = playersArr[0];
+                            } else {
+                                a = playersArr[meIdx];
+                                b = playersArr[(meIdx === 0 ? 1 : 0)] || null;
                             }
                         } else if (payload.player_a || payload.player_b) {
-                            a = payload.player_a || { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '' };
+                            a = payload.player_a || { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '', user_id: currentUser?.user_id };
                             b = payload.player_b || payload.opponent || null;
                         } else if (payload.opponent) {
-                            a = { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '' };
+                            a = { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '', user_id: currentUser?.user_id };
                             b = payload.opponent;
                         } else {
-                            a = { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '' };
+                            a = { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '', user_id: currentUser?.user_id };
                             b = null;
                         }
 
@@ -860,14 +874,14 @@
                     // accept/decline handlers
                     document.getElementById('btn-accept').onclick = ()=>{
                         // Send accept but KEEP the modal visible; hide buttons and show waiting text
-                        socket.emit('match_accept', { match_id: payload.match_id });
+                        socket.emit('match_accept', { match_id: payload.match_id, user_id: currentUser?.user_id });
                         // Hide action buttons and show waiting message
                         try{ document.getElementById('confirm-buttons').style.display = 'none'; }catch(e){}
                         try{ document.getElementById('confirm-waiting').style.display = 'block'; }catch(e){}
                         // keep timer visible but make it non-interactive (it's behind the modal now)
                     };
                     document.getElementById('btn-decline').onclick = ()=>{
-                        socket.emit('match_decline', { match_id: payload.match_id });
+                        socket.emit('match_decline', { match_id: payload.match_id, user_id: currentUser?.user_id });
                         document.getElementById('confirm-modal').style.display = 'none';
                         if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
                         // re-enable navigation after decline and restore play button
