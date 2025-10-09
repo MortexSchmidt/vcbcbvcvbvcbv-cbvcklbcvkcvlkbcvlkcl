@@ -142,6 +142,34 @@
             #view-lobby input { flex: 1 1 auto; min-width: 0; margin-bottom:8px }
             #view-lobby > div > div { display:flex; flex-direction:column; gap:8px }
         }
+
+        /* Game card selection styles + floating Play button */
+        .game-card { transition: box-shadow var(--transition), outline var(--transition); }
+        .game-card:focus { outline: 2px dashed rgba(108,140,255,0.18); }
+        .game-card.selected { outline: 3px solid var(--accent); box-shadow: 0 8px 24px rgba(108,140,255,0.16); background: rgba(12,20,34,0.6); }
+
+        .play-button {
+            position: fixed;
+            left: 50%;
+            bottom: 86px; /* sits above bottom-nav */
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: #07102a;
+            padding: 12px 28px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            box-shadow: var(--shadow-1);
+            display: none;
+            z-index: 1001;
+            border: none;
+        }
+
+        @media (max-width: 720px) {
+            /* hide action buttons inside game cards on phones (keep global nav) */
+            .game-card .game-choose, .game-card .game-lobby, .game-card button { display: none !important; }
+            .game-card { cursor: pointer; }
+        }
     </style>
 </head>
 <body>
@@ -513,8 +541,83 @@
         // After initial load show home
         showView('home');
 
-        // small UX: animate view enter
-        const style = document.createElement('style'); style.textContent = `.view-enter{animation:fadeIn .22s ease both}@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}`; document.head.appendChild(style);
+        // --- Game selection: mobile-friendly selection + floating Play button ---
+        (function(){
+            const isMobile = window.matchMedia && window.matchMedia('(max-width: 720px)').matches;
+            if (!isMobile) return; // only change behaviour on small screens
+
+            // create floating play button if not present
+            let playButton = document.querySelector('.play-button');
+            if (!playButton) {
+                playButton = document.createElement('button');
+                playButton.className = 'play-button';
+                playButton.setAttribute('aria-hidden', 'true');
+                playButton.textContent = 'Играть';
+                document.body.appendChild(playButton);
+            }
+
+            let selected = null;
+
+            function updateListeners(){
+                const cards = document.querySelectorAll('.game-selection .game-card');
+                cards.forEach(card => {
+                    card.setAttribute('role','button');
+                    card.setAttribute('tabindex','0');
+                    card.onclick = null;
+                    card.addEventListener('click', (e)=>{
+                        e.stopPropagation();
+                        if (selected === card) {
+                            card.classList.remove('selected');
+                            card.setAttribute('aria-selected','false');
+                            selected = null;
+                            playButton.style.display = 'none';
+                            playButton.setAttribute('aria-hidden','true');
+                        } else {
+                            if (selected) { selected.classList.remove('selected'); selected.setAttribute('aria-selected','false'); }
+                            selected = card;
+                            card.classList.add('selected');
+                            card.setAttribute('aria-selected','true');
+                            playButton.style.display = 'block';
+                            playButton.setAttribute('aria-hidden','false');
+                        }
+                    });
+                    card.addEventListener('keydown', (ev)=>{
+                        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); card.click(); }
+                    });
+                });
+            }
+
+            updateListeners();
+
+            // hide selection when tapping outside
+            document.addEventListener('click', (ev)=>{
+                if (!ev.target.closest('.game-card')){
+                    if (selected) { selected.classList.remove('selected'); selected.setAttribute('aria-selected','false'); selected = null; }
+                    playButton.style.display = 'none';
+                    playButton.setAttribute('aria-hidden','true');
+                }
+            });
+
+            // clicking floating Play triggers inner hidden button (preserves existing flow)
+            playButton.addEventListener('click', ()=>{
+                if (!selected) return;
+                const chooseBtn = selected.querySelector('.game-choose');
+                if (chooseBtn) {
+                    // click hidden button to reuse existing handlers
+                    chooseBtn.click();
+                } else {
+                    // fallback: show lobby view for tictactoe
+                    const game = selected.dataset.game || '';
+                    if (game === 'tictactoe'){
+                        document.getElementById('lobby-name').value = `${currentUser?.name || 'Игрок'}'s lobby`;
+                        showView('lobby');
+                    } else {
+                        if (window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.showAlert('Выбрана игра: ' + (selected.querySelector('h3')?.textContent || game));
+                        else alert('Выбрана игра: ' + (selected.querySelector('h3')?.textContent || game));
+                    }
+                }
+            });
+        })();
     </script>
 </body>
 </html>
