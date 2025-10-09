@@ -699,6 +699,7 @@
         let activeLobby = null; // { id, lobby }
     // global reference to floating play button (may be created later on mobile)
     let playButton = null;
+    let gameStarted = false;
 
         // init user from tg
         if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
@@ -1007,6 +1008,7 @@
         socket.on('lobbies_list', (list)=>{ renderLobbies(list); });
         // when a quick-match hidden lobby is started, server emits 'lobby_started' with lobby data
         socket.on('lobby_started', (lobby)=>{
+            gameStarted = true;
             try{
                 console.debug('socket:lobby_started', lobby);
                 try{ console.debug('lobby_started: ' + JSON.stringify({ id: lobby?.id, status: lobby?.status, hasPlayers: Array.isArray(lobby?.players) ? lobby.players.length : 0 })); }catch(e){}
@@ -1557,7 +1559,8 @@
                 showEndScreen({ winner: winner, name: winnerName, avatar: winnerAvatar });
                 // ensure sidebar is visible again after game
                 try{ document.querySelector('.app-sidebar').style.display = ''; }catch(e){}
-            } else if (lobby.status==='playing') {
+            } else if (lobby.status==='playing' && !gameStarted) {
+                gameStarted = true;
                 try{
                     // when server signals game start, show preload then game
                     showPreload({ random: false });
@@ -1759,6 +1762,7 @@
 
         // display end-of-game modal with winner info and return-home action
         function showEndScreen(payload){
+            gameStarted = false;
             try{
                 appendDebugLine('showEndScreen: payload=' + JSON.stringify(payload));
                 const modal = document.getElementById('end-modal');
