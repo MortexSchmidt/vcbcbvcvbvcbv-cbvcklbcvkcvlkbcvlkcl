@@ -1970,6 +1970,7 @@ def handle_quick_match(data):
             def match_timeout(m_id=match_id):
                 m = pending_matches.get(m_id)
                 if not m:
+                    logger.warning(f"match_timeout: match {m_id} not found in pending_matches")
                     return
 
                 logger.info(f"match_timeout: checking match {m_id}, confirmed: {len(m.get('confirmed', set()))}")
@@ -1989,6 +1990,9 @@ def handle_quick_match(data):
 
                 # if one confirmed, requeue that player
                 logger.info(f"match_timeout: match {m_id} timed out, requeueing confirmed players")
+                requeued_players = 0
+                notified_players = 0
+
                 for p in players:
                     # resolve player's key for matching against confirmed set
                     player_key = None
@@ -2022,7 +2026,8 @@ def handle_quick_match(data):
                             with hidden_waiting_lock:
                                 hidden_waiting.append(nid)
                             socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=notify_sid)
-                            logger.info(f"match_timeout: requeued player_key {player_key} into hidden lobby {nid}")
+                            logger.info(f"match_timeout: requeued player {player_key} into hidden lobby {nid}")
+                            requeued_players += 1
                         except Exception as e:
                             logger.warning(f"match_timeout: error requeueing player {player_key}: {e}")
                     else:
@@ -2036,9 +2041,11 @@ def handle_quick_match(data):
                                 notify_sid = p
                             socketio.emit('match_cancelled', {'match_id': m_id, 'reason': 'timeout'}, room=notify_sid)
                             logger.info(f"match_timeout: notified player {notify_sid} that match {m_id} timed out")
+                            notified_players += 1
                         except Exception as e:
                             logger.warning(f"match_timeout: error notifying player {notify_sid}: {e}")
 
+                logger.info(f"match_timeout: completed for {m_id}. Requeued: {requeued_players}, Notified: {notified_players}")
                 try:
                     del pending_matches[m_id]
                     logger.info(f"match_timeout: cleaned up match {m_id}")
@@ -2047,6 +2054,7 @@ def handle_quick_match(data):
 
             t = threading.Timer(30.0, match_timeout)
             pending_matches[match_id]['timer'] = t
+            logger.info(f"quick_match: started timeout timer for match {match_id}")
             t.start()
     else:
         # no match yet — keep waiting; notify creator that search is ongoing
