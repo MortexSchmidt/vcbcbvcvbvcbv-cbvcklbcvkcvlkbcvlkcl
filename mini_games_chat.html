@@ -779,10 +779,22 @@
         // when a quick-match hidden lobby is started, server emits 'lobby_started' with lobby data
         socket.on('lobby_started', (lobby)=>{
             try{
-                    console.debug('socket:lobby_started', lobby);
-                    try{ appendDebugLine('lobby_started: ' + JSON.stringify({ id: lobby?.id, status: lobby?.status })); }catch(e){}
+                console.debug('socket:lobby_started', lobby);
+                try{ appendDebugLine('lobby_started: ' + JSON.stringify({ id: lobby?.id, status: lobby?.status, hasPlayers: Array.isArray(lobby?.players) ? lobby.players.length : 0 })); }catch(e){}
                 if (!lobby) return;
-                // immediately clear search & confirm UI
+
+                // If server sent only minimal data (id/status) without players/board, request a fuller update
+                const hasPlayers = Array.isArray(lobby.players) && lobby.players.length;
+                const hasBoard = !!lobby.board;
+                if (!hasPlayers && !hasBoard) {
+                    try{ appendDebugLine('lobby_started: incomplete payload — requesting lobbies update'); }catch(e){}
+                    // ask server for freshest lobby data; server will emit update_lobby or lobbies_list
+                    try{ socket.emit('get_lobbies'); }catch(e){}
+                    // keep confirm modal visible until we receive a proper update to avoid the modal disappearing without UI transition
+                    return;
+                }
+
+                // we have a full lobby payload — proceed to transition
                 try{ hideSearchIndicator(); }catch(e){}
                 try{ document.getElementById('confirm-modal').style.display = 'none'; }catch(e){}
                 if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
