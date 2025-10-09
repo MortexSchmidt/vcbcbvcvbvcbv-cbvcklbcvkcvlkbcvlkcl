@@ -1055,11 +1055,10 @@
                     activeLobby = lobby;
                 }catch(e){ try{ appendDebugLine('lobby_started: set activeLobby failed: '+(e&&e.message)); }catch(_){} }
                 try{
-                    showLobby(activeLobby);
-                }catch(e){ console.warn('lobby_started: showLobby threw: '+(e&&e.message)); }
-                try{
-                    showView('game');
-                }catch(e){ console.warn('lobby_started: showView("game") threw: '+(e&&e.message)); }
+                    // show preload BEFORE showing game
+                    showPreload({ random: false });
+                    setTimeout(()=>{ try{ showLobby(activeLobby); showView('game'); }catch(e){} }, 10100);
+                }catch(e){ console.warn('lobby_started: showLobby/showView threw: '+(e&&e.message)); }
                 try{ SoundEngine.lobbyCreated(); }catch(e){ console.warn('lobby_started: SoundEngine.lobbyCreated threw: '+(e&&e.message)); }
             }catch(e){ console.error(e); }
         });
