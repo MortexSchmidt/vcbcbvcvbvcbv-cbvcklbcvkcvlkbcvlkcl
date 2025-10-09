@@ -1772,14 +1772,9 @@
                             // force focus and repaint so visual border appears immediately
                             try{ card.focus(); card.getBoundingClientRect(); }catch(e){}
                             // show animated play button
-                            // create or show per-card play button inside card
-                            let pbtn = card.querySelector('.card-play-btn');
-                            if (!pbtn){
-                                pbtn = document.createElement('button'); pbtn.className='menu-btn card-play-btn primary'; pbtn.textContent='Играть';
-                                pbtn.style.alignSelf='stretch'; pbtn.style.marginTop='6px'; pbtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); startCardSearch(card); });
-                                card.appendChild(pbtn);
-                            }
-                            pbtn.style.display='block';
+                            // create or show per-card play button inside card using unified factory
+                            let pbtn = createCardPlayButton(card);
+                            if (pbtn) pbtn.style.display = 'block';
                             playButton.classList.remove('visible');
                             playButton.setAttribute('aria-hidden','true');
                             // ensure audio context is allowed by user gesture and play a select sound
@@ -1793,13 +1788,8 @@
                     try{
                         const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
                         if (isMobileNow){
-                            let pbtn = card.querySelector('.card-play-btn');
-                            if (!pbtn){
-                                pbtn = document.createElement('button'); pbtn.className='menu-btn card-play-btn primary'; pbtn.textContent='Играть';
-                                pbtn.style.alignSelf='stretch'; pbtn.style.marginTop='6px'; pbtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); startCardSearch(card); });
-                                card.appendChild(pbtn);
-                            }
-                            pbtn.style.display='block';
+                            let pbtn = createCardPlayButton(card);
+                            if (pbtn) pbtn.style.display = 'block';
                         }
                     }catch(e){}
                 });
@@ -1922,6 +1912,11 @@
                     };
 
                     try{ if (typeof appendDebugLine === 'function') appendDebugLine('about to emit quick_match for ' + gameName); }catch(e){}
+                    // Mark button state (if present) to searching so UI updates to 'Отменить'
+                    try{
+                        const pbtn = card.querySelector('.card-play-btn');
+                        if (pbtn) { pbtn.dataset.searching = '1'; pbtn.textContent = 'Отменить'; pbtn.classList.remove('primary'); pbtn.classList.add('danger'); }
+                    }catch(e){}
                     // Emit quick_match for a fast matchmaking flow (server will create hidden lobby and match)
                     try{ socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id, game: gameName }); }catch(e){ console.warn('emit quick_match failed', e); }
 
