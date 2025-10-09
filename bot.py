@@ -683,7 +683,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 Вызвал: {user_mention}"""
     
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=help_message, parse_mode='HTML')
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=admin_help_msg, parse_mode='HTML')
 
 # административные команды
 async def mute_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
