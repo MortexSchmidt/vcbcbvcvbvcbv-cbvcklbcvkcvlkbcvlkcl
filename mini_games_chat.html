@@ -156,13 +156,14 @@
         /* Game card selection styles + floating Play button */
         .game-card { transition: box-shadow var(--transition), outline var(--transition); }
         .game-card:focus { outline: 2px dashed rgba(108,140,255,0.18); }
-        .game-card.selected { outline: 3px solid var(--accent); box-shadow: 0 8px 24px rgba(108,140,255,0.16); background: rgba(12,20,34,0.6); }
+        .game-card.selected { outline: 3px solid var(--accent); box-shadow: 0 12px 34px rgba(108,140,255,0.22); background: linear-gradient(180deg, rgba(20,30,60,0.6), rgba(12,20,34,0.6)); transform: translateY(-4px); animation: glow 900ms ease-in-out infinite alternate; }
+        @keyframes glow { from { box-shadow: 0 8px 24px rgba(108,140,255,0.12); } to { box-shadow: 0 18px 44px rgba(108,140,255,0.28); } }
 
         .play-button {
             position: fixed;
             left: 50%;
             bottom: 86px; /* sits above bottom-nav */
-            transform: translateX(-50%);
+            transform: translateX(-50%) translateY(8px) scale(.98);
             background: var(--accent);
             color: #07102a;
             padding: 12px 28px;
@@ -170,10 +171,13 @@
             font-size: 1rem;
             font-weight: 700;
             box-shadow: var(--shadow-1);
-            display: none;
+            opacity: 0;
+            transition: opacity 260ms cubic-bezier(.2,.9,.2,1), transform 260ms cubic-bezier(.2,.9,.2,1);
             z-index: 1001;
             border: none;
+            pointer-events: none;
         }
+        .play-button.visible { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); pointer-events: auto; }
 
         @media (max-width: 720px) {
             /* hide action buttons inside game cards on phones (keep global nav) */
@@ -580,14 +584,15 @@
                             card.classList.remove('selected');
                             card.setAttribute('aria-selected','false');
                             selected = null;
-                            playButton.style.display = 'none';
+                            playButton.classList.remove('visible');
                             playButton.setAttribute('aria-hidden','true');
                         } else {
                             if (selected) { selected.classList.remove('selected'); selected.setAttribute('aria-selected','false'); }
                             selected = card;
                             card.classList.add('selected');
                             card.setAttribute('aria-selected','true');
-                            playButton.style.display = 'block';
+                            // show animated play button
+                            playButton.classList.add('visible');
                             playButton.setAttribute('aria-hidden','false');
                         }
                     });
@@ -601,32 +606,72 @@
 
             // hide selection when tapping outside
             document.addEventListener('click', (ev)=>{
-                if (!ev.target.closest('.game-card')){
+                // if clicked outside both card and modal and not on playButton — clear selection
+                if (!ev.target.closest('.game-card') && !ev.target.closest('.play-button') && !ev.target.closest('.game-modal')){
                     if (selected) { selected.classList.remove('selected'); selected.setAttribute('aria-selected','false'); selected = null; }
-                    playButton.style.display = 'none';
+                    playButton.classList.remove('visible');
                     playButton.setAttribute('aria-hidden','true');
                 }
             });
 
             // clicking floating Play triggers inner hidden button (preserves existing flow)
-            playButton.addEventListener('click', ()=>{
+            playButton.addEventListener('click', (ev)=>{
+                ev.stopPropagation();
                 if (!selected) return;
-                const chooseBtn = selected.querySelector('.game-choose');
-                if (chooseBtn) {
-                    // click hidden button to reuse existing handlers
-                    chooseBtn.click();
-                } else {
-                    // fallback: show lobby view for tictactoe
-                    const game = selected.dataset.game || '';
-                    if (game === 'tictactoe'){
-                        document.getElementById('lobby-name').value = `${currentUser?.name || 'Игрок'}'s lobby`;
-                        showView('lobby');
-                    } else {
-                        if (window.Telegram && window.Telegram.WebApp) window.Telegram.WebApp.showAlert('Выбрана игра: ' + (selected.querySelector('h3')?.textContent || game));
-                        else alert('Выбрана игра: ' + (selected.querySelector('h3')?.textContent || game));
-                    }
-                }
+                // open modal for creating/joining lobby for selected game
+                openGameModal(selected);
             });
+
+            // Modal: show selected game and allow create lobby
+            function openGameModal(card){
+                // if modal exists, remove
+                const existing = document.querySelector('.game-modal');
+                if (existing) existing.remove();
+
+                const game = card.dataset.game || '';
+                const title = card.querySelector('h3')?.textContent || game;
+
+                const overlay = document.createElement('div');
+                overlay.className = 'game-modal';
+                overlay.style.position = 'fixed';
+                overlay.style.inset = '0';
+                overlay.style.display = 'flex';
+                overlay.style.alignItems = 'center';
+                overlay.style.justifyContent = 'center';
+                overlay.style.background = 'rgba(2,6,23,0.6)';
+                overlay.style.zIndex = 1200;
+
+                const box = document.createElement('div');
+                box.style.width = '92%'; box.style.maxWidth = '420px'; box.style.background = 'var(--card)'; box.style.border = '1px solid var(--glass)'; box.style.borderRadius='12px'; box.style.padding='18px'; box.style.boxShadow='0 14px 40px rgba(2,6,23,0.6)';
+
+                box.innerHTML = `<h3 style="margin:0 0 8px 0">${escapeHtml(title)}</h3><p style="margin:0 0 12px 0;color:var(--muted)">Создать лобби и ждать противника. Название лобби можно изменить.</p>`;
+                const input = document.createElement('input');
+                input.value = `${currentUser?.name || 'Игрок'}'s lobby`;
+                input.style.width='100%'; input.style.padding='10px'; input.style.borderRadius='10px'; input.style.border='1px solid var(--glass)'; input.style.background='transparent'; input.style.color='var(--text)'; input.style.marginBottom='12px';
+
+                const row = document.createElement('div'); row.style.display='flex'; row.style.gap='8px'; row.style.justifyContent='flex-end';
+                const btnCreate = document.createElement('button'); btnCreate.className='menu-btn primary'; btnCreate.textContent='Создать лобби';
+                const btnClose = document.createElement('button'); btnClose.className='menu-btn'; btnClose.textContent='Отмена';
+                row.appendChild(btnClose); row.appendChild(btnCreate);
+
+                box.appendChild(input); box.appendChild(row);
+                overlay.appendChild(box);
+                document.body.appendChild(overlay);
+
+                // prevent outside clicks from closing modal unintentionally
+                overlay.addEventListener('click', (e)=>{ if (e.target === overlay){ /* click outside closes modal */ overlay.remove(); } });
+                btnClose.addEventListener('click', ()=>{ overlay.remove(); });
+
+                btnCreate.addEventListener('click', ()=>{
+                    const name = input.value || `${currentUser?.name || 'Игрок'}'s lobby`;
+                    // emit create_lobby — socket handler on server will send 'lobby_created' and client will switch to game view
+                    socket.emit('create_lobby', { name, player_name: currentUser?.name || 'Игрок', player_avatar: currentUser?.avatar || '', user_id: currentUser?.user_id });
+                    // show waiting state in modal
+                    box.innerHTML = `<h3 style="margin:0 0 8px 0">${escapeHtml(title)}</h3><p style="margin:0 0 12px 0;color:var(--muted)">Лобби создаётся. Ожидание игроков...</p><div style="display:flex;gap:8px;justify-content:flex-end;"><button class="menu-btn">Закрыть</button></div>`;
+                    const closeNow = box.querySelector('.menu-btn');
+                    closeNow.addEventListener('click', ()=>{ overlay.remove(); });
+                });
+            }
         })();
     </script>
 </body>
