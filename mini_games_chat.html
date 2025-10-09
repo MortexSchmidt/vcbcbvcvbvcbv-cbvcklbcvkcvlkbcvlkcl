@@ -996,7 +996,7 @@
                         root.style.position = 'fixed';
                         root.style.left = (sbRect.left + 12) + 'px';
                         // place a bit below the top of sidebar content area
-                        root.style.top = (sbRect.top + 120) + 'px';
+                        root.style.top = (sbRect.top + 12) + 'px';
                         root.style.width = Math.max(220, sbRect.width - 24) + 'px';
                         root.style.transform = 'none';
                         // style as blue pill (mobile-like) but larger and with full data
@@ -1004,7 +1004,21 @@
                         // mark desktop anchored so CSS can switch layout
                         root.dataset.desktop = '1';
                         // ensure expanded view is visible and rendered inline (full data under the pill)
-                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.classList.add('expanded'); exp.style.position = 'relative'; exp.style.bottom = 'auto'; exp.style.left='0'; exp.style.right='0'; exp.style.transform='none'; exp.style.opacity='1'; exp.style.pointerEvents='auto'; exp.style.display = 'block'; } }catch(e){}
+                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.classList.add('expanded'); exp.style.position = 'relative'; exp.style.bottom = 'auto'; exp.style.left='0'; exp.style.right='0'; exp.style.transform='none'; exp.style.opacity = '1'; exp.style.pointerEvents='auto'; exp.style.display = 'block'; exp.style.maxHeight = '140px'; exp.style.overflow = 'auto'; } }catch(e){}
+                        // try to hide the sidebar's main play button so it visually appears covered by the search card
+                        try{
+                            const playBtn = sidebar.querySelector('.menu-buttons .menu-btn.primary') || sidebar.querySelector('.menu-buttons .menu-btn');
+                            if (playBtn){
+                                // compute height so root ends at the top of this play button
+                                const pbRect = playBtn.getBoundingClientRect();
+                                const topMargin = 8; // small gap
+                                const desiredHeight = Math.max(80, Math.floor(pbRect.top - (sbRect.top + 12) - topMargin));
+                                root.style.height = desiredHeight + 'px';
+                                // hide the button while searching
+                                playBtn.dataset._wasHiddenBySearch = '1';
+                                playBtn.style.visibility = 'hidden';
+                            }
+                        }catch(e){}
                     } else {
                         // fallback: original settingsBtn behaviour
                         const settingsBtn = document.querySelector('.bottom-settings');
@@ -1069,6 +1083,8 @@
                                 if (!isMobileNow) return; // desktop: do not toggle (static)
                                 const expanded = bar.getAttribute('aria-expanded') === 'true'; _toggleSearchExpanded(root, !expanded);
                             });
+                            // touchstart for mobile reliability
+                            bar.addEventListener('touchstart', (ev)=>{ const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches; if (!isMobileNow) return; ev.stopPropagation(); const expanded = bar.getAttribute('aria-expanded') === 'true'; _toggleSearchExpanded(root, !expanded); }, { passive: true });
                             bar.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); bar.click(); } });
                         }
                         if (collapseBtn) collapseBtn.addEventListener('click', ()=>{ _toggleSearchExpanded(root, false); });
@@ -1085,9 +1101,11 @@
                 try{ root.style.display = 'none'; }catch(e){}
                 try{ 
                     // clear desktop anchoring and restore defaults
+                    // restore play button visibility if we hid it earlier
+                    try{ const sidebar = document.querySelector('.app-sidebar'); if (sidebar){ const playBtn = sidebar.querySelector('.menu-buttons .menu-btn.primary') || sidebar.querySelector('.menu-buttons .menu-btn'); if (playBtn && playBtn.dataset._wasHiddenBySearch){ playBtn.style.visibility='visible'; delete playBtn.dataset._wasHiddenBySearch; } } }catch(e){}
                     root.dataset.desktop = '';
                     const exp = root.querySelector('.search-expanded'); 
-                    if (exp){ exp.classList.remove('expanded'); exp.style.position = ''; exp.style.bottom = ''; exp.style.left = ''; exp.style.right = ''; exp.style.transform = ''; exp.style.opacity = ''; exp.style.pointerEvents = ''; exp.style.display = 'none'; exp.style.maxHeight = ''; }
+                    if (exp){ exp.classList.remove('expanded'); exp.style.position = ''; exp.style.bottom = ''; exp.style.left = ''; exp.style.right = ''; exp.style.transform = ''; exp.style.opacity = ''; exp.style.pointerEvents = ''; exp.style.display = 'none'; exp.style.maxHeight = ''; exp.style.overflow = ''; }
                     // reset search-bar styles
                     try{ const bar = root.querySelector('.search-bar'); if (bar){ bar.style.background=''; bar.style.color=''; bar.style.justifyContent=''; } }catch(e){}
                 }catch(e){}
