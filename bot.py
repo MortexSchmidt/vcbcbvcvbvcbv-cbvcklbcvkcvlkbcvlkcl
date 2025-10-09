@@ -1504,7 +1504,7 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
     chat = update.effective_chat
     chat_id = chat.id if chat else None
     chat_type = getattr(chat, 'type', 'unknown')
-    logger.info(f"tictactoe invoked by user {update.effective_user.id} in chat {chat_id} (type={chat_type})")
+    logger.info(f"tictactoe invoked by user {update.effective_user.id} in chat {chat_id} (type={chat_type})"
     
     # URL Mini-App
     miniapp_url = "https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/mini_games_chat.html"
@@ -1872,6 +1872,33 @@ def auth_code():
         return json.dumps({'code': code}), 200
     except Exception as e:
         logger.error(f"Ошибка /auth_code: {e}")
+        return json.dumps({'error': 'server error'}), 500
+
+# Админ-эндпоинт для сброса авторизаций (очищает telegram_profiles и pending_auths)
+@app.route('/admin/reset_auth', methods=['POST'])
+def admin_reset_auth():
+    """Очищает в памяти привязанные профили и ожидающие коды авторизации.
+    Требует заголовок X-ADMIN-KEY, совпадающий с переменной окружения ADMIN_KEY.
+    """
+    try:
+        provided = request.headers.get('X-ADMIN-KEY') or request.args.get('key')
+        secret = os.environ.get('ADMIN_KEY')
+        if not secret:
+            logger.warning('ADMIN_KEY not set in env; denying reset request for safety')
+            return json.dumps({'error': 'admin key not configured on server'}), 403
+        if not provided or provided != secret:
+            logger.warning('Unauthorized attempt to call /admin/reset_auth')
+            return json.dumps({'error': 'unauthorized'}), 403
+
+        profiles_count = len(telegram_profiles)
+        pending_count = len(pending_auths)
+        telegram_profiles.clear()
+        pending_auths.clear()
+
+        logger.info(f"Admin reset_auth called: cleared {profiles_count} profiles and {pending_count} pending codes")
+        return json.dumps({'cleared_profiles': profiles_count, 'cleared_pending_auths': pending_count}), 200
+    except Exception as e:
+        logger.error(f"Error in admin_reset_auth: {e}")
         return json.dumps({'error': 'server error'}), 500
 
 @app.route('/webhook', methods=['POST'])
