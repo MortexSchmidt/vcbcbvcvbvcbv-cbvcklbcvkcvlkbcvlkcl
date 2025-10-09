@@ -2076,12 +2076,17 @@ def handle_match_accept(data):
             logger.info(f"match_accept: starting lobby {lobby_id} for match {match_id}")
             # Cancel other hidden quick-match searches for the same users (other devices)
             try:
-                for psid in m.get('players', []):
-                    profile = telegram_profiles.get(psid) or {}
-                    uid = profile.get('user_id')
-                    if not uid:
-                        continue
-                    # find hidden lobbies whose first player's user_id equals uid (but not the lobby that just started)
+                # collect user_ids from the lobby's players (if available)
+                user_ids = set()
+                try:
+                    if lobby and lobby.get('players'):
+                        for p in lobby.get('players', []):
+                            if p and p.get('user_id'):
+                                user_ids.add(p.get('user_id'))
+                except Exception:
+                    pass
+
+                if user_ids:
                     to_remove = []
                     with hidden_waiting_lock:
                         for hid in list(hidden_waiting):
@@ -2095,7 +2100,7 @@ def handle_match_accept(data):
                                     pass
                                 continue
                             first_p = (h.get('players') or [None])[0]
-                            if first_p and first_p.get('user_id') == uid:
+                            if first_p and first_p.get('user_id') in user_ids:
                                 to_remove.append(hid)
                         for hid in to_remove:
                             try:
@@ -2106,11 +2111,11 @@ def handle_match_accept(data):
                                 del lobbies[hid]
                             except KeyError:
                                 pass
-                            # notify all sids of this user that their search was cancelled
+                            # notify all sids of these users that their search was cancelled
                             notify_sids = []
                             for sid, prof in list(telegram_profiles.items()):
                                 try:
-                                    if prof and prof.get('user_id') == uid and sid not in notify_sids:
+                                    if prof and prof.get('user_id') in user_ids and sid not in notify_sids:
                                         notify_sids.append(sid)
                                 except Exception:
                                     pass
@@ -2119,7 +2124,7 @@ def handle_match_accept(data):
                                     socketio.emit('lobby_cancelled', {'lobby_id': hid, 'message': 'Поиск отменён — матч начался'}, room=sid)
                                 except Exception:
                                     pass
-                            logger.info(f"match_accept: removed other hidden lobby {hid} for user {uid}")
+                            logger.info(f"match_accept: removed other hidden lobby {hid} for users {list(user_ids)}")
             except Exception as e:
                 logger.warning(f"match_accept: error cancelling other hidden lobbies: {e}")
         else:

@@ -575,7 +575,17 @@
         // when a quick-match hidden lobby is started, server emits 'lobby_started' with lobby data
         socket.on('lobby_started', (lobby)=>{
             try{
+                console.debug('socket:lobby_started', lobby);
                 if (!lobby) return;
+                // immediately clear search & confirm UI
+                try{ hideSearchIndicator(); }catch(e){}
+                try{ document.getElementById('confirm-modal').style.display = 'none'; }catch(e){}
+                if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
+                try{ if (playButton) playButton.style.pointerEvents = ''; }catch(e){}
+                searching = false;
+                enableNavigation();
+
+                // set active lobby and show game
                 activeLobby = lobby;
                 showLobby(activeLobby);
                 showView('game');
