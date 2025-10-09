@@ -1882,9 +1882,11 @@ def handle_quick_match(data):
 
             payload = {'match_id': match_id, 'lobby': other}
             try:
-                socketio.emit('match_found', payload, room=p0)
-                socketio.emit('match_found', payload, room=p1)
-                logger.info(f"quick_match: match_found emitted for match {match_id} to {p0} and {p1}")
+                p0_sid = p0.get('sid') if isinstance(p0, dict) else p0
+                p1_sid = p1.get('sid') if isinstance(p1, dict) else p1
+                socketio.emit('match_found', payload, room=p0_sid)
+                socketio.emit('match_found', payload, room=p1_sid)
+                logger.info(f"quick_match: match_found emitted for match {match_id} to {p0_sid} and {p1_sid}")
             except Exception as e:
                 logger.warning(f"quick_match: failed to emit match_found for {match_id}: {e}")
 
