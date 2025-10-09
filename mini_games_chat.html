@@ -297,6 +297,9 @@
 <body>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- pako: zlib inflate for .tgs (zlib-compressed lottie json), lottie-web to render animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.10.1/lottie.min.js"></script>
 
     <div class="app-container">
         <aside class="app-sidebar">
@@ -467,9 +470,11 @@
         <div id="preload-box" style="width:92%;max-width:520px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6);z-index:1301;display:flex;flex-direction:column;align-items:center;gap:12px;pointer-events:auto">
             <!-- Center animation (user will upload loading.tgs to this path) -->
             <div id="preload-center" style="width:160px;height:160px;display:flex;align-items:center;justify-content:center">
-                <!-- Placeholder image; replace with .tgs or supported animation. -->
-                <img id="preload-tgs" src="/assets/loading.tgs" alt="loading animation" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">
-                <!-- Fallback simple SVG animation if .tgs not supported -->
+                <!-- Container where .tgs will be decoded and played via lottie-web -->
+                <div id="preload-lottie" style="width:100%;height:100%;display:block"></div>
+                <!-- Image fallback (if someone uploaded a gif/png instead) -->
+                <img id="preload-tgs" src="/assets/loading.tgs" alt="loading animation" style="width:100%;height:100%;object-fit:contain;display:none" onerror="this.style.display='none'">
+                <!-- Fallback simple SVG animation if .tgs cannot be decoded -->
                 <svg id="preload-fallback" viewBox="0 0 100 100" width="120" height="120" style="display:none">
                     <circle cx="50" cy="50" r="40" stroke="rgba(108,140,255,0.9)" stroke-width="6" fill="none" stroke-linecap="round">
                         <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="1s" repeatCount="indefinite" />
@@ -564,12 +569,57 @@
         }, 1000);
         // ensure it's removed after exactly duration seconds even if tab hidden
         setTimeout(()=>{ try{ clearInterval(tick); hidePreload(); }catch(e){} }, duration*1000 + 50);
+        // attempt to load and play assets/loading.tgs (zlib-compressed lottie json)
+        try{ playLoadingTgs(); }catch(e){ console.warn('playLoadingTgs err', e); }
     }
 
     function hidePreload(){
         try{ document.getElementById('preload-modal').style.display = 'none'; }catch(e){}
         try{ document.querySelector('.app-sidebar').style.display = ''; }catch(e){}
         try{ document.getElementById('preload-spinner').style.display = 'none'; }catch(e){}
+    }
+
+    // Play loading.tgs using pako + lottie-web
+    let _preloadPlayer = null;
+    async function playLoadingTgs(){
+        const container = document.getElementById('preload-lottie');
+        const imgFallback = document.getElementById('preload-tgs');
+        const svgFallback = document.getElementById('preload-fallback');
+        if (!container) return;
+        // clear previous player
+        try{ if (_preloadPlayer){ _preloadPlayer.destroy(); _preloadPlayer = null; } }catch(e){}
+        // fetch binary
+        try{
+            const resp = await fetch('/assets/loading.tgs');
+            if (!resp.ok) throw new Error('failed to fetch tgs');
+            const arrbuf = await resp.arrayBuffer();
+            const uint8 = new Uint8Array(arrbuf);
+            // Try to inflate (pako) then parse JSON
+            try{
+                const inflated = pako.inflate(uint8, { to: 'string' });
+                const json = JSON.parse(inflated);
+                // create player
+                _preloadPlayer = lottie.loadAnimation({ container: container, renderer: 'svg', loop: true, autoplay: true, animationData: json });
+                // ensure fallbacks hidden
+                if (imgFallback) imgFallback.style.display = 'none';
+                if (svgFallback) svgFallback.style.display = 'none';
+                container.style.display = 'block';
+                return;
+            }catch(e){
+                console.warn('TGS inflate/parse failed, falling back to image/SVG', e);
+            }
+            // if inflate failed, attempt to treat file as image
+            try{
+                const blob = new Blob([arrbuf]);
+                const url = URL.createObjectURL(blob);
+                if (imgFallback){ imgFallback.src = url; imgFallback.style.display = 'block'; }
+                if (svgFallback) svgFallback.style.display = 'none';
+                container.style.display = 'none';
+                return;
+            }catch(e){ console.warn('image fallback failed', e); }
+        }catch(e){ console.warn('playLoadingTgs fetch error', e); }
+        // final fallback: show svg
+        try{ if (svgFallback) svgFallback.style.display = 'block'; if (container) container.style.display = 'none'; if (imgFallback) imgFallback.style.display = 'none'; }catch(e){}
     }
 
     // Добавляем обработчик ошибок подключения
