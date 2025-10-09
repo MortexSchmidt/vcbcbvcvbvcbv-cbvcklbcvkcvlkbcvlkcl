@@ -1255,7 +1255,8 @@
                     }catch(e){}
                     // reveal expanded 'Долгий поиск' text and also animate alt title inside pill
                     const lt = root.querySelector('#search-long-text'); if (lt){ lt.style.display='block'; lt.style.opacity='1'; lt.style.transform='translateY(0)'; }
-                    try{ const alt = root.querySelector('#search-alt-title'); if (alt) { alt.style.display='block'; alt.style.opacity='1'; alt.style.transform='translateY(0)'; } }catch(e){}
+                    try{ const titleEl = root.querySelector('#search-title'); if (titleEl) titleEl.textContent = 'Долгий поиск'; }catch(e){}
+                    try{ const altEl = root.querySelector('#search-alt-title'); if (altEl) altEl.style.display = 'none'; }catch(e){}
                     // on mobile, expand the search indicator to show the long search text
                     if (root.dataset.desktop !== '1') { _toggleSearchExpanded(root, true); }
                 }catch(e){} }, 15000);
@@ -1329,10 +1330,8 @@
             playButton.setAttribute('aria-hidden','true');
             enableNavigation();
             // reset dynamic fields
-            try{ const g = document.getElementById('search-game-text'); if (g) g.textContent = 'Игра: —'; }catch(e){}
-            try{ const av = document.getElementById('search-player-avatar'); if (av) { av.innerHTML = ''; av.textContent = '—'; } }catch(e){}
-            try{ const pn = document.getElementById('search-player-name'); if (pn) pn.textContent = 'Игрок: —'; }catch(e){}
-            try{ const ff = document.getElementById('search-found-text'); if (ff) ff.textContent = 'Игроков найдено: 0'; }catch(e){}
+            try{ const titleEl = root.querySelector('#search-title'); if (titleEl) titleEl.textContent = 'Поиск'; }catch(e){}
+            try{ const altEl = root.querySelector('#search-alt-title'); if (altEl) altEl.style.display = ''; }catch(e){}
         }
 
     socket.on('lobby_waiting', (data)=>{
