@@ -321,6 +321,18 @@
         </div>
     </div>
 
+    <!-- Reload confirmation modal (appears when user attempts to refresh during a game) -->
+    <div id="reload-confirm-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.7);z-index:1250">
+        <div style="width:92%;max-width:420px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)">
+            <h3 style="margin:0 0 8px 0">Перезагрузить страницу?</h3>
+            <p style="margin:0 0 12px 0;color:var(--muted)">Если вы перезагрузите страницу, игра будет завершена. Вы уверены?</p>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button id="reload-cancel" class="menu-btn">Отмена</button>
+                <button id="reload-confirm" class="menu-btn primary">Перезагрузить и закончить игру</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Bottom nav для телефонов -->
     <nav class="bottom-nav" aria-hidden="false">
         <button class="bottom-play" data-action="go-home" title="Играть">
@@ -793,6 +805,61 @@
             activeLobby=null; showView('home'); socket.emit('get_lobbies');
         });
         document.getElementById('btn-forfeit').addEventListener('click', ()=>{ if (activeLobby && activeLobby.id) socket.emit('make_move',{ lobby_id: activeLobby.id, position: -1, forfeit:true }); });
+
+        // Reload/close protection: when in an active playing game, intercept refresh/close
+        function _showReloadConfirm(){
+            document.getElementById('reload-confirm-modal').style.display = 'flex';
+        }
+        function _hideReloadConfirm(){
+            document.getElementById('reload-confirm-modal').style.display = 'none';
+        }
+
+        document.getElementById('reload-cancel').addEventListener('click', ()=>{ _hideReloadConfirm(); });
+        document.getElementById('reload-confirm').addEventListener('click', ()=>{
+            // if in game, send forfeit to end game, then reload
+            try{
+                if (activeLobby && activeLobby.id){
+                    socket.emit('make_move', { lobby_id: activeLobby.id, position: -1, forfeit: true });
+                }
+            }catch(e){}
+            _hideReloadConfirm();
+            // small delay to allow message to send
+            setTimeout(()=>{ location.reload(); }, 300);
+        });
+
+        // beforeunload handler
+        function _onBeforeUnload(e){
+            if (activeLobby && activeLobby.status === 'playing'){
+                // show native confirmation when possible
+                const msg = 'Вы участвуете в игре. Перезагрузка завершит игру. Уверены?';
+                (e || window.event).returnValue = msg; // Gecko + IE
+                return msg; // Webkit, Chrome
+            }
+            return undefined;
+        }
+
+        // keydown intercept for F5 / Ctrl+R to show modal instead of immediate reload
+        window.addEventListener('keydown', (ev)=>{
+            const isRefresh = (ev.key === 'F5') || ((ev.ctrlKey || ev.metaKey) && ev.key === 'r');
+            if (!isRefresh) return;
+            if (activeLobby && activeLobby.status === 'playing'){
+                ev.preventDefault();
+                _showReloadConfirm();
+            }
+        }, { capture: true });
+
+        // register/unregister beforeunload depending on game state
+        function _maybeRegisterUnload(){
+            if (activeLobby && activeLobby.status === 'playing') window.addEventListener('beforeunload', _onBeforeUnload);
+            else window.removeEventListener('beforeunload', _onBeforeUnload);
+        }
+
+        // call when lobby state changes
+        const originalShowLobby = showLobby;
+        function showLobby(lobby){
+            originalShowLobby(lobby);
+            _maybeRegisterUnload();
+        }
 
         // safe html
         function escapeHtml(s){ return String(s||'').replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
