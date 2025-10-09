@@ -967,13 +967,20 @@
             try{
                 const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
                 if (isMobileNow){
-                    // attach to top menu (assume .left-col exists)
-                    const left = document.querySelector('.left-col') || document.querySelector('.app-container');
-                    if (left){
-                        root.style.position = 'fixed'; root.style.left = left.getBoundingClientRect().left + 'px'; root.style.width = (left.getBoundingClientRect().width) + 'px';
-                        root.style.top = '8px'; root.style.bottom = 'auto'; root.style.transform = 'none';
+                    // attach to top of the sidebar menu (.app-sidebar)
+                    const sidebar = document.querySelector('.app-sidebar');
+                    if (sidebar){
+                        const sbRect = sidebar.getBoundingClientRect();
+                        root.style.position = 'fixed';
+                        root.style.left = (sbRect.left) + 'px';
+                        root.style.width = (sbRect.width) + 'px';
+                        // place slightly below sidebar top so it appears attached to menu area
+                        root.style.top = (sbRect.top + 8) + 'px';
+                        root.style.bottom = 'auto'; root.style.transform = 'none';
                         // style as blue pill
-                        root.querySelector('.search-bar').style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)';
+                        try{ root.querySelector('.search-bar').style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; }catch(e){}
+                        // when expanded on mobile, show details above (position it to overlap sidebar content)
+                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.transformOrigin = 'top'; } }catch(e){}
                     }
                 } else {
                     // desktop: position the indicator to the right of the settings button (same row)
@@ -1052,6 +1059,8 @@
                 try{ _toggleSearchExpanded(root, false); }catch(e){}
                 try{ root.style.display = 'none'; }catch(e){}
             }
+            // reset any per-card buttons searching state
+            try{ document.querySelectorAll('.card-play-btn').forEach(b=>{ b.dataset.searching='0'; b.textContent='Играть'; b.classList.remove('danger'); b.classList.add('primary'); }); }catch(e){}
             try{ if (searchLongTimer) clearTimeout(searchLongTimer); }catch(e){}
             try{ const lt = document.getElementById('search-long-text'); if (lt) lt.style.display = 'none'; }catch(e){}
             if (searchTimer) { clearInterval(searchTimer); searchTimer = null; }
@@ -1733,21 +1742,49 @@
             // helper: ensure each card has no visible inline play buttons by default (we'll create them dynamically)
             document.querySelectorAll('.game-selection .game-card .card-play-btn').forEach(b=>b.style.display='none');
 
-            // start search for card
+            // helper to create or return per-card play button with unified handler
+            function createCardPlayButton(card){
+                if (!card) return null;
+                const game = (card.dataset.game || '').toLowerCase();
+                // skip not-ready games
+                if (game === 'memory' || game === 'quiz') return null;
+                let pbtn = card.querySelector('.card-play-btn');
+                if (!pbtn){
+                    pbtn = document.createElement('button');
+                    pbtn.className = 'menu-btn card-play-btn primary';
+                    pbtn.textContent = 'Играть';
+                    pbtn.style.alignSelf = 'stretch'; pbtn.style.marginTop = '6px';
+                    pbtn.dataset.searching = '0';
+                    // unified click handler: start or cancel depending on state
+                    pbtn.addEventListener('click', function(ev){
+                        ev.stopPropagation();
+                        try{
+                            const isSearching = pbtn.dataset.searching === '1';
+                            const gameName = card.dataset.game || card.querySelector('h3')?.textContent || '';
+                            if (!currentUser || !currentUser.user_id){ openAuthModal(); return; }
+                            if (!isSearching){
+                                // start
+                                lastSearchStart = Date.now(); lastSearchGame = gameName;
+                                socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id, game: gameName });
+                                pbtn.dataset.searching = '1'; pbtn.textContent = 'Отменить'; pbtn.classList.remove('primary'); pbtn.classList.add('danger');
+                                showSearchIndicator({ game: gameName, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: 1, originCard: card });
+                            } else {
+                                // cancel
+                                try{ socket.emit('cancel_quick_match', {}); }catch(e){}
+                                pbtn.dataset.searching = '0'; pbtn.textContent = 'Играть'; pbtn.classList.remove('danger'); pbtn.classList.add('primary');
+                                hideSearchIndicator();
+                            }
+                        }catch(er){ console.warn('card play handler err', er); }
+                    });
+                    card.appendChild(pbtn);
+                }
+                return pbtn;
+            }
+
+            // start search for card (kept for compatibility but uses createCardPlayButton)
             function startCardSearch(card){
-                if (!currentUser || !currentUser.user_id) { openAuthModal(); return; }
-                // get game name
-                const gameName = card.dataset.game || card.querySelector('h3')?.textContent || '';
-                // switch per-card play -> cancel while searching
-                let pbtn = card.querySelector('.card-play-btn'); if (!pbtn) return;
-                // mark searching
-                lastSearchStart = Date.now(); lastSearchGame = gameName;
-                socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id, game: gameName });
-                // show search indicator and update positioning
-                showSearchIndicator({ game: gameName, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: 1, originCard: card });
-                // change button
-                pbtn.textContent = 'Отменить'; pbtn.classList.remove('primary'); pbtn.classList.add('danger');
-                pbtn.onclick = (ev)=>{ ev.stopPropagation(); try{ socket.emit('cancel_quick_match', {}); }catch(e){}; hideSearchIndicator(); pbtn.textContent='Играть'; pbtn.classList.remove('danger'); pbtn.classList.add('primary'); };
+                const btn = createCardPlayButton(card);
+                if (btn){ btn.click(); }
             }
 
             // hide selection when tapping outside — but DO NOT clear selection while searching for opponent
