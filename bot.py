@@ -1507,7 +1507,7 @@ async def tictactoe_miniapp_command(update: Update, context: ContextTypes.DEFAUL
     logger.info(f"tictactoe invoked by user {update.effective_user.id} in chat {chat_id} (type={chat_type})")
     
     # URL Mini-App
-    miniapp_url = "https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/tictactoe_app.html"
+    miniapp_url = "https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/mini_games_chat.html"
 
     # Создаем кнопку для открытия Mini-App (web_app)
     keyboard = [
@@ -1842,6 +1842,10 @@ def check_winner(board):
 @app.route('/tictactoe_app.html')
 def serve_tictactoe_app():
     return app.send_static_file('tictactoe_app.html')
+
+@app.route('/mini_games_chat.html')
+def serve_mini_games_chat():
+    return app.send_static_file('mini_games_chat.html')
 
 
 @app.route('/auth_code', methods=['POST'])

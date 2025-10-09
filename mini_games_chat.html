@@ -195,6 +195,119 @@
     </style>
 </head>
 <body>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Инициализация SocketIO клиента
+        const socket = io('https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app');
+
+        let currentUser = null;
+        let currentGame = null;
+
+        // Авторизация при загрузке страницы
+        tg.ready();
+
+        // Обработка подключения к серверу
+        socket.on('connect', () => {
+            console.log('Подключено к серверу мини-игр');
+
+            // Получаем данные пользователя из Telegram
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                currentUser = {
+                    user_id: tg.initDataUnsafe.user.id,
+                    name: tg.initDataUnsafe.user.first_name || tg.initDataUnsafe.user.username || 'Игрок',
+                    avatar: ''
+                };
+
+                // Отправляем данные на сервер
+                socket.emit('identify', currentUser);
+
+                // Обновляем интерфейс профиля
+                updateProfile(currentUser);
+            }
+        });
+
+        // Обновление профиля пользователя
+        function updateProfile(user) {
+            const profileName = document.querySelector('.profile-name');
+            const profileSub = document.querySelector('.profile-sub');
+            const avatarImg = document.querySelector('.avatar img');
+
+            if (profileName) profileName.textContent = user.name;
+            if (profileSub) profileSub.textContent = 'Авторизован';
+            if (avatarImg) {
+                avatarImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=5865f2&color=ffffff&size=128`;
+            }
+        }
+
+        // Включаем кнопки после авторизации
+        function enableGameButtons() {
+            const playBtn = document.querySelector('.menu-btn.primary');
+            const selectBtn = document.querySelector('.game-card button');
+
+            if (playBtn) {
+                playBtn.classList.remove('disabled');
+                playBtn.style.cursor = 'pointer';
+                playBtn.addEventListener('click', () => {
+                    tg.showAlert('Ищем игру для вас...');
+                    socket.emit('find_game', { game_type: 'tictactoe' });
+                });
+            }
+
+            if (selectBtn) {
+                selectBtn.classList.remove('disabled');
+                selectBtn.style.cursor = 'pointer';
+                selectBtn.addEventListener('click', () => {
+                    tg.showAlert('Запуск игры крестики-нолики...');
+                    socket.emit('start_game', { game_type: 'tictactoe' });
+                });
+            }
+        }
+
+        // Обработка событий SocketIO
+        socket.on('game_found', (data) => {
+            console.log('Игра найдена:', data);
+            tg.showAlert('Игра найдена! Начинаем...');
+        });
+
+        socket.on('game_started', (data) => {
+            console.log('Игра начата:', data);
+            currentGame = data.game_id;
+            tg.showAlert('Игра крестики-нолики начата!');
+        });
+
+        socket.on('game_update', (data) => {
+            console.log('Обновление игры:', data);
+            // Здесь можно обновить игровое поле
+        });
+
+        socket.on('game_ended', (data) => {
+            console.log('Игра завершена:', data);
+            currentGame = null;
+            tg.showAlert(`Игра завершена! Результат: ${data.result}`);
+        });
+
+        socket.on('error', (error) => {
+            console.error('Ошибка:', error);
+            tg.showAlert('Ошибка: ' + error.message);
+        });
+
+        // Включаем кнопки после успешной авторизации
+        setTimeout(() => {
+            if (currentUser) {
+                enableGameButtons();
+            }
+        }, 1000);
+
+        // Обработка отключения
+        socket.on('disconnect', () => {
+            console.log('Отключено от сервера');
+        });
+    </script>
     <div class="app-container">
         <aside class="app-sidebar">
             <div class="profile-row">
@@ -208,7 +321,7 @@
             </div>
 
             <div class="menu-buttons">
-                <button class="menu-btn disabled">Играть</button>
+                <button class="menu-btn primary">Играть</button>
                 <button class="menu-btn">Настройки</button>
                 <button class="menu-btn">Лобби</button>
             </div>
@@ -218,7 +331,7 @@
             <div class="game-selection">
                 <div class="game-card">
                     <h3>Крестики-Нолики</h3>
-                    <button class="disabled">Выбрать</button>
+                    <button>Выбрать</button>
                 </div>
             </div>
         </main>

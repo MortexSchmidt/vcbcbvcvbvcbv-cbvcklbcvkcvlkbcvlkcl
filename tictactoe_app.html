@@ -33,9 +33,9 @@
             -webkit-font-smoothing:antialiased;
             -moz-osx-font-smoothing:grayscale;
             display:flex;
-            align-items:flex-start; /* align to top, not center */
-            justify-content:center; /* keep horizontal centering */
-            padding:10px 16px; /* reduce top padding further to remove empty space */
+            align-items:flex-start;
+            justify-content:center;
+            padding:10px 16px;
         }
 
         .app-container{
@@ -557,140 +557,7 @@
     .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
     .section-title i{color:var(--accent)}
 
-    .lobby-grid{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:flex-end;overflow:auto;padding-top:6px}
-    .lobby-card{
-        background: var(--card);
-        border: 1px solid var(--glass);
-        border-radius: var(--radius-sm);
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .lobby-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .lobby-name {
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: var(--text);
-    }
-    .lobby-status {
-        font-size: 0.9rem;
-        color: var(--muted);
-    }
-    .lobby-players {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-    .player-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .player-avatar-img {
-        width: 36px;
-        height: 36px;
-        border-radius: var(--radius-sm);
-        object-fit: cover;
-    }
-    .player-details {
-        display: flex;
-        flex-direction: column;
-    }
-    .player-name {
-        font-weight: 600;
-        color: var(--text);
-    }
-    .player-symbol {
-        font-size: 0.85rem;
-        color: var(--muted);
-    }
-    .empty-slot {
-        font-style: italic;
-        color: var(--muted);
-    }
 
-    .profile-info{display:flex;flex-direction:column}
-    .profile-name{font-weight:600}
-    .profile-sub{font-size:0.9rem;color:var(--muted)}
-
-    .menu-buttons{display:flex;flex-direction:column;gap:10px;margin-top:0}
-    /* Menu buttons: allow wrapping, prevent icon wrap, consistent min height */
-    .menu-btn{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);cursor:pointer;transition:all var(--transition);font-weight:600;white-space:normal;word-break:break-word;text-align:left;min-height:48px;line-height:1.15;overflow-wrap:anywhere}
-    .menu-btn i{width:28px;text-align:center;color:var(--accent);flex-shrink:0;flex-basis:28px}
-    .menu-btn.primary{background:var(--accent);color:#07102a;border:0}
-    .menu-btn.primary svg {
-        margin-right: 6px; /* Уменьшаем отступ для лучшего отображения */
-    }
-    .menu-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,0.55)}
-
-    /* Main area */
-    .app-main{padding:22px;display:flex;flex-direction:column;gap:18px;background:transparent;height:100%}
-    /* Sections keep the card background to ensure consistent dark surfaces */
-    .section{background:var(--card);border-radius:12px;padding:16px;border:1px solid var(--glass)}
-    .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
-    .section-title i{color:var(--accent)}
-
-    .lobby-grid{display:flex;flex-direction:column;gap:12px;flex:1;justify-content:flex-end;overflow:auto;padding-top:6px}
-    .lobby-card{
-        background: var(--card);
-        border: 1px solid var(--glass);
-        border-radius: var(--radius-sm);
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .lobby-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .lobby-name {
-        font-weight: 600;
-        font-size: 1.1rem;
-        color: var(--text);
-    }
-    .lobby-status {
-        font-size: 0.9rem;
-        color: var(--muted);
-    }
-    .lobby-players {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-    .player-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .player-avatar-img {
-        width: 36px;
-        height: 36px;
-        border-radius: var(--radius-sm);
-        object-fit: cover;
-    }
-    .player-details {
-        display: flex;
-        flex-direction: column;
-    }
-    .player-name {
-        font-weight: 600;
-        color: var(--text);
-    }
-    .player-symbol {
-        font-size: 0.85rem;
-        color: var(--muted);
-    }
-    .empty-slot {
-        font-style: italic;
-        color: var(--muted);
-    }
 
     .profile-info{display:flex;flex-direction:column}
     .profile-name{font-weight:600}
@@ -874,6 +741,82 @@
     </style>
 </head>
 <body>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // Инициализация Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Инициализация SocketIO клиента
+        const socket = io('https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app');
+
+        let currentUser = null;
+        let currentLobby = null;
+
+        // Авторизация при загрузке страницы
+        tg.ready();
+
+        socket.on('connect', () => {
+            console.log('Подключено к серверу');
+
+            // Отправляем данные пользователя при подключении
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                currentUser = {
+                    user_id: tg.initDataUnsafe.user.id,
+                    name: tg.initDataUnsafe.user.first_name || tg.initDataUnsafe.user.username || 'Игрок',
+                    avatar: ''
+                };
+
+                socket.emit('identify', currentUser);
+            }
+        });
+
+        // Обработка создания лобби
+        document.querySelectorAll('.menu-btn.primary').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.textContent.includes('Создать лобби')) {
+                    socket.emit('create_lobby', {
+                        name: 'Лобби игрока',
+                        player_name: currentUser ? currentUser.name : 'Игрок',
+                        player_avatar: currentUser ? currentUser.avatar : '',
+                        user_id: currentUser ? currentUser.user_id : null
+                    });
+                }
+            });
+        });
+
+        // Обработка получения списка лобби
+        socket.on('lobbies_list', (lobbies) => {
+            console.log('Получен список лобби:', lobbies);
+        });
+
+        // Обработка создания лобби
+        socket.on('lobby_created', (data) => {
+            console.log('Лобби создано:', data);
+            currentLobby = data.lobby_id;
+            tg.showAlert('Лобби создано! Ожидаем второго игрока...');
+        });
+
+        // Обработка обновления лобби
+        socket.on('update_lobby', (lobby) => {
+            console.log('Лобби обновлено:', lobby);
+            if (lobby.status === 'playing') {
+                tg.showAlert('Игра началась!');
+            }
+        });
+
+        // Обработка ошибок
+        socket.on('error', (error) => {
+            console.error('Ошибка:', error);
+            tg.showAlert('Ошибка: ' + error.message);
+        });
+
+        // Обработка отключения
+        socket.on('disconnect', () => {
+            console.log('Отключено от сервера');
+        });
+    </script>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="app-sidebar">
