@@ -1005,60 +1005,18 @@
                     try{ root.querySelector('.search-bar').style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; }catch(e){}
                     try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.transformOrigin = 'bottom'; } }catch(e){}
                 } else {
-                    // desktop: prefer anchoring the indicator inside the left sidebar area (where user highlighted)
-                    const sidebar = document.querySelector('.app-sidebar');
-                    if (sidebar){
-                        const sbRect = sidebar.getBoundingClientRect();
-                        root.style.position = 'fixed';
-                        root.style.left = (sbRect.left + 12) + 'px';
-                        // place a bit below the top of sidebar content area
-                        root.style.top = (sbRect.top + 12) + 'px';
-                        root.style.width = Math.max(220, sbRect.width - 24) + 'px';
-                        root.style.transform = 'none';
-                        // style as blue pill (mobile-like) but larger and with full data
-                        try{ const bar = root.querySelector('.search-bar'); if (bar) { bar.style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; bar.style.color = '#07102a'; bar.style.justifyContent='space-between'; } }catch(e){}
-                        // mark desktop anchored so CSS can switch layout
-                        root.dataset.desktop = '1';
-                        // ensure expanded view is visible and rendered inline (full data under the pill)
-                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.classList.add('expanded'); exp.style.position = 'relative'; exp.style.bottom = 'auto'; exp.style.left='0'; exp.style.right='0'; exp.style.transform='none'; exp.style.opacity = '1'; exp.style.pointerEvents='auto'; exp.style.display = 'block'; exp.style.maxHeight = '140px'; exp.style.overflow = 'auto'; } }catch(e){}
-                        // position the indicator to exactly cover the menu-buttons area (so it doesn't touch the profile)
-                        try{
-                            const menuButtons = sidebar.querySelector('.menu-buttons');
-                            if (menuButtons){
-                                const mbRect = menuButtons.getBoundingClientRect();
-                                    // Position the search card under the Settings button so profile stays visible
-                                    const settingsBtn = sidebar.querySelector('.menu-buttons [data-action="go-settings"]');
-                                    const gap = 8; // small gap under settings button
-                                    let topStart = mbRect.top;
-                                    try{
-                                        if (settingsBtn){ const sb = settingsBtn.getBoundingClientRect(); topStart = sb.bottom + gap; }
-                                    }catch(e){}
-                    // compute available space down to bottom of sidebar so we don't overflow the layout
-                        const sbRect = sidebar.getBoundingClientRect();
-                        const availableSpace = Math.max(80, Math.floor(sbRect.bottom - topStart - 12));
-                                const extraDown = 36; // ~3 clicks height
-                        const desiredHeight = Math.min( Math.max(56, Math.floor(mbRect.height) + extraDown), availableSpace );
-                                root.style.top = (topStart) + 'px';
-                                root.style.height = desiredHeight + 'px';
-                                // do NOT hide menu buttons; keep them visible as requested
-                                // set expanded area to use available space (avoid inner scroll where possible)
-                                const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.maxHeight = (desiredHeight - 8) + 'px'; exp.style.overflow = 'auto'; }
-                            }
-                        }catch(e){}
-                    } else {
-                        // fallback: original settingsBtn behaviour
-                        const settingsBtn = document.querySelector('.bottom-settings');
-                        if (settingsBtn){
-                            const rect = settingsBtn.getBoundingClientRect();
-                            root.style.position = 'fixed';
-                            root.style.left = (rect.right + 12) + 'px';
-                            root.style.top = (rect.top) + 'px';
-                            root.style.width = '260px';
-                            root.style.transform = 'none';
-                            try{ const bar = root.querySelector('.search-bar'); if (bar) { bar.style.background = 'rgba(6,18,46,0.88)'; bar.style.color = 'var(--text)'; } }catch(e){}
-                            _toggleSearchExpanded(root, true);
-                        }
-                    }
+                    // desktop: revert to centered floating pill (previous behaviour)
+                    root.style.position = 'fixed';
+                    root.style.left = '50%';
+                    root.style.bottom = '140px';
+                    root.style.transform = 'translateX(-50%)';
+                    root.style.width = '';
+                    root.style.top = '';
+                    root.style.height = '';
+                    root.dataset.desktop = '';
+                    // ensure expanded area is collapsed for desktop (static pill)
+                    try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.classList.remove('expanded'); exp.style.position = ''; exp.style.bottom = 'calc(100% + 10px)'; exp.style.left = ''; exp.style.right = ''; exp.style.transform = 'translateY(8px)'; exp.style.opacity = '0'; exp.style.pointerEvents = 'none'; exp.style.display = 'block'; exp.style.maxHeight = ''; exp.style.overflow = ''; } }catch(e){}
+                }
                 }
             }catch(e){}
             // update game text
@@ -1082,7 +1040,7 @@
             playButton.textContent = 'Отменить';
             playButton.classList.add('visible');
             playButton.setAttribute('aria-hidden','false');
-            disableNavigation();
+            // do not disable navigation here — keep menu/buttons clickable while searching
             // start timer update
             if (searchTimer) clearInterval(searchTimer);
             (function update(){
