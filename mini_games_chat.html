@@ -231,6 +231,14 @@
         @media (max-width: 720px) {
             /* hide action buttons inside game cards on phones (keep global nav) */
             .game-card .game-choose, .game-card .game-lobby, .game-card button { display: none !important; }
+
+        /* Mobile layout: one card per row, show per-card Play buttons */
+        @media (max-width: 720px) {
+            .game-selection { flex-direction: column; }
+            .game-card { width: 100%; min-width: 0; }
+            .game-card .game-choose, .game-card .game-lobby, .game-card button { display: block !important; }
+            .card-play-btn { display: block !important; width: 100%; box-sizing: border-box; }
+        }
             .game-card { cursor: pointer; }
         }
     </style>
@@ -1697,6 +1705,19 @@
                     card.addEventListener('keydown', (ev)=>{
                         if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); card.click(); }
                     });
+                    // on mobile ensure play button exists and is visible so user can tap it directly
+                    try{
+                        const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
+                        if (isMobileNow){
+                            let pbtn = card.querySelector('.card-play-btn');
+                            if (!pbtn){
+                                pbtn = document.createElement('button'); pbtn.className='menu-btn card-play-btn primary'; pbtn.textContent='Играть';
+                                pbtn.style.alignSelf='stretch'; pbtn.style.marginTop='6px'; pbtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); startCardSearch(card); });
+                                card.appendChild(pbtn);
+                            }
+                            pbtn.style.display='block';
+                        }
+                    }catch(e){}
                 });
             }
 
