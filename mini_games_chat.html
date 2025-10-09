@@ -114,7 +114,7 @@
         .app-main { padding:22px; display:flex; flex-direction:column; gap:18px; background:transparent; height:100%; overflow:auto }
 
         /* Game selection — on desktop column, on mobile horizontal cards */
-        .game-selection { display:flex; flex-direction:column; gap:12px }
+    .game-selection { display:flex; flex-direction:column; gap:12px }
         .game-card { background:var(--card); border:1px solid var(--glass); border-radius:var(--radius); padding:16px; display:flex; flex-direction:column; gap:8px; }
         .game-card h3 { font-weight:600; color:var(--text); margin:0 }
         .game-card button { padding:12px 16px; border-radius:var(--radius-sm); border:1px solid var(--glass); background:var(--accent); color:#07102a; font-weight:700; cursor:pointer; transition:all var(--transition); }
@@ -170,6 +170,15 @@
             .lobby-info { flex:1 1 auto; min-width:0; }
             .lobby-actions { display:flex; gap:8px; flex:0 0 auto; }
             .lobby-name { font-size:15px; }
+        }
+        /* Desktop: make cards appear in a grid similar to mobile for denser layout */
+        @media (min-width: 721px) {
+            .game-selection { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px }
+            /* hide the secondary create-lobby button on desktop to match mobile compactness */
+            .game-card .game-lobby { display: none !important }
+            /* make primary action occupy full width within card footer */
+            .game-card .game-choose { width: 100%; }
+            .game-card button { min-height:44px; padding:10px 12px }
         }
 
         /* Game card selection styles + floating Play button */
@@ -1462,7 +1471,7 @@
         // --- Game selection: mobile-friendly selection + floating Play button ---
         (function(){
             const isMobile = window.matchMedia && window.matchMedia('(max-width: 720px)').matches;
-            if (!isMobile) return; // only change behaviour on small screens
+            // Enable mobile-like floating Play button behaviour on desktop as well
 
             // create floating play button if not present
             playButton = document.querySelector('.play-button');
@@ -1473,6 +1482,8 @@
                 playButton.textContent = 'Играть';
                 document.body.appendChild(playButton);
             }
+            // make floating button a bit wider on desktop and slightly higher
+            if (!isMobile){ playButton.style.padding = '12px 32px'; playButton.style.bottom = '120px'; }
 
             let selected = null;
 
