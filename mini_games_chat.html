@@ -731,7 +731,6 @@
 
         // navigation lock helpers (used during quick-match searching/confirmation)
         function disableNavigation(){
-            document.querySelectorAll('[data-action]').forEach(b=>{ try{ b.dataset._disabled = b.dataset.action; b.disabled = true; b.classList.add('disabled'); }catch(e){} });
             document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.disabled=true; b.classList.add('disabled'); }catch(e){} });
         }
 
@@ -847,6 +846,11 @@
                 // optionally show a toast / do nothing
                 console.debug('navigation blocked: game in progress');
                 return;
+            }
+            // if searching, cancel search before navigating
+            if (searching) {
+                try{ socket.emit('cancel_quick_match', {}); }catch(e){}
+                hideSearchIndicator();
             }
             if (a==='go-home') showView('home');
             if (a==='go-lobby') { showView('lobby'); socket.emit('get_lobbies'); }
@@ -1328,7 +1332,6 @@
             playButton.textContent = 'Играть';
             playButton.classList.remove('visible');
             playButton.setAttribute('aria-hidden','true');
-            enableNavigation();
             // reset dynamic fields
             try{ const titleEl = root.querySelector('#search-title'); if (titleEl) { titleEl.textContent = 'Поиск'; titleEl.style.transform = ''; titleEl.style.opacity = ''; } }catch(e){}
             try{ const altEl = root.querySelector('#search-alt-title'); if (altEl) { altEl.style.display = ''; altEl.style.transform = ''; altEl.style.opacity = '0'; } }catch(e){}
