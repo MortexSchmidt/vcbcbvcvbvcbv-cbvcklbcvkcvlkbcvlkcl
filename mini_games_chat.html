@@ -246,6 +246,7 @@
     .end-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2,6,23,0.8); z-index: 1300 }
     .end-card { width: 92%; max-width: 520px; background: linear-gradient(180deg, rgba(20,30,60,0.9), rgba(10,14,26,0.95)); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 18px 60px rgba(2,6,23,0.8); transform: translateY(12px) scale(.98); opacity: 0; animation: popIn 420ms cubic-bezier(.2,.9,.2,1) forwards; display:flex; flex-direction:column; align-items:center; gap:12px }
     @keyframes popIn { to { transform: translateY(0) scale(1); opacity: 1 } }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .winner-emoji { font-size:48px }
     .winner-avatar { width:84px; height:84px; border-radius:20px; overflow:hidden; background:var(--glass); display:flex; align-items:center; justify-content:center; }
     /* mini board in end modal */
@@ -584,17 +585,24 @@
         // clear previous player
         try{ if (_preloadPlayer){ _preloadPlayer.destroy(); _preloadPlayer = null; } }catch(e){}
         // fetch binary
-        try{
+            try{
+            console.info('playLoadingTgs: fetching /assets/loading.tgs');
             const resp = await fetch('/assets/loading.tgs');
-            if (!resp.ok) throw new Error('failed to fetch tgs');
+            console.info('playLoadingTgs: fetch response', resp.status, resp.headers.get('content-type'));
+            if (!resp.ok) throw new Error('failed to fetch tgs: ' + resp.status);
             const arrbuf = await resp.arrayBuffer();
+            console.info('playLoadingTgs: fetched bytes=', arrbuf.byteLength);
             const uint8 = new Uint8Array(arrbuf);
             // Try to inflate (pako) then parse JSON
             try{
+                console.info('playLoadingTgs: attempting pako.inflate');
                 const inflated = pako.inflate(uint8, { to: 'string' });
+                console.info('playLoadingTgs: inflate ok, length=', inflated.length);
                 const json = JSON.parse(inflated);
+                console.info('playLoadingTgs: JSON parsed, version=', json.v || json.version || 'n/a');
                 // create player
                 _preloadPlayer = lottie.loadAnimation({ container: container, renderer: 'svg', loop: true, autoplay: true, animationData: json });
+                console.info('playLoadingTgs: lottie player created');
                 // ensure fallbacks hidden
                 if (imgFallback) imgFallback.style.display = 'none';
                 if (svgFallback) svgFallback.style.display = 'none';
