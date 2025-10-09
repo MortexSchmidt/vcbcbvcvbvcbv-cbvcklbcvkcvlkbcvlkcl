@@ -447,7 +447,36 @@
         try{ tg.expand?.() }catch(e){}
         try{ tg.ready?.() }catch(e){}
 
-    const socket = io('https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app');
+    // Попытка подключения к Socket.IO серверу
+    const socket = io('https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app', {
+        transports: ['websocket', 'polling'],
+        upgrade: true,
+        timeout: 10000,
+        forceNew: true
+    });
+
+    // Добавляем обработчик ошибок подключения
+    socket.on('connect_error', (error) => {
+        console.error('Socket.IO connection error:', error);
+        console.log('Trying alternative connection...');
+
+        // Попытка альтернативного подключения
+        socket.disconnect();
+        window.altSocket = io('http://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app', {
+            transports: ['websocket', 'polling'],
+            upgrade: true,
+            timeout: 10000
+        });
+
+        // Копируем все обработчики событий на альтернативный сокет
+        window.altSocket.on('connect', () => {
+            console.log('Alternative socket connected successfully');
+            // Заменяем основной сокет альтернативным
+            Object.setPrototypeOf(window.altSocket, socket);
+            socket = window.altSocket;
+            delete window.altSocket;
+        });
+    });
         let currentUser = null;
         let activeLobby = null; // { id, lobby }
     // global reference to floating play button (may be created later on mobile)
@@ -1824,38 +1853,50 @@
                 lastSearchGame = gameName;
 
                 try {
-                    console.log('Starting quick match search for game:', gameName);
+                    console.log('Starting game search for:', gameName);
                     console.log('Socket connected:', socket.connected);
-                    console.log('User data:', {
-                        name: currentUser?.name,
-                        user_id: currentUser?.user_id,
-                        avatar: currentUser?.avatar
-                    });
+                    console.log('User authenticated:', !!currentUser?.user_id);
 
-                    socket.emit('quick_match', {
-                        player_name: currentUser?.name,
-                        player_avatar: currentUser?.avatar,
-                        user_id: currentUser?.user_id,
-                        game: gameName
-                    });
+                    if (!socket.connected) {
+                        alert('Нет подключения к серверу. Попробуйте перезагрузить страницу.');
+                        return;
+                    }
 
-                    console.log('Quick match event emitted successfully');
+                    if (!currentUser?.user_id) {
+                        alert('Необходимо авторизоваться для начала игры');
+                        openAuthModal();
+                        return;
+                    }
 
-                    // Добавляем обратный вызов для подтверждения получения сервером
-                    socket.once('quick_match_received', (data) => {
-                        console.log('Server received quick_match event:', data);
-                    });
+                    // Используем событие create_lobby вместо quick_match для надежности
+                    const lobbyData = {
+                        name: `${currentUser.name || 'Игрок'}'s ${gameName} game`,
+                        game: gameName,
+                        player_name: currentUser.name,
+                        player_avatar: currentUser.avatar || '',
+                        user_id: currentUser.user_id,
+                        hidden: true // Создаем скрытое лобби для быстрого матча
+                    };
 
-                    // Устанавливаем таймаут для проверки ответа сервера
-                    setTimeout(() => {
-                        if (!document.querySelector('.search-indicator[style*="display: block"]')) {
-                            console.warn('No search indicator appeared, server may not have responded');
-                        }
-                    }, 2000);
+                    console.log('Creating lobby with data:', lobbyData);
+                    socket.emit('create_lobby', lobbyData);
+
+                    console.log('Create lobby event emitted successfully');
+
+                    // Показываем индикатор поиска сразу
+                    try {
+                        showSearchIndicator({
+                            game: gameName,
+                            player: { name: currentUser?.name, avatar: currentUser?.avatar },
+                            foundCount: 1
+                        });
+                    } catch(e) {
+                        console.warn('Failed to show search indicator:', e);
+                    }
 
                 } catch (error) {
-                    console.error('Error emitting quick_match event:', error);
-                    alert('Ошибка при начале поиска игры: ' + error.message);
+                    console.error('Error creating lobby:', error);
+                    alert('Ошибка при создании лобби: ' + error.message);
                 }
 
                 // show search indicator
