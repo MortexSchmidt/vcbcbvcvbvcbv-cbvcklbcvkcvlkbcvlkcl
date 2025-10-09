@@ -328,6 +328,21 @@
             // notify server when connected
         }
 
+        // update sidebar/profile UI
+        function updateProfile(user){
+            try{
+                const profileName = document.querySelector('.profile-name');
+                const profileSub = document.querySelector('.profile-sub');
+                const avatarEl = document.querySelector('.avatar');
+                if (!profileName || !avatarEl) return;
+                profileName.textContent = user.name || ('User' + (user.user_id||''));
+                profileSub.textContent = user.user_id ? ('ID: ' + user.user_id) : '';
+                avatarEl.innerHTML = '';
+                if (user.avatar){ const img = document.createElement('img'); img.src = user.avatar; img.alt = user.name || 'Avatar'; avatarEl.appendChild(img); }
+                else { avatarEl.textContent = (user.name||'').slice(0,1).toUpperCase(); }
+            }catch(e){ console.error('updateProfile err', e); }
+        }
+
         socket.on('connect', ()=>{
             console.log('socket connected');
             if (currentUser) socket.emit('identify', currentUser);
@@ -447,6 +462,8 @@
 
         // Create lobby
         document.getElementById('btn-create-lobby').addEventListener('click', ()=>{
+            // require auth
+            if (!currentUser || !currentUser.user_id) { openAuthModal(); return; }
             const name = document.getElementById('lobby-name').value || `${currentUser?.name || 'Игрок'}'s lobby`;
             socket.emit('create_lobby', { name, player_name: currentUser?.name || 'Игрок', player_avatar: currentUser?.avatar || '', user_id: currentUser?.user_id });
         });
@@ -466,8 +483,15 @@
 
                 const avatar = document.createElement('div');
                 avatar.className = 'lobby-avatar';
-                const initial = (lobby.name||'L').trim().slice(0,1).toUpperCase();
-                avatar.textContent = initial;
+                // if avatar available from lobby.players[0].avatar use img, else show initial
+                const firstPlayer = (lobby.players && lobby.players[0]) ? lobby.players[0] : null;
+                if (firstPlayer && firstPlayer.avatar) {
+                    const img = document.createElement('img'); img.src = firstPlayer.avatar; img.alt = firstPlayer.name || 'Игрок';
+                    avatar.innerHTML = ''; avatar.appendChild(img);
+                } else {
+                    const initial = (lobby.name||'L').trim().slice(0,1).toUpperCase();
+                    avatar.textContent = initial;
+                }
 
                 const info = document.createElement('div');
                 info.className = 'lobby-info';
@@ -482,7 +506,10 @@
 
                 const join = document.createElement('button'); join.className='menu-btn'; join.textContent = lobby.players && lobby.players.length>=2 ? 'Полное' : 'Войти';
                 if (lobby.players && lobby.players.length>=2) join.disabled = true;
-                join.addEventListener('click', ()=>{ socket.emit('join_lobby', { lobby_id: lobby.id, player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id }); });
+                join.addEventListener('click', ()=>{
+                    if (!currentUser || !currentUser.user_id) { openAuthModal(); return; }
+                    socket.emit('join_lobby', { lobby_id: lobby.id, player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id });
+                });
 
                 actions.appendChild(statusBadge);
                 actions.appendChild(join);
@@ -529,7 +556,12 @@
             // players row
             const pr = document.getElementById('players-row'); pr.innerHTML = '';
             (lobby.players||[]).forEach(p=>{
-                const d = document.createElement('div'); d.style.display='flex'; d.style.alignItems='center'; d.style.gap='8px'; d.innerHTML = `<div style="width:40px;height:40px;border-radius:8px;background:var(--glass);display:flex;align-items:center;justify-content:center;font-weight:600">${escapeHtml((p.name||'Игрок').slice(0,1))}</div><div><div style='font-weight:600'>${escapeHtml(p.name||'Игрок')}</div><div style='color:var(--muted);font-size:12px'>${escapeHtml(p.symbol||'')}</div></div>`;
+                const d = document.createElement('div'); d.style.display='flex'; d.style.alignItems='center'; d.style.gap='8px';
+                const imgWrap = document.createElement('div'); imgWrap.style.width='40px'; imgWrap.style.height='40px'; imgWrap.style.borderRadius='8px'; imgWrap.style.background='var(--glass)'; imgWrap.style.display='flex'; imgWrap.style.alignItems='center'; imgWrap.style.justifyContent='center'; imgWrap.style.fontWeight='600';
+                if (p.avatar){ const img = document.createElement('img'); img.src = p.avatar; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; img.style.borderRadius='8px'; imgWrap.appendChild(img); }
+                else { imgWrap.textContent = escapeHtml((p.name||'Игрок').slice(0,1)); }
+                const infoWrap = document.createElement('div'); infoWrap.innerHTML = `<div style='font-weight:600'>${escapeHtml(p.name||'Игрок')}</div><div style='color:var(--muted);font-size:12px'>${escapeHtml(p.symbol||'')}</div>`;
+                d.appendChild(imgWrap); d.appendChild(infoWrap);
                 pr.appendChild(d);
             });
 
