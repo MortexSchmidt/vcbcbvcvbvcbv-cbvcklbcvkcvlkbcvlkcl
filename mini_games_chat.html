@@ -444,7 +444,6 @@
             <div id="confirm-actions-row" style="display:flex;gap:8px;justify-content:space-between;align-items:center">
                 <div id="confirm-timer" style="font-weight:700;color:var(--accent)">15</div>
                 <div id="confirm-buttons" style="display:flex;gap:8px;justify-content:flex-end">
-                    <button id="btn-decline" class="menu-btn">Отказаться</button>
                     <button id="btn-accept" class="menu-btn primary">Подтвердить</button>
                 </div>
             </div>
@@ -1432,14 +1431,7 @@
                         try{ document.getElementById('confirm-waiting').style.display = 'block'; }catch(e){}
                         // keep timer visible but make it non-interactive (it's behind the modal now)
                     };
-                    document.getElementById('btn-decline').onclick = ()=>{
-                        socket.emit('match_decline', { match_id: payload.match_id, user_id: currentUser?.user_id });
-                        document.getElementById('confirm-modal').style.display = 'none';
-                        if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
-                        // re-enable navigation after decline and restore play button
-                        try{ if (playButton) playButton.style.pointerEvents = ''; }catch(e){}
-                        enableNavigation();
-                    };
+                    // No decline button: user may simply wait out the timeout to decline implicitly.
                 }catch(e){ console.error(e); }
         });
 
