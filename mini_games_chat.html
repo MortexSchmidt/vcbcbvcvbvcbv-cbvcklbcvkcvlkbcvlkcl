@@ -199,8 +199,10 @@
             pointer-events: none;
         }
         /* Ensure search indicator can render expanded content above the pill without shifting the pill itself */
-        #search-indicator { overflow: visible; }
-        #search-indicator .search-bar { position: relative; z-index: 2; }
+    /* allow clicks to pass through the indicator wrapper; interactive parts keep pointer-events */
+    #search-indicator { overflow: visible; pointer-events: none; }
+    #search-indicator .search-bar { position: relative; z-index: 2; pointer-events: auto; }
+    #search-indicator .search-expanded { pointer-events: auto; }
         #search-indicator .search-expanded {
             position: absolute;
             left: 0;
@@ -992,23 +994,16 @@
             try{
                 const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
                 if (isMobileNow){
-                    // anchor to bottom navigation area: place indicator just above bottom-nav and stretch to match its width
+                    // mobile: stretch full-width pill above bottom nav (consistent with mobile UI)
                     const bottomNav = document.querySelector('.bottom-nav');
-                    if (bottomNav){
-                        const bnRect = bottomNav.getBoundingClientRect();
-                        root.style.position = 'fixed';
-                        root.style.left = (bnRect.left + 12) + 'px';
-                        root.style.width = Math.max(240, bnRect.width - 24) + 'px';
-                        // place just above bottom nav (account safe-area inset)
-                        root.style.bottom = (window.innerHeight - bnRect.top + 8) + 'px';
-                        root.style.top = 'auto'; root.style.transform = 'none';
-                        // style as blue pill
-                        try{ root.querySelector('.search-bar').style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; }catch(e){}
-                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.transformOrigin = 'bottom'; } }catch(e){}
-                    } else {
-                        // fallback: center above the bottom area
-                        root.style.position = 'fixed'; root.style.left='50%'; root.style.transform='translateX(-50%)'; root.style.bottom='120px';
-                    }
+                    root.style.position = 'fixed';
+                    root.style.left = '0'; root.style.right = '0';
+                    root.style.width = 'calc(100% - 28px)'; root.style.margin = '0 14px';
+                    root.style.transform = 'none';
+                    // place just above bottom navigation or safe fallback value
+                    if (bottomNav){ const bnRect = bottomNav.getBoundingClientRect(); root.style.bottom = (window.innerHeight - bnRect.top + 8) + 'px'; } else { root.style.bottom = '84px'; }
+                    try{ root.querySelector('.search-bar').style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; }catch(e){}
+                    try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.transformOrigin = 'bottom'; } }catch(e){}
                 } else {
                     // desktop: prefer anchoring the indicator inside the left sidebar area (where user highlighted)
                     const sidebar = document.querySelector('.app-sidebar');
@@ -1038,11 +1033,11 @@
                                     try{
                                         if (settingsBtn){ const sb = settingsBtn.getBoundingClientRect(); topStart = sb.bottom + gap; }
                                     }catch(e){}
-                                // compute available space down to bottom of sidebar so we don't overflow the layout
-                                const sbRect = sidebar.getBoundingClientRect();
-                                const availableSpace = Math.max(80, Math.floor(sbRect.bottom - topStart - 12));
+                    // compute available space down to bottom of sidebar so we don't overflow the layout
+                        const sbRect = sidebar.getBoundingClientRect();
+                        const availableSpace = Math.max(80, Math.floor(sbRect.bottom - topStart - 12));
                                 const extraDown = 36; // ~3 clicks height
-                                const desiredHeight = Math.min( Math.max(56, Math.floor(mbRect.height) + extraDown), availableSpace );
+                        const desiredHeight = Math.min( Math.max(56, Math.floor(mbRect.height) + extraDown), availableSpace );
                                 root.style.top = (topStart) + 'px';
                                 root.style.height = desiredHeight + 'px';
                                 // do NOT hide menu buttons; keep them visible as requested
