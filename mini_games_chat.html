@@ -160,7 +160,8 @@
         /* Game card selection styles + floating Play button */
         .game-card { transition: box-shadow var(--transition), outline var(--transition); }
         .game-card:focus { outline: 2px dashed rgba(108,140,255,0.18); }
-        .game-card.selected { outline: 3px solid var(--accent); box-shadow: 0 12px 34px rgba(108,140,255,0.22); background: linear-gradient(180deg, rgba(20,30,60,0.6), rgba(12,20,34,0.6)); transform: translateY(-4px); animation: glow 900ms ease-in-out infinite alternate; }
+    /* make selection visually robust even when global focus outlines are suppressed */
+    .game-card.selected { border: 2px solid var(--accent); box-shadow: 0 14px 40px rgba(108,140,255,0.28); background: linear-gradient(180deg, rgba(20,30,60,0.6), rgba(12,20,34,0.6)); transform: translateY(-4px); animation: glow 900ms ease-in-out infinite alternate; }
         @keyframes glow { from { box-shadow: 0 8px 24px rgba(108,140,255,0.12); } to { box-shadow: 0 18px 44px rgba(108,140,255,0.28); } }
 
         .play-button {
@@ -761,6 +762,9 @@
                     card.onclick = null;
                     card.addEventListener('click', (e)=>{
                         e.stopPropagation();
+                        // do not allow selecting disabled/coming-soon cards
+                        if (card.getAttribute('aria-disabled') === 'true' || card.querySelector('.disabled')) return;
+
                         if (selected === card) {
                             card.classList.remove('selected');
                             card.setAttribute('aria-selected','false');
@@ -772,6 +776,8 @@
                             selected = card;
                             card.classList.add('selected');
                             card.setAttribute('aria-selected','true');
+                            // force focus and repaint so visual border appears immediately
+                            try{ card.focus(); card.getBoundingClientRect(); }catch(e){}
                             // show animated play button
                             playButton.classList.add('visible');
                             playButton.setAttribute('aria-hidden','false');
