@@ -171,15 +171,7 @@
             .lobby-actions { display:flex; gap:8px; flex:0 0 auto; }
             .lobby-name { font-size:15px; }
         }
-        /* Desktop: make cards appear in a grid similar to mobile for denser layout */
-        @media (min-width: 721px) {
-            .game-selection { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px }
-            /* hide the secondary create-lobby button on desktop to match mobile compactness */
-            .game-card .game-lobby { display: none !important }
-            /* make primary action occupy full width within card footer */
-            .game-card .game-choose { width: 100%; }
-            .game-card button { min-height:44px; padding:10px 12px }
-        }
+        /* desktop keeps default column layout for game selection (restore original) */
 
         /* Game card selection styles + floating Play button */
         .game-card { transition: box-shadow var(--transition), outline var(--transition); }
@@ -278,7 +270,6 @@
                         <p style="margin:0;color:var(--muted);font-size:13px">Быстрая игра 1 на 1 в реальном времени.</p>
                         <div style="height:6px"></div>
                         <div style="display:flex;gap:8px">
-                            <button class="game-choose" data-game="tictactoe">Играть</button>
                             <button class="game-lobby" data-game="tictactoe">Создать лобби</button>
                         </div>
                     </article>
@@ -287,14 +278,12 @@
                         <h3>Мемо (скоро)</h3>
                         <p style="margin:0;color:var(--muted);font-size:13px">Карточная память — в разработке.</p>
                         <div style="height:6px"></div>
-                        <button class="disabled">Скоро</button>
                     </article>
 
                     <article class="game-card" data-game="quiz" aria-disabled="true">
                         <h3>Quiz (скоро)</h3>
                         <p style="margin:0;color:var(--muted);font-size:13px">Викторина против друзей.</p>
                         <div style="height:6px"></div>
-                        <button class="disabled">Скоро</button>
                     </article>
                 </div>
             </section>
@@ -1471,7 +1460,7 @@
         // --- Game selection: mobile-friendly selection + floating Play button ---
         (function(){
             const isMobile = window.matchMedia && window.matchMedia('(max-width: 720px)').matches;
-            // Enable mobile-like floating Play button behaviour on desktop as well
+            if (!isMobile) return; // only change behaviour on small screens
 
             // create floating play button if not present
             playButton = document.querySelector('.play-button');
