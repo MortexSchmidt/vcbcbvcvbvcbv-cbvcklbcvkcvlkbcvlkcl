@@ -121,6 +121,7 @@ MAX_LOBBIES = int(os.environ.get('MAX_LOBBIES', 10))
 MAX_PLAYERS_PER_LOBBY = int(os.environ.get('MAX_PLAYERS_PER_LOBBY', 10))
 # queue for hidden quick-match lobbies
 hidden_waiting = []  # list of lobby_id
+pending_matches = {}  # match_id -> { lobby_id, players: [sid1,sid2], confirmed: set(), timer }
 
 # Функции модерации
 async def add_warning(user_id: int, violation_type: str, context: ContextTypes.DEFAULT_TYPE):
@@ -1858,13 +1859,67 @@ def handle_quick_match(data):
         break
 
     if matched:
-        # notify both players in their rooms (rooms are lobby_id and sid rooms are joined earlier via join_room)
-        join_room(matched['id'])
-        # emit update to participants only
+        # prepare a match confirmation step: emit 'match_found' to both players with a 15s confirmation window
+        p0 = other['players'][0]['sid']
+        p1 = request.sid
+        match_id = uuid.uuid4().hex[:8]
+        pending_matches[match_id] = {'lobby_id': other['id'], 'players': [p0, p1], 'confirmed': set(), 'timer': None}
+
+        payload = {'match_id': match_id, 'lobby': other}
         try:
-            socketio.emit('lobby_started', matched, room=matched['id'])
+            socketio.emit('match_found', payload, room=p0)
+            socketio.emit('match_found', payload, room=p1)
         except Exception:
             pass
+
+        # start timeout timer (15s)
+        def match_timeout(m_id=match_id):
+            m = pending_matches.get(m_id)
+            if not m:
+                return
+            # determine who confirmed
+            conf = m.get('confirmed', set())
+            players = m.get('players', [])
+            # if both confirmed, do nothing (should have been started)
+            if len(conf) >= 2:
+                try:
+                    del pending_matches[m_id]
+                except Exception:
+                    pass
+                return
+            # if one confirmed, requeue that player
+            for sid in players:
+                if sid in conf:
+                    # create new hidden lobby for this sid and notify searching
+                    try:
+                        nid = uuid.uuid4().hex[:8]
+                        lobbies[nid] = {
+                            'id': nid,
+                            'name': 'Quick Match',
+                            'players': [{'sid': sid, 'user_id': None, 'name': 'Игрок', 'symbol': 'X', 'avatar': ''}],
+                            'hidden': True,
+                            'status': 'waiting',
+                            'board': ['', '', '', '', '', '', '', '', ''],
+                            'current_player': 'X'
+                        }
+                        hidden_waiting.append(nid)
+                        socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=sid)
+                    except Exception:
+                        pass
+                else:
+                    # notify other player that match cancelled for them
+                    try:
+                        socketio.emit('match_cancelled', {'match_id': m_id, 'reason': 'timeout'}, room=sid)
+                    except Exception:
+                        pass
+            try:
+                del pending_matches[m_id]
+            except Exception:
+                pass
+
+        t = threading.Timer(15.0, match_timeout)
+        pending_matches[match_id]['timer'] = t
+        t.start()
     else:
         # no match yet — keep waiting; notify creator that search is ongoing
         emit('lobby_waiting', {'lobby_id': lobby_id, 'message': 'Поиск соперника...'}, room=request.sid)
@@ -1899,6 +1954,86 @@ def handle_cancel_quick_match(data):
         emit('lobby_cancelled', {'lobby_id': to_remove, 'message': 'Поиск отменён'}, room=request.sid)
     else:
         emit('lobby_cancelled', {'lobby_id': None, 'message': 'Нечего отменять'}, room=request.sid)
+
+
+@socketio.on('match_accept')
+def handle_match_accept(data):
+    match_id = data.get('match_id')
+    m = pending_matches.get(match_id)
+    if not m:
+        emit('error', {'message': 'Матч не найден или уже обработан'})
+        return
+    sid = request.sid
+    m['confirmed'].add(sid)
+    # if both confirmed -> start game
+    if len(m['confirmed']) >= 2:
+        # cancel timer
+        try:
+            if m.get('timer'):
+                m['timer'].cancel()
+        except Exception:
+            pass
+        lobby_id = m['lobby_id']
+        lobby = lobbies.get(lobby_id)
+        if lobby:
+            lobby['status'] = 'playing'
+        # notify both players
+        for psid in m.get('players', []):
+            try:
+                socketio.emit('lobby_started', lobby or {'id': lobby_id}, room=psid)
+            except Exception:
+                pass
+        try:
+            del pending_matches[match_id]
+        except Exception:
+            pass
+    else:
+        # notify the player we received acceptance (optional)
+        emit('match_ack', {'match_id': match_id})
+
+
+@socketio.on('match_decline')
+def handle_match_decline(data):
+    match_id = data.get('match_id')
+    m = pending_matches.get(match_id)
+    if not m:
+        emit('error', {'message': 'Матч не найден'})
+        return
+    sid = request.sid
+    # cancel timer
+    try:
+        if m.get('timer'):
+            m['timer'].cancel()
+    except Exception:
+        pass
+    # notify other player and requeue them
+    for psid in m.get('players', []):
+        if psid == sid:
+            try:
+                socketio.emit('match_cancelled', {'match_id': match_id, 'reason': 'declined'}, room=psid)
+            except Exception:
+                pass
+        else:
+            try:
+                # requeue other player for quick match
+                nid = uuid.uuid4().hex[:8]
+                lobbies[nid] = {
+                    'id': nid,
+                    'name': 'Quick Match',
+                    'players': [{'sid': psid, 'user_id': None, 'name': 'Игрок', 'symbol': 'X', 'avatar': ''}],
+                    'hidden': True,
+                    'status': 'waiting',
+                    'board': ['', '', '', '', '', '', '', '', ''],
+                    'current_player': 'X'
+                }
+                hidden_waiting.append(nid)
+                socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=psid)
+            except Exception:
+                pass
+    try:
+        del pending_matches[match_id]
+    except Exception:
+        pass
 
 @socketio.on('make_move')
 def handle_make_move(data):

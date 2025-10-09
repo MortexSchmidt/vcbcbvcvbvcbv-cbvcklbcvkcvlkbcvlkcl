@@ -301,12 +301,21 @@
         </div>
     </div>
 
-    <!-- Quick-match waiting modal -->
-    <div id="search-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:210">
-        <div style="width:92%;max-width:420px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)">
-            <h3 style="margin:0 0 8px 0">Поиск соперника</h3>
-            <p id="search-msg" style="margin:0 0 12px 0;color:var(--muted)">Поиск соперника...</p>
-            <div style="display:flex;gap:8px;justify-content:flex-end"><button id="btn-cancel-search" class="menu-btn">Отменить</button></div>
+    <!-- Inline quick-match status (appears above floating play button) -->
+    <div id="search-indicator" style="position:fixed;left:50%;bottom:140px;transform:translateX(-50%);display:none;z-index:1002;padding:8px 12px;border-radius:10px;background:rgba(2,6,23,0.9);border:1px solid rgba(255,255,255,0.03);font-weight:700;color:var(--text)"></div>
+
+    <!-- Blocking match confirmation modal (appears when match found) -->
+    <div id="confirm-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.8);z-index:220">
+        <div style="width:92%;max-width:520px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)">
+            <h3 id="confirm-title" style="margin:0 0 8px 0">Матч найден</h3>
+            <p id="confirm-desc" style="margin:0 0 12px 0;color:var(--muted)">Подтвердите участие. Выйдя — вы получите временный бан.</p>
+            <div style="display:flex;gap:8px;justify-content:space-between;align-items:center">
+                <div id="confirm-timer" style="font-weight:700;color:var(--accent)">15</div>
+                <div style="display:flex;gap:8px;justify-content:flex-end">
+                    <button id="btn-decline" class="menu-btn">Отказаться</button>
+                    <button id="btn-accept" class="menu-btn primary">Подтвердить</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -552,20 +561,84 @@
                 try{ SoundEngine.lobbyCreated(); }catch(e){}
             }catch(e){ console.error(e); }
         });
-        socket.on('lobby_waiting', (data)=>{
+        // inline search indicator and play button toggle state
+        let searching = false;
+        let searchStart = 0;
+        let searchTimer = null;
+
+        function showSearchIndicator(){
+            searching = true; searchStart = Date.now();
+            document.getElementById('search-indicator').style.display = 'block';
+            playButton.textContent = 'Отменить';
+            playButton.classList.add('visible');
+            playButton.setAttribute('aria-hidden','false');
+            // start timer update
+            if (searchTimer) clearInterval(searchTimer);
+            searchTimer = setInterval(()=>{
+                const elapsed = Math.floor((Date.now() - searchStart)/1000);
+                const sec = String(elapsed).padStart(2,'0');
+                document.getElementById('search-indicator').textContent = `Поиск: ${sec} — 1/2`;
+            }, 500);
+        }
+
+        function hideSearchIndicator(){
+            searching = false;
+            document.getElementById('search-indicator').style.display = 'none';
+            if (searchTimer) { clearInterval(searchTimer); searchTimer = null; }
+            playButton.textContent = 'Играть';
+            playButton.classList.remove('visible');
+            playButton.setAttribute('aria-hidden','true');
+        }
+
+        socket.on('lobby_waiting', (data)=>{ try{ showSearchIndicator(); }catch(e){} });
+        socket.on('lobby_cancelled', (data)=>{ try{ hideSearchIndicator(); }catch(e){} });
+
+        // playButton cancel handler: if searching -> cancel, else start quick_match
+        playButton.addEventListener('click', (ev)=>{
+            ev.stopPropagation();
+            if (!selected) return;
+            if (!currentUser || !currentUser.user_id) { openAuthModal(); return; }
+            if (searching){ socket.emit('cancel_quick_match', {}); hideSearchIndicator(); return; }
+            socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id });
+            try{ SoundEngine.modalOpen(); }catch(e){}
+        });
+
+        // match found confirmation flow
+        let confirmCountdown = null;
+        socket.on('match_found', (payload)=>{
             try{
-                document.getElementById('search-msg').textContent = data.message || 'Поиск соперника...';
-                document.getElementById('search-modal').style.display = 'flex';
-            }catch(e){ }
+                // show blocking confirm modal
+                document.getElementById('confirm-modal').style.display = 'flex';
+                let timeLeft = 15;
+                document.getElementById('confirm-timer').textContent = String(timeLeft);
+                // start countdown
+                if (confirmCountdown) clearInterval(confirmCountdown);
+                confirmCountdown = setInterval(()=>{
+                    timeLeft -= 1;
+                    document.getElementById('confirm-timer').textContent = String(timeLeft);
+                    if (timeLeft <= 0){
+                        clearInterval(confirmCountdown); confirmCountdown = null;
+                        // auto-decline if not confirmed
+                        socket.emit('match_decline', { match_id: payload.match_id });
+                        document.getElementById('confirm-modal').style.display = 'none';
+                    }
+                }, 1000);
+
+                // accept/decline handlers
+                document.getElementById('btn-accept').onclick = ()=>{
+                    socket.emit('match_accept', { match_id: payload.match_id });
+                    document.getElementById('confirm-modal').style.display = 'none';
+                    if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
+                };
+                document.getElementById('btn-decline').onclick = ()=>{
+                    socket.emit('match_decline', { match_id: payload.match_id });
+                    document.getElementById('confirm-modal').style.display = 'none';
+                    if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; }
+                };
+            }catch(e){ console.error(e); }
         });
 
-        socket.on('lobby_cancelled', (data)=>{
-            try{ document.getElementById('search-modal').style.display = 'none'; }catch(e){}
-        });
-
-        document.getElementById('btn-cancel-search').addEventListener('click', ()=>{
-            socket.emit('cancel_quick_match', {});
-        });
+        socket.on('match_cancelled', (data)=>{ try{ hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } }catch(e){} });
         socket.on('lobby_created', (data)=>{
             // server returns lobby_id and lobby
             const lobby = data.lobby || data;
