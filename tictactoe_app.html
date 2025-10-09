@@ -245,15 +245,26 @@
     .section-title{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--text);margin:0 0 8px 0}
     .section-title i{color:var(--accent)}
 
+    /* На мобильных: скрываем все кнопки внутри карточек лобби */
+    @media (max-width: 768px) {
+        .lobby-card button,
+        .lobby-card .menu-btn {
+            display: none !important;
+        }
+        .lobby-card { cursor: pointer; }
+        .lobby-card.selected { outline: 2px solid var(--accent); box-shadow: 0 6px 20px rgba(108,140,255,0.10); }
+    }
     .play-button {
         position: fixed;
-        bottom: 80px;
         left: 50%;
+        bottom: 80px;
         transform: translateX(-50%);
         background: var(--accent);
         color: #fff;
-        padding: 12px 24px;
+        padding: 14px 32px;
         border-radius: var(--radius);
+        font-size: 1.1rem;
+        font-weight: 600;
         box-shadow: var(--shadow-1);
         display: none;
         z-index: 1000;
@@ -350,42 +361,32 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => {
-            const lobbyCards = document.querySelectorAll('.lobby-card');
-            const playButton = document.createElement('button');
-            playButton.className = 'play-button';
-            playButton.textContent = 'Играть';
-            document.body.appendChild(playButton);
-
-            let selectedCard = null;
-
             const isMobile = window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
-
+            const lobbyCards = document.querySelectorAll('.lobby-card');
+            let playButton = document.querySelector('.play-button');
+            if (!playButton) {
+                playButton = document.createElement('button');
+                playButton.className = 'play-button';
+                playButton.textContent = 'Играть';
+                document.body.appendChild(playButton);
+            }
+            let selectedCard = null;
             if (isMobile) {
                 lobbyCards.forEach(card => {
                     card.addEventListener('click', (e) => {
-                        // предотвращаем срабатывание внешнего обработчика, который скрывает кнопку
                         e.stopPropagation();
-
                         if (selectedCard === card) {
-                            // Снятие выделения
                             card.classList.remove('selected');
                             selectedCard = null;
                             playButton.style.display = 'none';
                         } else {
-                            // Убираем выделение у предыдущей
                             if (selectedCard) selectedCard.classList.remove('selected');
-
-                            // Выделяем новую карточку
                             selectedCard = card;
                             card.classList.add('selected');
-
-                            // Позиционируем кнопку чуть выше нижней панели
                             playButton.style.display = 'block';
                         }
                     });
                 });
-
-                // Скрыть кнопку при клике вне блоков
                 document.addEventListener('click', (event) => {
                     if (!event.target.closest('.lobby-card')) {
                         if (selectedCard) selectedCard.classList.remove('selected');
@@ -393,24 +394,16 @@
                         playButton.style.display = 'none';
                     }
                 });
-
-                // Обработка нажатия на кнопку "Играть" (только пример: можно заменить на emit сокета)
                 playButton.addEventListener('click', () => {
                     if (!selectedCard) return;
-                    const lobbyName = selectedCard.querySelector('.lobby-name')?.textContent || null;
-                    // Вызов сокета для присоединения/начала игры (если нужно) — оставлено закомментированным
-                    // socket.emit('join_lobby', { lobby_id: selectedCard.dataset.lobbyId || null, user: currentUser });
-
-                    // Временно показываем уведомление через Telegram WebApp
+                    // Здесь можно добавить socket.emit('join_lobby', ...) или другую логику
+                    const lobbyName = selectedCard.querySelector('.lobby-name')?.textContent || '';
                     if (window.Telegram && window.Telegram.WebApp) {
-                        window.Telegram.WebApp.showAlert(lobbyName ? `Вы присоединяетесь к ${lobbyName}` : 'Присоединение...');
+                        window.Telegram.WebApp.showAlert(lobbyName ? `Вы выбрали: ${lobbyName}` : 'Выбрана игра');
                     } else {
-                        alert(lobbyName ? `Вы присоединяетесь к ${lobbyName}` : 'Присоединение...');
+                        alert(lobbyName ? `Вы выбрали: ${lobbyName}` : 'Выбрана игра');
                     }
                 });
-            } else {
-                // На десктопе оставляем текущую логику без переключения карточек
-                lobbyCards.forEach(card => card.classList.remove('selected'));
             }
         });
     </script>
