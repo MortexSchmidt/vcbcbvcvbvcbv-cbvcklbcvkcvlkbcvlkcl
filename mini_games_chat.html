@@ -233,8 +233,12 @@
             .game-selection { flex-direction: column; }
             .game-card { width: 100%; min-width: 0; }
             .game-card .game-choose, .game-card .game-lobby, .game-card button { display: block !important; }
-            /* do not auto-show per-card play buttons on mobile; they appear after selection */
-            .card-play-btn { width: 100%; box-sizing: border-box; }
+                /* do not auto-show per-card play buttons on mobile; they appear after selection */
+                /* hide card-play-btn by default (prevent media rule that forced all buttons visible)
+                    show only when the card is selected or the button is in searching state */
+                .card-play-btn { width: 100%; box-sizing: border-box; display: none !important; }
+                .game-card.selected .card-play-btn { display: block !important; }
+                .card-play-btn[data-searching="1"] { display: block !important; }
             /* place search indicator above bottom-nav and stretch across the menu area */
             #search-indicator { left: 0 !important; right: 0 !important; bottom: 84px !important; transform: none !important; min-width: unset !important; width: calc(100% - 28px) !important; margin: 0 14px; }
             #search-indicator .search-bar { justify-content: center; width: 100%; border-radius: 12px; }
@@ -943,20 +947,22 @@
             try{
                 const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
                 if (isMobileNow){
-                    // attach to top of the sidebar menu (.app-sidebar)
-                    const sidebar = document.querySelector('.app-sidebar');
-                    if (sidebar){
-                        const sbRect = sidebar.getBoundingClientRect();
+                    // anchor to bottom navigation area: place indicator just above bottom-nav and stretch to match its width
+                    const bottomNav = document.querySelector('.bottom-nav');
+                    if (bottomNav){
+                        const bnRect = bottomNav.getBoundingClientRect();
                         root.style.position = 'fixed';
-                        root.style.left = (sbRect.left) + 'px';
-                        root.style.width = (sbRect.width) + 'px';
-                        // place slightly below sidebar top so it appears attached to menu area
-                        root.style.top = (sbRect.top + 8) + 'px';
-                        root.style.bottom = 'auto'; root.style.transform = 'none';
+                        root.style.left = (bnRect.left + 12) + 'px';
+                        root.style.width = Math.max(240, bnRect.width - 24) + 'px';
+                        // place just above bottom nav (account safe-area inset)
+                        root.style.bottom = (window.innerHeight - bnRect.top + 8) + 'px';
+                        root.style.top = 'auto'; root.style.transform = 'none';
                         // style as blue pill
                         try{ root.querySelector('.search-bar').style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; }catch(e){}
-                        // when expanded on mobile, show details above (position it to overlap sidebar content)
-                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.transformOrigin = 'top'; } }catch(e){}
+                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.transformOrigin = 'bottom'; } }catch(e){}
+                    } else {
+                        // fallback: center above the bottom area
+                        root.style.position = 'fixed'; root.style.left='50%'; root.style.transform='translateX(-50%)'; root.style.bottom='120px';
                     }
                 } else {
                     // desktop: position the indicator to the right of the settings button (same row)
@@ -1700,7 +1706,7 @@
                     card.addEventListener('keydown', (ev)=>{
                         if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); card.click(); }
                     });
-                    // on mobile ensure play button exists and is visible so user can tap it directly
+                            // on mobile ensure play button exists (but keep it hidden until selection)
                     try{
                         const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
                         if (isMobileNow){
@@ -1780,6 +1786,24 @@
                 }
                 return pbtn;
             }
+
+                // Delegated click handler as a safety net: ensure cancel works even if per-button handlers
+                // were not attached due to race conditions. If searching is active and a card-play-btn
+                // is clicked, emit cancel_quick_match and reset UI.
+                document.addEventListener('click', function(ev){
+                    try{
+                        const btn = ev.target.closest && ev.target.closest('.card-play-btn');
+                        if (!btn) return;
+                        // if global searching active and this button indicates searching -> cancel
+                        if (searching && btn.dataset && btn.dataset.searching === '1'){
+                            ev.stopPropagation(); ev.preventDefault();
+                            try{ socket.emit('cancel_quick_match', {}); }catch(e){}
+                            try{ hideSearchIndicator(); }catch(e){}
+                            // reset all per-card buttons UI
+                            try{ document.querySelectorAll('.card-play-btn').forEach(b=>{ b.dataset.searching='0'; b.textContent='Играть'; b.classList.remove('danger'); b.classList.add('primary'); b.style.display = b.closest('.game-card') && b.closest('.game-card').classList.contains('selected') ? 'block' : 'none'; }); }catch(e){}
+                        }
+                    }catch(e){}
+                }, { capture: true });
 
             // start search for card (direct implementation without recursion)
             function startCardSearch(card){
