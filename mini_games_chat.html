@@ -272,18 +272,21 @@
                         <h3>Крестики‑Нолики</h3>
                         <p style="margin:0;color:var(--muted);font-size:13px">Быстрая игра 1 на 1 в реальном времени.</p>
                         <div style="height:6px"></div>
+                        <!-- Кнопка 'Играть' будет добавлена динамически при выборе игры -->
                     </article>
 
                     <article class="game-card" data-game="memory" aria-disabled="true">
                         <h3>Мемо (скоро)</h3>
                         <p style="margin:0;color:var(--muted);font-size:13px">Карточная память — в разработке.</p>
                         <div style="height:6px"></div>
+                        <button class="menu-btn card-play-btn" style="display:none !important;" disabled>Играть</button>
                     </article>
 
                     <article class="game-card" data-game="quiz" aria-disabled="true">
                         <h3>Quiz (скоро)</h3>
                         <p style="margin:0;color:var(--muted);font-size:13px">Викторина против друзей.</p>
                         <div style="height:6px"></div>
+                        <button class="menu-btn card-play-btn" style="display:none !important;" disabled>Играть</button>
                     </article>
                 </div>
             </section>
@@ -1096,15 +1099,21 @@
         }
     });
 
-    socket.on('lobby_cancelled', (data)=>{ 
-        try{ 
-            console.debug('socket:lobby_cancelled', data); 
+    socket.on('lobby_cancelled', (data)=>{
+        try{
+            console.debug('socket:lobby_cancelled', data);
             try{ appendDebugLine('lobby_cancelled: ' + JSON.stringify({lobby_id: data?.lobby_id, message: data?.message})); }catch(e){}
             try{ if (data && data.lobby_id) delete lastMatchStarts[data.lobby_id]; }catch(e){}
             lastSearchStart = 0; lastSearchGame = null;
             processedMatchIds.clear();
-            hideSearchIndicator(); 
-        }catch(e){} 
+            hideSearchIndicator();
+        }catch(e){}
+    });
+
+    // Добавляем обработчик для подтверждения получения сервером события quick_match
+    socket.on('quick_match_received', (data) => {
+        console.log('Server received quick_match event:', data);
+        try{ appendDebugLine('quick_match_received: ' + JSON.stringify(data)); }catch(e){}
     });
 
     // server notifies when a player forfeits — show end screen immediately
@@ -1721,7 +1730,7 @@
                                 pbtn = document.createElement('button'); pbtn.className='menu-btn card-play-btn primary'; pbtn.textContent='Играть';
                                 pbtn.style.alignSelf='stretch'; pbtn.style.marginTop='6px'; pbtn.addEventListener('click', (ev)=>{ ev.stopPropagation(); startCardSearch(card); });
                                 card.appendChild(pbtn);
-                            } else { pbtn.style.display='block'; }
+                            }
                             pbtn.style.display='block';
                             playButton.classList.remove('visible');
                             playButton.setAttribute('aria-hidden','true');
@@ -1816,16 +1825,37 @@
 
                 try {
                     console.log('Starting quick match search for game:', gameName);
+                    console.log('Socket connected:', socket.connected);
+                    console.log('User data:', {
+                        name: currentUser?.name,
+                        user_id: currentUser?.user_id,
+                        avatar: currentUser?.avatar
+                    });
+
                     socket.emit('quick_match', {
                         player_name: currentUser?.name,
                         player_avatar: currentUser?.avatar,
                         user_id: currentUser?.user_id,
                         game: gameName
                     });
+
                     console.log('Quick match event emitted successfully');
+
+                    // Добавляем обратный вызов для подтверждения получения сервером
+                    socket.once('quick_match_received', (data) => {
+                        console.log('Server received quick_match event:', data);
+                    });
+
+                    // Устанавливаем таймаут для проверки ответа сервера
+                    setTimeout(() => {
+                        if (!document.querySelector('.search-indicator[style*="display: block"]')) {
+                            console.warn('No search indicator appeared, server may not have responded');
+                        }
+                    }, 2000);
+
                 } catch (error) {
                     console.error('Error emitting quick_match event:', error);
-                    alert('Ошибка при начале поиска игры. Проверьте подключение к серверу.');
+                    alert('Ошибка при начале поиска игры: ' + error.message);
                 }
 
                 // show search indicator
