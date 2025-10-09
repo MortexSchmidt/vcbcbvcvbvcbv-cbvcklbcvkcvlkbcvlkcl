@@ -457,6 +457,21 @@
         forceNew: true
     });
 
+    // expose to window for diagnostic monkeypatches
+    try{ window.socket = socket; }catch(e){}
+
+    // ensure outgoing emits are logged for easier debugging
+    try{
+        if (socket && !socket.__emit_logged){
+            const _emit = socket.emit.bind(socket);
+            socket.__emit_logged = true;
+            socket.emit = function(eventName, payload){
+                try{ if (typeof appendDebugLine === 'function') appendDebugLine('EMIT -> ' + eventName + ' payload=' + JSON.stringify(payload || {})); }catch(e){}
+                return _emit(eventName, payload);
+            }
+        }
+    }catch(e){ console.warn('emit monkeypatch failed', e); }
+
     // Добавляем обработчик ошибок подключения
     socket.on('connect_error', (error) => {
         console.error('Socket.IO connection error:', error);
@@ -1864,6 +1879,11 @@
             function startCardSearch(card){
                 if (!card) return;
 
+                const gameName = card.dataset.game || card.querySelector('h3')?.textContent || '';
+
+                // skip not-ready games
+                if (gameName === 'memory' || gameName === 'quiz') return;
+
                 // check if user is authenticated
                 if (!currentUser || !currentUser.user_id) {
                     console.log('User not authenticated, showing auth modal');
@@ -1871,23 +1891,16 @@
                     return;
                 }
 
-                console.log('User authenticated, starting game search for:', gameName);
-
-                const gameName = card.dataset.game || card.querySelector('h3')?.textContent || '';
-
-                // skip not-ready games
-                if (gameName === 'memory' || gameName === 'quiz') return;
-
                 // start search directly without creating button
                 lastSearchStart = Date.now();
                 lastSearchGame = gameName;
 
                 try {
-                    console.log('Starting game search for:', gameName);
-                    console.log('Socket connected:', socket.connected);
+                    console.log('User authenticated, starting game search for:', gameName);
+                    console.log('Socket connected:', !!(socket && socket.connected));
                     console.log('User authenticated:', !!currentUser?.user_id);
 
-                    if (!socket.connected) {
+                    if (!socket || !socket.connected) {
                         alert('Нет подключения к серверу. Попробуйте перезагрузить страницу.');
                         return;
                     }
@@ -1898,46 +1911,25 @@
                         return;
                     }
 
-                    // Используем событие create_lobby вместо quick_match для надежности
+                    // Use create_lobby for reliability
                     const lobbyData = {
                         name: `${currentUser.name || 'Игрок'}'s ${gameName} game`,
                         game: gameName,
                         player_name: currentUser.name,
                         player_avatar: currentUser.avatar || '',
                         user_id: currentUser.user_id,
-                        hidden: true // Создаем скрытое лобби для быстрого матча
+                        hidden: true // Create hidden lobby for quick match
                     };
 
-                    console.log('Creating lobby with data:', lobbyData);
+                    try{ if (typeof appendDebugLine === 'function') appendDebugLine('about to emit create_lobby for ' + gameName); }catch(e){}
                     socket.emit('create_lobby', lobbyData);
 
-                    console.log('Create lobby event emitted successfully');
-
-                    // Показываем индикатор поиска сразу
-                    try {
-                        showSearchIndicator({
-                            game: gameName,
-                            player: { name: currentUser?.name, avatar: currentUser?.avatar },
-                            foundCount: 1
-                        });
-                    } catch(e) {
-                        console.warn('Failed to show search indicator:', e);
-                    }
+                    // show search indicator
+                    try { showSearchIndicator({ game: gameName, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: 1, originCard: card }); } catch(e) { console.warn('Failed to show search indicator:', e); }
 
                 } catch (error) {
                     console.error('Error creating lobby:', error);
-                    alert('Ошибка при создании лобби: ' + error.message);
-                }
-
-                // show search indicator
-                try {
-                    showSearchIndicator({
-                        game: gameName,
-                        player: { name: currentUser?.name, avatar: currentUser?.avatar },
-                        foundCount: 1
-                    });
-                } catch(e) {
-                    console.warn('Failed to show search indicator:', e);
+                    alert('Ошибка при создании лобби: ' + (error && error.message ? error.message : String(error)));
                 }
             }
 
