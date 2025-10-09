@@ -1401,6 +1401,18 @@
 
                 // animate modal in (CSS already defines popIn on .end-card)
                 modal.style.display = 'flex';
+                // ensure TGS animation plays when modal becomes visible
+                try{
+                    appendDebugLine && appendDebugLine('showEndScreen: attempting to play tgs animation');
+                    const anim = window.__tgs_trophy_anim;
+                    if (anim && typeof anim.play === 'function'){
+                        // ensure looping and play
+                        try{ anim.loop = true; }catch(e){}
+                        try{ anim.play(); appendDebugLine && appendDebugLine('showEndScreen: tgs play() called'); }catch(e){ appendDebugLine && appendDebugLine('showEndScreen: tgs play() threw: '+(e&&e.message)); }
+                    } else {
+                        appendDebugLine && appendDebugLine('showEndScreen: no tgs animation instance available');
+                    }
+                }catch(e){ appendDebugLine && appendDebugLine('showEndScreen: tgs play attempt error: '+(e&&e.message)); }
 
                 // wire button
                 if (btn){ btn.onclick = function(){ appendDebugLine('end-modal: return home clicked'); modal.style.display='none'; activeLobby = null; showView('home'); try{ socket.emit('get_lobbies'); }catch(e){} }; }
@@ -1883,16 +1895,25 @@
                     appendDebugLine && appendDebugLine('tgs-loader: parsed JSON, layers=' + (json.layers ? json.layers.length : 'unknown'));
                     // render with lottie
                     container.innerHTML = ''; // clear
+                    // create animation but do NOT autoplay; we'll control playback when modal is shown
                     const anim = window.lottie.loadAnimation({
                         container: container,
                         renderer: 'svg',
                         loop: false,
-                        autoplay: true,
+                        autoplay: false,
                         animationData: json
                     });
+                    // store global reference so showEndScreen can trigger play()
+                    try{ window.__tgs_trophy_anim = anim; }catch(e){}
+                    // attach some debug listeners
+                    try{
+                        anim.addEventListener('DOMLoaded', ()=>{ appendDebugLine && appendDebugLine('tgs-loader: DOMLoaded'); });
+                        anim.addEventListener('data_ready', ()=>{ appendDebugLine && appendDebugLine('tgs-loader: data_ready'); });
+                        anim.addEventListener('complete', ()=>{ appendDebugLine && appendDebugLine('tgs-loader: complete'); });
+                    }catch(e){ appendDebugLine && appendDebugLine('tgs-loader: addEventListener failed: '+(e&&e.message)); }
                     // small scaling to fit 48x48 box if needed
                     container.style.width = '48px'; container.style.height = '48px';
-                    appendDebugLine && appendDebugLine('tgs-loader: animation loaded');
+                    appendDebugLine && appendDebugLine('tgs-loader: animation loaded (autoplay=false)');
                 }catch(e){
                     console.warn('tgs-loader error', e);
                     appendDebugLine && appendDebugLine('tgs-loader: error: '+(e&&e.message));
