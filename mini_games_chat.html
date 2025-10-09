@@ -1294,6 +1294,30 @@
                         try{ document.getElementById('confirm-name-b').textContent = b && b.name ? b.name : 'Ожидание'; }catch(e){}
                     }catch(e){ console.warn('confirm players populate err', e); }
 
+                    // Ensure buttons/waiting state reflects server 'confirmed' list (so if user already confirmed on another device we show waiting)
+                    try{
+                        const buttonsEl = document.getElementById('confirm-buttons');
+                        const waitingEl = document.getElementById('confirm-waiting');
+                        // default: show buttons, hide waiting
+                        if (buttonsEl) buttonsEl.style.display = 'flex';
+                        if (waitingEl) waitingEl.style.display = 'none';
+                        try{
+                            const confirmedArr = Array.isArray(payload?.confirmed) ? payload.confirmed : [];
+                            let alreadyConfirmed = false;
+                            // payload.confirmed may contain user_key strings like 'uid:<id>' or socket ids
+                            if (Array.isArray(confirmedArr) && confirmedArr.length){
+                                const myUidKey = currentUser?.user_id ? `uid:${currentUser.user_id}` : null;
+                                for (let ci=0; ci<confirmedArr.length; ci++){
+                                    const v = String(confirmedArr[ci]);
+                                    if ((myUidKey && v === myUidKey) || v === socket.id || v === String(currentUser?.user_id)){
+                                        alreadyConfirmed = true; break;
+                                    }
+                                }
+                            }
+                            if (alreadyConfirmed){ if (buttonsEl) buttonsEl.style.display='none'; if (waitingEl) waitingEl.style.display='block'; }
+                        }catch(e){}
+                    }catch(e){}
+
                     // accept/decline handlers
                     document.getElementById('btn-accept').onclick = ()=>{
                         // Send accept but KEEP the modal visible; hide buttons and show waiting text
