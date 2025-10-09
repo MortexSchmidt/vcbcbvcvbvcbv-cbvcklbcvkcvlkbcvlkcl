@@ -301,6 +301,15 @@
         </div>
     </div>
 
+    <!-- Quick-match waiting modal -->
+    <div id="search-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:210">
+        <div style="width:92%;max-width:420px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)">
+            <h3 style="margin:0 0 8px 0">Поиск соперника</h3>
+            <p id="search-msg" style="margin:0 0 12px 0;color:var(--muted)">Поиск соперника...</p>
+            <div style="display:flex;gap:8px;justify-content:flex-end"><button id="btn-cancel-search" class="menu-btn">Отменить</button></div>
+        </div>
+    </div>
+
     <!-- Bottom nav для телефонов -->
     <nav class="bottom-nav" aria-hidden="false">
         <button class="bottom-play" data-action="go-home" title="Играть">
@@ -543,6 +552,20 @@
                 try{ SoundEngine.lobbyCreated(); }catch(e){}
             }catch(e){ console.error(e); }
         });
+        socket.on('lobby_waiting', (data)=>{
+            try{
+                document.getElementById('search-msg').textContent = data.message || 'Поиск соперника...';
+                document.getElementById('search-modal').style.display = 'flex';
+            }catch(e){ }
+        });
+
+        socket.on('lobby_cancelled', (data)=>{
+            try{ document.getElementById('search-modal').style.display = 'none'; }catch(e){}
+        });
+
+        document.getElementById('btn-cancel-search').addEventListener('click', ()=>{
+            socket.emit('cancel_quick_match', {});
+        });
         socket.on('lobby_created', (data)=>{
             // server returns lobby_id and lobby
             const lobby = data.lobby || data;
@@ -639,14 +662,7 @@
             function init(){ if (ac) return; ac = new (window.AudioContext || window.webkitAudioContext)(); }
             function resume(){ if (!ac) init(); if (ac.state === 'suspended') return ac.resume(); return Promise.resolve(); }
 
-            function makeNoise(duration, now){
-                const bufferSize = Math.floor(ac.sampleRate * duration);
-                const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
-                const src = ac.createBufferSource(); src.buffer = buffer;
-                return src;
-            }
+            // removed complex noise generator to avoid 8-bit artifacts; use pure tones only
 
             // Percussive tactile click: softened transient using sine body + filtered click + shaped noise
             function playClick(opts){
@@ -674,23 +690,19 @@
                 click.connect(clickLP);
                 clickLP.connect(gClick);
 
-                // noise transient through bandpass for tactile edge (kept subtle)
-                const noiseSrc = makeNoise(opts.noiseDur || 0.055, now);
-                const noiseFilt = ac.createBiquadFilter(); noiseFilt.type = 'bandpass'; noiseFilt.frequency.setValueAtTime(opts.noiseFreq || 1800, now);
-                const gNoise = ac.createGain(); gNoise.gain.setValueAtTime(opts.noiseGain || 0.045, now);
-                noiseSrc.connect(noiseFilt); noiseFilt.connect(gNoise);
+                // removed noise path; rely on body + filtered click for tactile feel
 
                 // master gain for click
                 const master = ac.createGain(); master.gain.setValueAtTime(opts.masterGain || 1.0, now);
 
                 // routing
-                gBody.connect(master); gClick.connect(master); gNoise.connect(master);
+                gBody.connect(master); gClick.connect(master);
                 master.connect(ac.destination);
 
                 // start/stop
                 body.start(now); body.stop(now + (opts.bodyDur || 0.12) + 0.02);
                 click.start(now); click.stop(now + (opts.clickDur || 0.05) + 0.01);
-                noiseSrc.start(now); noiseSrc.stop(now + (opts.noiseDur || 0.055) + 0.01);
+                // no noise to start
             }
 
             // small melodic ping for confirmations — keep smooth sine and slightly lower amplitude
@@ -707,24 +719,23 @@
                 o.start(now); o.stop(now + (dur || 0.16) + 0.02);
             }
 
-            function uiClick(kind){ // tactile UI clicks
+            function uiClick(kind){ // very simple UI clicks: short sine click
                 resume().then(()=>{
-                    if (kind === 'primary') {
-                        playClick({ bodyFreq: 200, bodyDur: 0.12, bodyGain: 0.12, clickFreq: 2800, clickDur: 0.05, clickGain: 0.10, noiseFreq: 2000, noiseGain: 0.05, clickLP: 3600 });
-                    } else if (kind === 'destructive') {
-                        playClick({ bodyFreq: 140, bodyDur: 0.16, bodyGain: 0.14, clickFreq: 1600, clickDur: 0.06, clickGain: 0.12, noiseFreq: 1200, noiseGain: 0.06, clickLP: 2600 });
-                    } else if (kind === 'soft') {
-                        playClick({ bodyFreq: 300, bodyDur: 0.10, bodyGain: 0.08, clickFreq: 3000, clickDur: 0.04, clickGain: 0.06, noiseFreq: 3000, noiseGain: 0.02, clickLP: 3800 });
-                    } else {
-                        playClick({ bodyFreq: 220, bodyDur: 0.10, bodyGain: 0.10, clickFreq: 2400, clickDur: 0.045, clickGain: 0.08, noiseFreq: 1800, noiseGain: 0.03, clickLP: 3400 });
-                    }
+                    if (!ac) return;
+                    const now = ac.currentTime;
+                    const o = ac.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(kind==='primary' ? 800 : 600, now);
+                    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, now);
+                    g.gain.linearRampToValueAtTime(kind==='primary' ? 0.12 : 0.08, now + 0.006);
+                    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+                    o.connect(g); g.connect(ac.destination);
+                    o.start(now); o.stop(now + 0.09);
                 }).catch(()=>{});
             }
 
-            function select(){ resume().then(()=>{ playClick({ bodyFreq: 260, bodyDur: 0.10, bodyGain: 0.10, clickFreq: 2600, clickDur: 0.04, clickGain: 0.07, clickLP:3600 }); playPing(900, 0.08, 0.05, 0.04); }); }
-            function modalOpen(){ resume().then(()=>{ playClick({ bodyFreq: 240, bodyDur: 0.12, bodyGain: 0.12, clickFreq: 2800, clickDur: 0.05, clickGain: 0.09, clickLP:3600 }); playPing(680, 0.12, 0.06, 0.06); }); }
-            function create(){ resume().then(()=>{ playClick({ bodyFreq: 320, bodyDur: 0.14, bodyGain: 0.14, clickFreq: 2400, clickDur: 0.055, clickGain: 0.12, noiseFreq: 2000, noiseGain: 0.045, clickLP:3500 }); playPing(980, 0.14, 0.10, 0.05); }); }
-            function lobbyCreated(){ resume().then(()=>{ playClick({ bodyFreq: 300, bodyDur: 0.12, bodyGain: 0.12, clickFreq: 3000, clickDur: 0.05, clickGain: 0.10, clickLP:3600 }); playPing(820, 0.12, 0.09, 0.05); playPing(980, 0.10, 0.07, 0.12); }); }
+            function select(){ resume().then(()=>{ uiClick('soft'); }); }
+            function modalOpen(){ resume().then(()=>{ uiClick('primary'); }); }
+            function create(){ resume().then(()=>{ uiClick('primary'); }); }
+            function lobbyCreated(){ resume().then(()=>{ uiClick('primary'); setTimeout(()=>{ uiClick('soft'); }, 120); }); }
 
             // modern presets
             function setMuted(v){ muted = !!v; }

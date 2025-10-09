@@ -1869,6 +1869,37 @@ def handle_quick_match(data):
         # no match yet — keep waiting; notify creator that search is ongoing
         emit('lobby_waiting', {'lobby_id': lobby_id, 'message': 'Поиск соперника...'}, room=request.sid)
 
+
+@socketio.on('cancel_quick_match')
+def handle_cancel_quick_match(data):
+    """Cancel a pending hidden quick-match lobby created by this sid."""
+    logger.info(f"cancel_quick_match from sid={request.sid}")
+    to_remove = None
+    for hid in list(hidden_waiting):
+        l = lobbies.get(hid)
+        if not l: 
+            try:
+                hidden_waiting.remove(hid)
+            except ValueError:
+                pass
+            continue
+        if l.get('players') and l['players'][0].get('sid') == request.sid:
+            to_remove = hid
+            break
+
+    if to_remove:
+        try:
+            hidden_waiting.remove(to_remove)
+        except ValueError:
+            pass
+        try:
+            del lobbies[to_remove]
+        except KeyError:
+            pass
+        emit('lobby_cancelled', {'lobby_id': to_remove, 'message': 'Поиск отменён'}, room=request.sid)
+    else:
+        emit('lobby_cancelled', {'lobby_id': None, 'message': 'Нечего отменять'}, room=request.sid)
+
 @socketio.on('make_move')
 def handle_make_move(data):
     lobby_id = data.get('lobby_id')
