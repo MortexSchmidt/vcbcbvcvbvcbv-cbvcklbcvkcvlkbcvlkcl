@@ -466,25 +466,27 @@
     <!-- Custom loading modal shown before game starts -->
     <div id="preload-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.85);z-index:1300;pointer-events:auto">
         <div style="position:absolute;inset:0;background:transparent;z-index:1300"></div>
-        <div id="preload-box" style="width:92%;max-width:520px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6);z-index:1301;display:flex;flex-direction:column;align-items:center;gap:12px;pointer-events:auto">
-            <!-- Center animation (user will upload loading.tgs to this path) -->
-            <div id="preload-center" style="width:160px;height:160px;display:flex;align-items:center;justify-content:center">
-                <!-- Container where .tgs will be decoded and played via lottie-web -->
-                <div id="preload-lottie" style="width:100%;height:100%;display:block"></div>
-                <!-- Image fallback (if someone uploaded a gif/png instead) -->
-                <img id="preload-tgs" src="/assets/loading.tgs" alt="loading animation" style="width:100%;height:100%;object-fit:contain;display:none" onerror="this.style.display='none'">
-                <!-- Fallback simple SVG animation if .tgs cannot be decoded -->
-                <svg id="preload-fallback" viewBox="0 0 100 100" width="120" height="120" style="display:none">
-                    <circle cx="50" cy="50" r="40" stroke="rgba(108,140,255,0.9)" stroke-width="6" fill="none" stroke-linecap="round">
-                        <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="1s" repeatCount="indefinite" />
-                    </circle>
-                </svg>
+    <!-- fullscreen box: covers entire viewport with centered animation -->
+        <div id="preload-box" style="width:100%;max-width:none;height:100%;background:transparent;border-radius:0;padding:0;border:0;box-shadow:none;z-index:1301;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto">
+            <!-- Center animation (user will upload loading.tgs to this path) - animation constrained to 480px -->
+            <div id="preload-center" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center">
+                <div style="width:480px;max-width:90%;height:auto;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+                    <!-- Container where .tgs will be decoded and played via lottie-web -->
+                    <div id="preload-lottie" style="width:100%;height:480px;display:block"></div>
+                    <!-- Image fallback (if someone uploaded a gif/png instead) -->
+                    <img id="preload-tgs" src="/assets/loading.tgs" alt="loading animation" style="width:100%;height:auto;object-fit:contain;display:none" onerror="this.style.display='none'">
+                    <!-- Fallback simple SVG animation if .tgs cannot be decoded -->
+                    <svg id="preload-fallback" viewBox="0 0 100 100" width="120" height="120" style="display:none">
+                        <circle cx="50" cy="50" r="40" stroke="rgba(108,140,255,0.9)" stroke-width="6" fill="none" stroke-linecap="round">
+                            <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="1s" repeatCount="indefinite" />
+                        </circle>
+                    </svg>
+                </div>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
-                <div style="color:var(--text);font-weight:800;font-size:18px">Загрузка</div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:18px">
+                <div style="color:var(--text);font-weight:800;font-size:20px">Загрузка</div>
                 <div style="color:var(--muted);font-weight:700">Пожалуйста, подождите...</div>
             </div>
-            <div id="preload-timer" style="font-weight:700;color:var(--accent)">10</div>
         </div>
         <!-- bottom-right spinner -->
         <div id="preload-spinner" style="position:fixed;right:18px;bottom:18px;width:48px;height:48px;border-radius:24px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;z-index:1400">
@@ -558,16 +560,10 @@
         // show modal, hide sidebar
         try{ document.getElementById('preload-modal').style.display = 'flex'; }catch(e){}
         try{ document.querySelector('.app-sidebar').style.display = 'none'; }catch(e){}
-        // timer display
-        try{ document.getElementById('preload-timer').textContent = String(duration); }catch(e){}
-        let left = duration;
-        const tick = setInterval(()=>{
-            left -= 1;
-            try{ document.getElementById('preload-timer').textContent = String(left); }catch(e){}
-            if (left <= 0){ clearInterval(tick); hidePreload(); }
-        }, 1000);
+        // show spinner in bottom-right while preload is visible
+        try{ document.getElementById('preload-spinner').style.display = 'flex'; }catch(e){}
         // ensure it's removed after exactly duration seconds even if tab hidden
-        setTimeout(()=>{ try{ clearInterval(tick); hidePreload(); }catch(e){} }, duration*1000 + 50);
+        setTimeout(()=>{ try{ hidePreload(); }catch(e){} }, duration*1000 + 50);
         // attempt to load and play assets/loading.tgs (zlib-compressed lottie json)
         try{ playLoadingTgs(); }catch(e){ console.warn('playLoadingTgs err', e); }
     }
