@@ -219,6 +219,13 @@
             opacity: 1;
             pointer-events: auto;
         }
+        /* Desktop anchored variant: display expanded content as a full card inside sidebar area */
+        #search-indicator[data-desktop="1"] {
+            border-radius: 12px; box-shadow: 0 12px 40px rgba(2,6,23,0.6); background: linear-gradient(90deg,#0f1720, #0b1220); padding: 8px; z-index: 60;
+        }
+        #search-indicator[data-desktop="1"] .search-bar { border-radius: 10px; padding: 10px 12px; font-weight:700; }
+        #search-indicator[data-desktop="1"] .search-expanded { position: relative; bottom: auto; transform: none; opacity: 1; pointer-events: auto; margin-top:8px; }
+        #search-indicator[data-desktop="1"] #search-player-row { justify-content: flex-start; }
     /* End-game modal styles */
     .end-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2,6,23,0.8); z-index: 1300 }
     .end-card { width: 92%; max-width: 520px; background: linear-gradient(180deg, rgba(20,30,60,0.9), rgba(10,14,26,0.95)); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 18px 60px rgba(2,6,23,0.8); transform: translateY(12px) scale(.98); opacity: 0; animation: popIn 420ms cubic-bezier(.2,.9,.2,1) forwards; display:flex; flex-direction:column; align-items:center; gap:12px }
@@ -982,21 +989,35 @@
                         root.style.position = 'fixed'; root.style.left='50%'; root.style.transform='translateX(-50%)'; root.style.bottom='120px';
                     }
                 } else {
-                    // desktop: position the indicator to the right of the settings button (same row)
-                    const settingsBtn = document.querySelector('.bottom-settings');
-                    if (settingsBtn){
-                        const rect = settingsBtn.getBoundingClientRect();
+                    // desktop: prefer anchoring the indicator inside the left sidebar area (where user highlighted)
+                    const sidebar = document.querySelector('.app-sidebar');
+                    if (sidebar){
+                        const sbRect = sidebar.getBoundingClientRect();
                         root.style.position = 'fixed';
-                        // place in same horizontal row as settings; a small offset to the right
-                        root.style.left = (rect.right + 12) + 'px';
-                        // align vertically to the same top as settings button
-                        root.style.top = (rect.top) + 'px';
-                        root.style.width = '260px';
+                        root.style.left = (sbRect.left + 12) + 'px';
+                        // place a bit below the top of sidebar content area
+                        root.style.top = (sbRect.top + 120) + 'px';
+                        root.style.width = Math.max(220, sbRect.width - 24) + 'px';
                         root.style.transform = 'none';
-                        // dark blue semi-transparent background for desktop
-                        try{ const bar = root.querySelector('.search-bar'); if (bar) { bar.style.background = 'rgba(6,18,46,0.88)'; bar.style.color = 'var(--text)'; } }catch(e){}
-                        // expand details by default on desktop
-                        _toggleSearchExpanded(root, true);
+                        // style as blue pill (mobile-like) but larger and with full data
+                        try{ const bar = root.querySelector('.search-bar'); if (bar) { bar.style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; bar.style.color = '#07102a'; bar.style.justifyContent='space-between'; } }catch(e){}
+                        // mark desktop anchored so CSS can switch layout
+                        root.dataset.desktop = '1';
+                        // ensure expanded view is visible and rendered inline
+                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.classList.add('expanded'); exp.style.position = 'relative'; exp.style.bottom = 'auto'; exp.style.left='0'; exp.style.right='0'; exp.style.transform='none'; exp.style.opacity='1'; exp.style.pointerEvents='auto'; } }catch(e){}
+                    } else {
+                        // fallback: original settingsBtn behaviour
+                        const settingsBtn = document.querySelector('.bottom-settings');
+                        if (settingsBtn){
+                            const rect = settingsBtn.getBoundingClientRect();
+                            root.style.position = 'fixed';
+                            root.style.left = (rect.right + 12) + 'px';
+                            root.style.top = (rect.top) + 'px';
+                            root.style.width = '260px';
+                            root.style.transform = 'none';
+                            try{ const bar = root.querySelector('.search-bar'); if (bar) { bar.style.background = 'rgba(6,18,46,0.88)'; bar.style.color = 'var(--text)'; } }catch(e){}
+                            _toggleSearchExpanded(root, true);
+                        }
                     }
                 }
             }catch(e){}
