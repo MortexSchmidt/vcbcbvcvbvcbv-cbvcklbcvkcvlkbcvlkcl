@@ -344,6 +344,8 @@
         const socket = io('https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app');
         let currentUser = null;
         let activeLobby = null; // { id, lobby }
+    // global reference to floating play button (may be created later on mobile)
+    let playButton = null;
 
         // init user from tg
         if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
@@ -593,15 +595,7 @@
         socket.on('lobby_waiting', (data)=>{ try{ showSearchIndicator(); }catch(e){} });
         socket.on('lobby_cancelled', (data)=>{ try{ hideSearchIndicator(); }catch(e){} });
 
-        // playButton cancel handler: if searching -> cancel, else start quick_match
-        playButton.addEventListener('click', (ev)=>{
-            ev.stopPropagation();
-            if (!selected) return;
-            if (!currentUser || !currentUser.user_id) { openAuthModal(); return; }
-            if (searching){ socket.emit('cancel_quick_match', {}); hideSearchIndicator(); return; }
-            socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id });
-            try{ SoundEngine.modalOpen(); }catch(e){}
-        });
+        
 
         // match found confirmation flow
         let confirmCountdown = null;
@@ -827,7 +821,7 @@
             if (!isMobile) return; // only change behaviour on small screens
 
             // create floating play button if not present
-            let playButton = document.querySelector('.play-button');
+            playButton = document.querySelector('.play-button');
             if (!playButton) {
                 playButton = document.createElement('button');
                 playButton.className = 'play-button';
