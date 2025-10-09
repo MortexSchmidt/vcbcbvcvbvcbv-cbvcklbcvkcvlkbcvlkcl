@@ -2245,15 +2245,31 @@ def handle_match_accept(data):
                         logger.warning(f"match_accept: unable to add sid {target_sid} to room {lobby_id}")
             except Exception as e:
                 logger.warning(f"match_accept: failed to add player {p} to room {lobby_id}: {e}")
-        # notify both players (use raw sid)
-        for p in m.get('players', []):
-            try:
-                target_sid = p if isinstance(p, str) else p.get('sid')
-                if not target_sid:
-                    continue
-                socketio.emit('lobby_started', lobby or {'id': lobby_id}, room=target_sid)
-            except Exception as e:
-                logger.warning(f"match_accept: failed to emit lobby_started to {p}: {e}")
+        # notify both players (use raw sid) — emit a normalized full lobby payload so clients get consistent data
+        try:
+            emitted_lobby = {'id': lobby_id, 'status': (lobby.get('status') if lobby else 'playing')}
+            if lobby:
+                emitted_lobby['name'] = lobby.get('name')
+                emitted_lobby['board'] = lobby.get('board')
+                emitted_lobby['current_player'] = lobby.get('current_player')
+                # normalize players into objects with expected fields
+                players_out = []
+                for p in (lobby.get('players') or []):
+                    if isinstance(p, str):
+                        players_out.append({'name': p, 'sid': None, 'user_id': None, 'avatar': '', 'symbol': ''})
+                    else:
+                        players_out.append({'sid': p.get('sid'), 'user_id': p.get('user_id'), 'name': p.get('name') or ('Игрок' if p.get('user_id') else ''), 'avatar': p.get('avatar') or '', 'symbol': p.get('symbol') or ''})
+                emitted_lobby['players'] = players_out
+            for p in m.get('players', []):
+                try:
+                    target_sid = p if isinstance(p, str) else p.get('sid')
+                    if not target_sid:
+                        continue
+                    socketio.emit('lobby_started', emitted_lobby, room=target_sid)
+                except Exception as e:
+                    logger.warning(f"match_accept: failed to emit lobby_started to {p}: {e}")
+        except Exception as e:
+            logger.warning(f"match_accept: error preparing lobby_started payload for match {match_id}: {e}")
         try:
             del pending_matches[match_id]
         except Exception:
