@@ -565,16 +565,30 @@
         }
 
         socket.on('connect', ()=>{
-            console.log('socket connected');
-            if (currentUser) socket.emit('identify', currentUser);
+            console.log('Socket connected successfully');
+            if (currentUser) {
+                console.log('Identifying user:', currentUser.user_id);
+                socket.emit('identify', currentUser);
+            }
             // refresh lobbies list when connect
             socket.emit('get_lobbies');
             // show auth modal if no init data from Telegram
             setTimeout(()=>{
                 if (!(tg && tg.initDataUnsafe && tg.initDataUnsafe.user)) {
+                    console.log('No Telegram user data found, showing auth modal');
                     openAuthModal();
+                } else {
+                    console.log('Telegram user data found, user is authenticated');
                 }
             }, 250);
+        });
+
+        socket.on('disconnect', ()=>{
+            console.log('Socket disconnected');
+        });
+
+        socket.on('connect_error', (error)=>{
+            console.error('Socket connection error:', error);
         });
 
         // --- Authorization modal flow ---
@@ -1070,14 +1084,16 @@
             try{ const ff = document.getElementById('search-found-text'); if (ff) ff.textContent = 'Игроков найдено: 0'; }catch(e){}
         }
 
-    socket.on('lobby_waiting', (data)=>{ 
-        try{ 
-            console.debug('socket:lobby_waiting', data); 
+    socket.on('lobby_waiting', (data)=>{
+        try{
+            console.log('Game search in progress:', data);
             try{ appendDebugLine('lobby_waiting: ' + JSON.stringify({lobby_id: data?.lobby_id, message: data?.message, found: (data && Array.isArray(data.players) ? data.players.length : data?.foundCount)})); }catch(e){}
-            const found = (data && Array.isArray(data.players) ? data.players.length : (typeof data?.foundCount !== 'undefined' ? Number(data.foundCount) : 1)); 
-            const opts = { game: data?.game || data?.name || null, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: found }; 
-            showSearchIndicator(opts); 
-        }catch(e){}
+            const found = (data && Array.isArray(data.players) ? data.players.length : (typeof data?.foundCount !== 'undefined' ? Number(data.foundCount) : 1));
+            const opts = { game: data?.game || data?.name || null, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: found };
+            showSearchIndicator(opts);
+        }catch(e){
+            console.error('Error handling lobby_waiting:', e);
+        }
     });
 
     socket.on('lobby_cancelled', (data)=>{ 
@@ -1776,10 +1792,52 @@
                 return pbtn;
             }
 
-            // start search for card (kept for compatibility but uses createCardPlayButton)
+            // start search for card (direct implementation without recursion)
             function startCardSearch(card){
-                const btn = createCardPlayButton(card);
-                if (btn){ btn.click(); }
+                if (!card) return;
+
+                // check if user is authenticated
+                if (!currentUser || !currentUser.user_id) {
+                    console.log('User not authenticated, showing auth modal');
+                    openAuthModal();
+                    return;
+                }
+
+                console.log('User authenticated, starting game search for:', gameName);
+
+                const gameName = card.dataset.game || card.querySelector('h3')?.textContent || '';
+
+                // skip not-ready games
+                if (gameName === 'memory' || gameName === 'quiz') return;
+
+                // start search directly without creating button
+                lastSearchStart = Date.now();
+                lastSearchGame = gameName;
+
+                try {
+                    console.log('Starting quick match search for game:', gameName);
+                    socket.emit('quick_match', {
+                        player_name: currentUser?.name,
+                        player_avatar: currentUser?.avatar,
+                        user_id: currentUser?.user_id,
+                        game: gameName
+                    });
+                    console.log('Quick match event emitted successfully');
+                } catch (error) {
+                    console.error('Error emitting quick_match event:', error);
+                    alert('Ошибка при начале поиска игры. Проверьте подключение к серверу.');
+                }
+
+                // show search indicator
+                try {
+                    showSearchIndicator({
+                        game: gameName,
+                        player: { name: currentUser?.name, avatar: currentUser?.avatar },
+                        foundCount: 1
+                    });
+                } catch(e) {
+                    console.warn('Failed to show search indicator:', e);
+                }
             }
 
             // hide selection when tapping outside — but DO NOT clear selection while searching for opponent
