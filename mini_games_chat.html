@@ -1587,6 +1587,32 @@
 
         // After initial load show home
     showView('home');
+        // Debug helper: show topmost element at center and under cursor, allow forcing overlays off
+        (function(){
+            try{
+                const dbg = document.createElement('div'); dbg.id='debug-overlay'; dbg.style.position='fixed'; dbg.style.left='8px'; dbg.style.top='8px'; dbg.style.zIndex='99999'; dbg.style.padding='8px'; dbg.style.background='rgba(0,0,0,0.6)'; dbg.style.color='#fff'; dbg.style.fontSize='12px'; dbg.style.borderRadius='8px'; dbg.style.fontFamily='monospace'; dbg.style.maxWidth='320px'; dbg.style.pointerEvents='auto'; dbg.style.display='flex'; dbg.style.flexDirection='column'; dbg.style.gap='6px';
+                dbg.innerHTML = '<div style="font-weight:700;margin-bottom:4px">DEBUG</div><div id="dbg-center">center: -</div><div id="dbg-cursor">cursor: -</div><div style="display:flex;gap:6px;margin-top:6px"><button id="dbg-enable-nav" style="flex:1">Enable Nav</button><button id="dbg-disable-ov" style="flex:1">Disable Overlays</button></div>';
+                document.body.appendChild(dbg);
+                const elc = document.getElementById('dbg-center'); const elp = document.getElementById('dbg-cursor');
+                function fmt(el){ if(!el) return 'null'; try{ let s = el.tagName.toLowerCase(); if (el.id) s += '#' + el.id; if (el.className) s += '.' + String(el.className).split(' ').filter(Boolean).join('.'); return s; }catch(e){ return String(el); } }
+                function updateCenter(){ const c = document.elementFromPoint(Math.floor(window.innerWidth/2), Math.floor(window.innerHeight/2)); elc.textContent = 'center: ' + fmt(c); }
+                function updateCursor(e){ const c = document.elementFromPoint(e.clientX, e.clientY); elp.textContent = 'cursor: ' + fmt(c); }
+                window.addEventListener('mousemove', updateCursor, { passive:true }); window.addEventListener('resize', updateCenter); window.addEventListener('scroll', updateCenter);
+                updateCenter();
+                document.getElementById('dbg-enable-nav').addEventListener('click', ()=>{ try{ enableNavigation(); alert('enableNavigation() called'); }catch(e){ alert('enableNavigation error:'+e); } });
+                document.getElementById('dbg-disable-ov').addEventListener('click', ()=>{
+                    try{
+                        const ids = ['auth-modal','confirm-modal','end-modal','search-indicator'];
+                        ids.forEach(id=>{ const el = document.getElementById(id); if (el){ el.style.pointerEvents='none'; el.querySelectorAll('*').forEach(c=>c.style.pointerEvents='none'); } });
+                        // also lower z-index of search indicator and modals
+                        try{ const s = document.getElementById('search-indicator'); if (s) s.style.zIndex='10'; }catch(e){}
+                        try{ const c = document.getElementById('confirm-modal'); if (c) c.style.zIndex='11'; }catch(e){}
+                        try{ const e = document.getElementById('end-modal'); if (e) e.style.zIndex='12'; }catch(e){}
+                        alert('Overlays disabled (pointer-events:none)');
+                    }catch(er){ alert('disable overlays error:'+er); }
+                });
+            }catch(e){ console.warn('debug overlay init failed', e); }
+        })();
     // Ensure navigation is enabled after initial render in case any overlays left items disabled
     try{ enableNavigation(); }catch(e){}
 
