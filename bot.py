@@ -2217,7 +2217,15 @@ def handle_match_accept(data):
 
         # notify clients that match is starting and include player info (diagnostic/helpful UI)
         try:
-            match_start_payload = {'match_id': match_id, 'lobby_id': lobby_id, 'players': [(p if isinstance(p, str) else {'sid': p.get('sid'), 'user_id': p.get('user_id'), 'name': p.get('name'), 'avatar': p.get('avatar')}) for p in (lobby.get('players') or [])]}
+            # normalize match_start_payload players to objects (avoid raw strings)
+            match_players = []
+            for p in (lobby.get('players') or []):
+                if isinstance(p, str):
+                    match_players.append({'name': p, 'sid': None, 'user_id': None, 'avatar': '', 'symbol': ''})
+                else:
+                    match_players.append({'sid': p.get('sid'), 'user_id': p.get('user_id'), 'name': p.get('name'), 'avatar': p.get('avatar')})
+            match_start_payload = {'match_id': match_id, 'lobby_id': lobby_id, 'players': match_players}
+            logger.info(f"match_accept: emitting match_starting for match {match_id} payload={json.dumps(match_start_payload, ensure_ascii=False)}")
             for p in (m.get('players') or []):
                 try:
                     target_sid = p if isinstance(p, str) else p.get('sid')
@@ -2260,12 +2268,18 @@ def handle_match_accept(data):
                     else:
                         players_out.append({'sid': p.get('sid'), 'user_id': p.get('user_id'), 'name': p.get('name') or ('Игрок' if p.get('user_id') else ''), 'avatar': p.get('avatar') or '', 'symbol': p.get('symbol') or ''})
                 emitted_lobby['players'] = players_out
+            logger.info(f"match_accept: emitting lobby_started for lobby {lobby_id} payload={json.dumps(emitted_lobby, ensure_ascii=False)}")
             for p in m.get('players', []):
                 try:
                     target_sid = p if isinstance(p, str) else p.get('sid')
                     if not target_sid:
                         continue
                     socketio.emit('lobby_started', emitted_lobby, room=target_sid)
+                    # additionally send update_lobby (full lobby object) to each sid to be safe
+                    try:
+                        socketio.emit('update_lobby', lobby, room=target_sid)
+                    except Exception:
+                        pass
                 except Exception as e:
                     logger.warning(f"match_accept: failed to emit lobby_started to {p}: {e}")
         except Exception as e:
