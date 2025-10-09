@@ -226,11 +226,22 @@
         #search-indicator[data-desktop="1"] .search-bar { border-radius: 10px; padding: 8px 12px; font-weight:700; display:flex; align-items:center }
         #search-indicator[data-desktop="1"] .search-expanded { position: relative; bottom: auto; transform: none; opacity: 1; pointer-events: auto; margin-top:8px; max-height: 140px; overflow: auto; }
         #search-indicator[data-desktop="1"] #search-player-row { justify-content: flex-start; }
-        /* Desktop: make the search elements transparent so they don't visually block the sidebar; buttons will be hidden instead */
-        #search-indicator[data-desktop="1"],
-        #search-indicator[data-desktop="1"] .search-bar,
-        #search-indicator[data-desktop="1"] .search-expanded {
-            background: transparent !important; box-shadow: none !important; }
+        /* Desktop: restore visible styles — colored pill on top and card-like details below */
+        #search-indicator[data-desktop="1"] {
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(2,6,23,0.6);
+            background: linear-gradient(180deg, rgba(11,15,22,0.6), rgba(10,14,20,0.85));
+            padding: 6px;
+            z-index: 60;
+        }
+        #search-indicator[data-desktop="1"] .search-bar { 
+            border-radius: 10px; padding: 8px 12px; font-weight:700; display:flex; align-items:center;
+            background: linear-gradient(90deg,#6b8cff,#5a6bd8); color: #07102a; box-shadow: none; 
+        }
+        #search-indicator[data-desktop="1"] .search-expanded { 
+            position: relative; bottom: auto; transform: none; opacity: 1; pointer-events: auto; margin-top:8px;
+            background: var(--card); border: 1px solid var(--glass); border-radius:10px; padding:8px; max-height:140px; overflow:auto; 
+        }
     /* End-game modal styles */
     .end-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2,6,23,0.8); z-index: 1300 }
     .end-card { width: 92%; max-width: 520px; background: linear-gradient(180deg, rgba(20,30,60,0.9), rgba(10,14,26,0.95)); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 18px 60px rgba(2,6,23,0.8); transform: translateY(12px) scale(.98); opacity: 0; animation: popIn 420ms cubic-bezier(.2,.9,.2,1) forwards; display:flex; flex-direction:column; align-items:center; gap:12px }
