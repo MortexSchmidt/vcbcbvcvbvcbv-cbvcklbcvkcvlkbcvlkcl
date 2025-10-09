@@ -1003,8 +1003,8 @@
                         try{ const bar = root.querySelector('.search-bar'); if (bar) { bar.style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; bar.style.color = '#07102a'; bar.style.justifyContent='space-between'; } }catch(e){}
                         // mark desktop anchored so CSS can switch layout
                         root.dataset.desktop = '1';
-                        // ensure expanded view is visible and rendered inline
-                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.classList.add('expanded'); exp.style.position = 'relative'; exp.style.bottom = 'auto'; exp.style.left='0'; exp.style.right='0'; exp.style.transform='none'; exp.style.opacity='1'; exp.style.pointerEvents='auto'; } }catch(e){}
+                        // ensure expanded view is visible and rendered inline (full data under the pill)
+                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.classList.add('expanded'); exp.style.position = 'relative'; exp.style.bottom = 'auto'; exp.style.left='0'; exp.style.right='0'; exp.style.transform='none'; exp.style.opacity='1'; exp.style.pointerEvents='auto'; exp.style.display = 'block'; } }catch(e){}
                     } else {
                         // fallback: original settingsBtn behaviour
                         const settingsBtn = document.querySelector('.bottom-settings');
@@ -1063,8 +1063,11 @@
                     const bar = root.querySelector('.search-bar');
                     const collapseBtn = root.querySelector('#search-collapse-btn');
                     if (bar){
-                        bar.addEventListener('click', ()=>{ const expanded = bar.getAttribute('aria-expanded') === 'true'; _toggleSearchExpanded(root, !expanded); });
-                        bar.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); bar.click(); } });
+                        // On desktop the indicator is static and should not toggle; attach toggle only on non-desktop
+                        if (root.dataset.desktop !== '1'){
+                            bar.addEventListener('click', ()=>{ const expanded = bar.getAttribute('aria-expanded') === 'true'; _toggleSearchExpanded(root, !expanded); });
+                            bar.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); bar.click(); } });
+                        }
                     }
                     if (collapseBtn) collapseBtn.addEventListener('click', ()=>{ _toggleSearchExpanded(root, false); });
                     root.dataset.toggleAttached = '1';
@@ -1078,6 +1081,7 @@
             if (root){
                 try{ _toggleSearchExpanded(root, false); }catch(e){}
                 try{ root.style.display = 'none'; }catch(e){}
+                try{ root.dataset.desktop = ''; const exp = root.querySelector('.search-expanded'); if (exp) exp.style.display = 'none'; }catch(e){}
             }
             // reset any per-card buttons searching state
             try{ document.querySelectorAll('.card-play-btn').forEach(b=>{ b.dataset.searching='0'; b.textContent='Играть'; b.classList.remove('danger'); b.classList.add('primary'); }); }catch(e){}
