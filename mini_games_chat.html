@@ -1543,26 +1543,7 @@
     </div>
     <button id="debug-toggle" style="position:fixed;right:12px;bottom:12px;z-index:1401;background:rgba(108,140,255,0.95);color:#07102a;border-radius:999px;padding:10px 12px;font-weight:700;border:none">Log</button>
     <script>
-        // Simple on-page debug logger for environments without DevTools (mini-app)
-        function appendDebugLine(text){
-            try{
-                const panel = document.getElementById('debug-panel');
-                const log = document.getElementById('debug-log');
-                if (!panel || !log) return;
-                const t = new Date();
-                const ts = t.toLocaleTimeString();
-                const line = document.createElement('div'); line.textContent = `[${ts}] ${text}`;
-                log.insertBefore(line, log.firstChild);
-                // keep max lines
-                while(log.childElementCount > 200) log.removeChild(log.lastChild);
-            }catch(e){}
-        }
-        document.getElementById('debug-toggle').addEventListener('click', ()=>{
-            const panel = document.getElementById('debug-panel');
-            if (!panel) return;
-            if (panel.style.display === 'none') panel.style.display = 'block'; else panel.style.display = 'none';
-        });
-        document.getElementById('debug-clear').addEventListener('click', ()=>{ const log=document.getElementById('debug-log'); if (log) log.innerHTML=''; });
+        // dynamic debug panel is created by createDebugPanel() to avoid duplicate IDs
         // Copy button for environments without native DevTools (uses clipboard API with fallback)
         (function(){
             const copyBtn = document.getElementById('debug-copy');
