@@ -100,6 +100,9 @@ user_messages = {}
 # Словарь для хранения предыдущего статуса стрима (больше не используется)
 # previous_stream_status = {}
 
+# Множество для отслеживания чатов, в которых бот активен
+known_chats = set()
+
 KICK_MINIAPP_URL = os.environ.get('KICK_MINIAPP_URL') or 'https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app/kick_stream_miniapp.html'
 
 # Команда /kickapp — ссылка на мини‑апп
@@ -1493,7 +1496,7 @@ def setup_application():
 
 
         # Установка webhook
-        railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'web-production-fa34.up.railway.app')
+        railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', 'vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app')
         webhook_url = f"https://{railway_domain}/webhook"
         asyncio.run(application.bot.set_webhook(webhook_url))
         logger.info(f"Webhook установлен: {webhook_url}")
@@ -1919,85 +1922,84 @@ def handle_quick_match(data):
                 logger.info(f"quick_match: match_found emitted for match {match_id} to {p0_sid} and {p1_sid}")
             except Exception as e:
                 logger.warning(f"quick_match: failed to emit match_found for {match_id}: {e}")
+            # start timeout timer (30s)
+            def match_timeout(m_id=match_id):
+                m = pending_matches.get(m_id)
+                if not m:
+                    return
 
-           # start timeout timer (30s)
-           def match_timeout(m_id=match_id):
-               m = pending_matches.get(m_id)
-               if not m:
-                   return
+                logger.info(f"match_timeout: checking match {m_id}, confirmed: {len(m.get('confirmed', set()))}")
 
-               logger.info(f"match_timeout: checking match {m_id}, confirmed: {len(m.get('confirmed', set()))}")
+                # determine who confirmed (we store normalized user_keys in confirmed)
+                conf = m.get('confirmed', set())
+                players = m.get('players', [])
 
-               # determine who confirmed (we store normalized user_keys in confirmed)
-               conf = m.get('confirmed', set())
-               players = m.get('players', [])
+                # if both confirmed, do nothing (should have been started)
+                if len(conf) >= 2:
+                    logger.info(f"match_timeout: match {m_id} already confirmed by both players, cleaning up")
+                    try:
+                        del pending_matches[m_id]
+                    except Exception:
+                        pass
+                    return
 
-               # if both confirmed, do nothing (should have been started)
-               if len(conf) >= 2:
-                   logger.info(f"match_timeout: match {m_id} already confirmed by both players, cleaning up")
-                   try:
-                       del pending_matches[m_id]
-                   except Exception:
-                       pass
-                   return
+                # if one confirmed, requeue that player
+                logger.info(f"match_timeout: match {m_id} timed out, requeueing confirmed players")
+                for p in players:
+                    # resolve player's key for matching against confirmed set
+                    player_key = None
+                    try:
+                        if isinstance(p, dict):
+                            player_key = p.get('user_key') or (f"uid:{p.get('user_id')}" if p.get('user_id') else f"sid:{p.get('sid')}")
+                        else:
+                            player_key = f"sid:{p}"
+                    except Exception:
+                        player_key = f"sid:{p if isinstance(p, str) else ''}"
 
-               # if one confirmed, requeue that player
-               logger.info(f"match_timeout: match {m_id} timed out, requeueing confirmed players")
-               for p in players:
-                   # resolve player's key for matching against confirmed set
-                   player_key = None
-                   try:
-                       if isinstance(p, dict):
-                           player_key = p.get('user_key') or (f"uid:{p.get('user_id')}" if p.get('user_id') else f"sid:{p.get('sid')}")
-                       else:
-                           player_key = f"sid:{p}"
-                   except Exception:
-                       player_key = f"sid:{p if isinstance(p, str) else ''}"
+                    if player_key in conf:
+                        # create new hidden lobby for this sid and notify searching
+                        try:
+                            nid = uuid.uuid4().hex[:8]
+                            # try to get original sid to notify; fall back to None
+                            notify_sid = None
+                            if isinstance(p, dict):
+                                notify_sid = p.get('sid')
+                            else:
+                                notify_sid = p
+                            lobbies[nid] = {
+                                'id': nid,
+                                'name': 'Quick Match',
+                                'players': [{'sid': notify_sid, 'user_id': None, 'name': 'Игрок', 'symbol': 'X', 'avatar': ''}],
+                                'hidden': True,
+                                'status': 'waiting',
+                                'board': ['', '', '', '', '', '', '', '', ''],
+                                'current_player': 'X'
+                            }
+                            with hidden_waiting_lock:
+                                hidden_waiting.append(nid)
+                            socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=notify_sid)
+                            logger.info(f"match_timeout: requeued player_key {player_key} into hidden lobby {nid}")
+                        except Exception as e:
+                            logger.warning(f"match_timeout: error requeueing player {player_key}: {e}")
+                    else:
+                        # notify other player that match cancelled for them
+                        try:
+                            # resolve notify sid
+                            notify_sid = None
+                            if isinstance(p, dict):
+                                notify_sid = p.get('sid')
+                            else:
+                                notify_sid = p
+                            socketio.emit('match_cancelled', {'match_id': m_id, 'reason': 'timeout'}, room=notify_sid)
+                            logger.info(f"match_timeout: notified player {notify_sid} that match {m_id} timed out")
+                        except Exception as e:
+                            logger.warning(f"match_timeout: error notifying player {notify_sid}: {e}")
 
-                   if player_key in conf:
-                       # create new hidden lobby for this sid and notify searching
-                       try:
-                           nid = uuid.uuid4().hex[:8]
-                           # try to get original sid to notify; fall back to None
-                           notify_sid = None
-                           if isinstance(p, dict):
-                               notify_sid = p.get('sid')
-                           else:
-                               notify_sid = p
-                           lobbies[nid] = {
-                               'id': nid,
-                               'name': 'Quick Match',
-                               'players': [{'sid': notify_sid, 'user_id': None, 'name': 'Игрок', 'symbol': 'X', 'avatar': ''}],
-                               'hidden': True,
-                               'status': 'waiting',
-                               'board': ['', '', '', '', '', '', '', '', ''],
-                               'current_player': 'X'
-                           }
-                           with hidden_waiting_lock:
-                               hidden_waiting.append(nid)
-                           socketio.emit('lobby_waiting', {'lobby_id': nid, 'message': 'Поиск соперника...'}, room=notify_sid)
-                           logger.info(f"match_timeout: requeued player_key {player_key} into hidden lobby {nid}")
-                       except Exception as e:
-                           logger.warning(f"match_timeout: error requeueing player {player_key}: {e}")
-                   else:
-                       # notify other player that match cancelled for them
-                       try:
-                           # resolve notify sid
-                           notify_sid = None
-                           if isinstance(p, dict):
-                               notify_sid = p.get('sid')
-                           else:
-                               notify_sid = p
-                           socketio.emit('match_cancelled', {'match_id': m_id, 'reason': 'timeout'}, room=notify_sid)
-                           logger.info(f"match_timeout: notified player {notify_sid} that match {m_id} timed out")
-                       except Exception as e:
-                           logger.warning(f"match_timeout: error notifying player {notify_sid}: {e}")
-
-               try:
-                   del pending_matches[m_id]
-                   logger.info(f"match_timeout: cleaned up match {m_id}")
-               except Exception as e:
-                   logger.warning(f"match_timeout: error deleting match {m_id}: {e}")
+                try:
+                    del pending_matches[m_id]
+                    logger.info(f"match_timeout: cleaned up match {m_id}")
+                except Exception as e:
+                    logger.warning(f"match_timeout: error deleting match {m_id}: {e}")
 
             t = threading.Timer(30.0, match_timeout)
             pending_matches[match_id]['timer'] = t
@@ -2648,6 +2650,66 @@ def admin_reset_auth():
         logger.error(f"Error in admin_reset_auth: {e}")
         return json.dumps({'error': 'server error'}), 500
 
+
+@app.route('/admin/debug_matches', methods=['GET'])
+def admin_debug_matches():
+    """Protected debug endpoint. Returns a snapshot of pending_matches, hidden_waiting and related lobbies.
+    Use header X-ADMIN-KEY or query param ?key= to provide the ADMIN_KEY from env.
+    """
+    try:
+        provided = request.headers.get('X-ADMIN-KEY') or request.args.get('key')
+        secret = os.environ.get('ADMIN_KEY')
+        if not secret:
+            logger.warning('ADMIN_KEY not set in env; denying debug request for safety')
+            return json.dumps({'error': 'admin key not configured on server'}), 403
+        if not provided or provided != secret:
+            logger.warning('Unauthorized attempt to call /admin/debug_matches')
+            return json.dumps({'error': 'unauthorized'}), 403
+
+        # Build safe serializable snapshot
+        def serialize_match(m):
+            try:
+                return {
+                    'match_id': m_id,
+                    'lobby_id': m.get('lobby_id'),
+                    'players': [
+                        {
+                            'sid': (p.get('sid') if isinstance(p, dict) else p),
+                            'user_id': (p.get('user_id') if isinstance(p, dict) else None),
+                            'user_key': (p.get('user_key') if isinstance(p, dict) else None)
+                        } for p in m.get('players', [])
+                    ],
+                    'confirmed': list(m.get('confirmed', set())),
+                    'has_timer': bool(m.get('timer'))
+                }
+            except Exception:
+                return {'error': 'serialize error'}
+
+        matches = []
+        for m_id, m in list(pending_matches.items()):
+            matches.append(serialize_match(m))
+
+        # collect hidden waiting lobbies (minimal info)
+        hidden = []
+        for hid in list(hidden_waiting):
+            l = lobbies.get(hid)
+            if not l:
+                hidden.append({'lobby_id': hid, 'present': False})
+            else:
+                hidden.append({'lobby_id': hid, 'players': [{'sid': p.get('sid'), 'user_id': p.get('user_id')} for p in (l.get('players') or [])]})
+
+        resp = {
+            'pending_matches_count': len(pending_matches),
+            'pending_matches': matches,
+            'hidden_waiting_count': len(hidden_waiting),
+            'hidden_waiting': hidden,
+            'telegram_profiles_count': len(telegram_profiles)
+        }
+        return json.dumps(resp, ensure_ascii=False), 200
+    except Exception as e:
+        logger.error(f"admin_debug_matches error: {e}")
+        return json.dumps({'error': 'server error'}), 500
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     """Обработчик webhook от Telegram"""
@@ -2680,21 +2742,7 @@ def process_update(update):
         # Создаем новый event loop для этого потока
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        
-        # Обрабатываем обновление напрямую
-        loop.run_until_complete(application.process_update(update))
-        loop.close()
-    except Exception as e:
-        logger.error(f"Ошибка обработки update: {e}")
 
-def process_update(update):
-    """Обработка обновления в отдельном потоке"""
-    global application
-    try:
-        # Создаем новый event loop для этого потока
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
         # Обрабатываем обновление напрямую
         loop.run_until_complete(application.process_update(update))
         loop.close()
