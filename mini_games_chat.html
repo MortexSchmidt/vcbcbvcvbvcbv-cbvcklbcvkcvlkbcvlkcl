@@ -425,7 +425,7 @@
         try{ tg.expand?.() }catch(e){}
         try{ tg.ready?.() }catch(e){}
 
-        const socket = io('https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app');
+    const socket = io('https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app');
         let currentUser = null;
         let activeLobby = null; // { id, lobby }
     // global reference to floating play button (may be created later on mobile)
@@ -450,6 +450,35 @@
                 if (user.avatar){ const img = document.createElement('img'); img.src = user.avatar; img.alt = user.name || 'Avatar'; avatarEl.appendChild(img); }
                 else { avatarEl.textContent = (user.name||'').slice(0,1).toUpperCase(); }
             }catch(e){ console.error('updateProfile err', e); }
+        }
+
+        // --- Debug panel (visible in mini-app) ---
+        function createDebugPanel(){
+            if (document.getElementById('debug-panel')) return;
+            const dp = document.createElement('div'); dp.id = 'debug-panel';
+            dp.style.position='fixed'; dp.style.right='12px'; dp.style.bottom='120px'; dp.style.width='320px'; dp.style.maxHeight='360px'; dp.style.background='rgba(0,0,0,0.6)'; dp.style.color='#e6eef8'; dp.style.border='1px solid rgba(255,255,255,0.06)'; dp.style.borderRadius='10px'; dp.style.zIndex='1600'; dp.style.display='none'; dp.style.flexDirection='column'; dp.style.overflow='hidden'; dp.style.fontSize='12px';
+            const header = document.createElement('div'); header.style.display='flex'; header.style.justifyContent='space-between'; header.style.alignItems='center'; header.style.padding='8px'; header.style.borderBottom='1px solid rgba(255,255,255,0.03)'; header.style.background='linear-gradient(180deg, rgba(255,255,255,0.02), transparent)';
+            const title = document.createElement('div'); title.textContent='Logs'; title.style.fontWeight='700'; title.style.color='var(--text)';
+            const clr = document.createElement('button'); clr.className='menu-btn'; clr.textContent='Очистить'; clr.style.padding='6px 8px'; clr.style.fontSize='12px'; clr.addEventListener('click', ()=>{ list.innerHTML=''; });
+            header.appendChild(title); header.appendChild(clr);
+            const list = document.createElement('div'); list.id='debug-log-list'; list.style.padding='8px'; list.style.overflowY='auto'; list.style.maxHeight='300px'; list.style.display='flex'; list.style.flexDirection='column'; list.style.gap='6px';
+            dp.appendChild(header); dp.appendChild(list);
+            document.body.appendChild(dp);
+
+            const btn = document.createElement('button'); btn.id='debug-toggle'; btn.textContent='Log'; btn.style.position='fixed'; btn.style.right='12px'; btn.style.bottom='80px'; btn.style.zIndex='1601'; btn.className='menu-btn'; btn.addEventListener('click', ()=>{ dp.style.display = dp.style.display==='none' ? 'flex' : 'none'; });
+            document.body.appendChild(btn);
+        }
+
+        function appendDebugLine(msg){
+            try{
+                createDebugPanel();
+                const list = document.getElementById('debug-log-list');
+                if (!list) return;
+                const el = document.createElement('div'); el.style.padding='6px'; el.style.background='rgba(255,255,255,0.02)'; el.style.borderRadius='8px'; el.style.border='1px solid rgba(255,255,255,0.02)'; el.style.fontSize='12px'; el.textContent = (new Date()).toLocaleTimeString() + ' — ' + msg;
+                list.insertBefore(el, list.firstChild);
+                // keep last 200
+                while(list.children.length > 200) list.removeChild(list.lastChild);
+            }catch(e){ console.warn('appendDebugLine err', e); }
         }
 
         // navigation lock helpers (used during quick-match searching/confirmation)
@@ -711,7 +740,8 @@
         // when a quick-match hidden lobby is started, server emits 'lobby_started' with lobby data
         socket.on('lobby_started', (lobby)=>{
             try{
-                console.debug('socket:lobby_started', lobby);
+                    console.debug('socket:lobby_started', lobby);
+                    try{ appendDebugLine('lobby_started: ' + JSON.stringify({ id: lobby?.id, status: lobby?.status })); }catch(e){}
                 if (!lobby) return;
                 // immediately clear search & confirm UI
                 try{ hideSearchIndicator(); }catch(e){}
@@ -732,6 +762,7 @@
         socket.on('match_starting', (payload)=>{
             try{
                 console.info('socket:match_starting', payload);
+                try{ appendDebugLine('match_starting: ' + JSON.stringify({ match_id: payload?.match_id, lobby_id: payload?.lobby_id, players: (payload?.players||[]).map(p=>p?.name||p?.user_id||p?.sid) })); }catch(e){}
                 // if confirm modal is open, update players with normalized payload
                 if (payload && payload.players && payload.players.length){
                     const players = payload.players;
@@ -749,11 +780,11 @@
         });
 
         socket.on('match_ack', (data)=>{
-            try{ console.info('socket:match_ack', data); }catch(e){}
+            try{ console.info('socket:match_ack', data); try{ appendDebugLine('match_ack: ' + JSON.stringify(data)); }catch(e){} }catch(e){}
         });
 
         socket.on('match_cancelled', (data)=>{
-            try{ console.info('socket:match_cancelled', data); hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } enableNavigation(); }catch(e){}
+            try{ console.info('socket:match_cancelled', data); try{ appendDebugLine('match_cancelled: ' + JSON.stringify(data)); }catch(e){} hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } enableNavigation(); }catch(e){}
         });
     // inline search indicator and play button toggle state
     let searching = false;
@@ -828,8 +859,23 @@
             try{ document.getElementById('search-found-text').textContent = 'Игроков найдено: 0'; }catch(e){}
         }
 
-    socket.on('lobby_waiting', (data)=>{ try{ console.debug('socket:lobby_waiting', data); const found = (data && Array.isArray(data.players) ? data.players.length : (typeof data?.foundCount !== 'undefined' ? Number(data.foundCount) : 1)); const opts = { game: data?.game || data?.name || null, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: found }; showSearchIndicator(opts); }catch(e){} });
-    socket.on('lobby_cancelled', (data)=>{ try{ console.debug('socket:lobby_cancelled', data); hideSearchIndicator(); }catch(e){} });
+    socket.on('lobby_waiting', (data)=>{ 
+        try{ 
+            console.debug('socket:lobby_waiting', data); 
+            try{ appendDebugLine('lobby_waiting: ' + JSON.stringify({lobby_id: data?.lobby_id, message: data?.message, found: (data && Array.isArray(data.players) ? data.players.length : data?.foundCount)})); }catch(e){}
+            const found = (data && Array.isArray(data.players) ? data.players.length : (typeof data?.foundCount !== 'undefined' ? Number(data.foundCount) : 1)); 
+            const opts = { game: data?.game || data?.name || null, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: found }; 
+            showSearchIndicator(opts); 
+        }catch(e){}
+    });
+
+    socket.on('lobby_cancelled', (data)=>{ 
+        try{ 
+            console.debug('socket:lobby_cancelled', data); 
+            try{ appendDebugLine('lobby_cancelled: ' + JSON.stringify({lobby_id: data?.lobby_id, message: data?.message})); }catch(e){}
+            hideSearchIndicator(); 
+        }catch(e){} 
+    });
 
         // server-side admin reset: force clients to clear local profile and show auth modal
         socket.on('force_logout', (data)=>{
@@ -1427,6 +1473,38 @@
             // optionally block context menu except for allowed targets
             document.addEventListener('contextmenu', function(e){ try{ if (!isSelectable(e.target) && !e.target.closest('.menu-btn')) e.preventDefault(); }catch(err){} }, { capture: true });
         })();
+    </script>
+    <!-- In-page debug panel (visible in Mini App when devs need to see socket events) -->
+    <div id="debug-panel" style="position:fixed;right:12px;bottom:12px;width:320px;max-height:50vh;overflow:auto;background:rgba(2,6,23,0.9);border:1px solid rgba(255,255,255,0.04);border-radius:10px;padding:8px;font-size:12px;color:var(--muted);z-index:1400;display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <strong style="color:var(--text);font-weight:700">Debug</strong>
+            <button id="debug-clear" class="menu-btn" style="padding:6px 8px;font-size:11px">Очистить</button>
+        </div>
+        <div id="debug-log" style="font-family:monospace;color:#cbd5e1;line-height:1.3;">
+        </div>
+    </div>
+    <button id="debug-toggle" style="position:fixed;right:12px;bottom:12px;z-index:1401;background:rgba(108,140,255,0.95);color:#07102a;border-radius:999px;padding:10px 12px;font-weight:700;border:none">Log</button>
+    <script>
+        // Simple on-page debug logger for environments without DevTools (mini-app)
+        function appendDebugLine(text){
+            try{
+                const panel = document.getElementById('debug-panel');
+                const log = document.getElementById('debug-log');
+                if (!panel || !log) return;
+                const t = new Date();
+                const ts = t.toLocaleTimeString();
+                const line = document.createElement('div'); line.textContent = `[${ts}] ${text}`;
+                log.insertBefore(line, log.firstChild);
+                // keep max lines
+                while(log.childElementCount > 200) log.removeChild(log.lastChild);
+            }catch(e){}
+        }
+        document.getElementById('debug-toggle').addEventListener('click', ()=>{
+            const panel = document.getElementById('debug-panel');
+            if (!panel) return;
+            if (panel.style.display === 'none') panel.style.display = 'block'; else panel.style.display = 'none';
+        });
+        document.getElementById('debug-clear').addEventListener('click', ()=>{ const log=document.getElementById('debug-log'); if (log) log.innerHTML=''; });
     </script>
     <!-- background music feature removed -->
 </body>
