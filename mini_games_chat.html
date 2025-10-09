@@ -233,15 +233,16 @@
             .game-selection { flex-direction: column; }
             .game-card { width: 100%; min-width: 0; }
             .game-card .game-choose, .game-card .game-lobby, .game-card button { display: block !important; }
-                /* do not auto-show per-card play buttons on mobile; they appear after selection */
-                /* hide card-play-btn by default (prevent media rule that forced all buttons visible)
-                    show only when the card is selected or the button is in searching state */
-                .card-play-btn { width: 100%; box-sizing: border-box; display: none !important; }
-                .game-card.selected .card-play-btn { display: block !important; }
-                .card-play-btn[data-searching="1"] { display: block !important; }
+                    /* do not auto-show per-card play buttons on mobile; they appear after selection */
+                    /* hide card-play-btn by default (increase specificity so generic .game-card button rule doesn't override)
+                        show only when the card is selected or the button is in searching state */
+                    .game-card button.card-play-btn { width: 100%; box-sizing: border-box; display: none !important; }
+                    .game-card.selected button.card-play-btn { display: block !important; }
+                    .game-card button.card-play-btn[data-searching="1"] { display: block !important; }
             /* place search indicator above bottom-nav and stretch across the menu area */
             #search-indicator { left: 0 !important; right: 0 !important; bottom: 84px !important; transform: none !important; min-width: unset !important; width: calc(100% - 28px) !important; margin: 0 14px; }
-            #search-indicator .search-bar { justify-content: center; width: 100%; border-radius: 12px; }
+            /* align title left and timer right inside the pill; avatar/name row left-aligned */
+            #search-indicator .search-bar { justify-content: space-between; width: 100%; border-radius: 12px; }
             .game-card { cursor: pointer; }
         }
         /* Ensure per-card play buttons are always clickable and above overlays */
@@ -362,10 +363,10 @@
             <div id="search-timer-compact" style="margin-left:auto;font-weight:700;color:#07102a">00:00</div>
             <div id="search-arrow" style="margin-left:6px;transition:transform .18s ease;color:#07102a">▾</div>
         </div>
-        <div class="search-expanded" style="max-height:0;overflow:hidden;transition:max-height .22s ease,opacity .18s ease;opacity:0;padding:0 12px">
+            <div class="search-expanded" style="max-height:0;overflow:hidden;transition:max-height .22s ease,opacity .18s ease;opacity:0;padding:0 12px">
             <div id="search-timer-text" style="margin-top:8px;font-weight:700">Поиск: 00:00</div>
             <div id="search-game-text" style="color:var(--muted);font-weight:600;margin-top:6px;font-size:13px">Игра: —</div>
-            <div id="search-player-row" style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:6px;">
+            <div id="search-player-row" style="display:flex;align-items:center;gap:8px;justify-content:flex-start;margin-top:6px;">
                 <div style="color:var(--muted);font-weight:600;font-size:13px">Игрок:</div>
                 <div id="search-player-avatar" style="width:32px;height:32px;border-radius:8px;overflow:hidden;background:var(--glass);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text);font-size:12px"></div>
                 <div id="search-player-name" style="color:var(--muted);font-weight:600;font-size:13px">—</div>
