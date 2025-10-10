@@ -7,19 +7,19 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600;700&display=swap');
         :root{
-            --bg:#071018;           /* deep navy */
-            --panel:#0f1418;        /* dark panel */
+            --bg:#0a0e12;           /* darker navy for CS2 feel */
+            --panel:#1a1f23;        /* darker panel */
             --card: var(--panel);
-            --muted:#9aa3a8;
-            --text:#e6f0f2;
-            --accent:#ffbe2e;       /* CS-like yellow */
-            --accent-2:#ff7b2e;     /* orange */
-            --danger:#ff4b4b;
-            --glass: rgba(255,255,255,0.04);
-            --edge: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(0,0,0,0.25));
-            --radius:10px;
-            --hud-border: 1px solid rgba(255,255,255,0.04);
-            --gap:12px;
+            --muted:#8a9ba8;
+            --text:#e4f0f5;
+            --accent:#ff8c00;       /* CS2 orange */
+            --accent-2:#ff4500;     /* darker orange */
+            --danger:#ff4444;
+            --glass: rgba(255,255,255,0.06);
+            --edge: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(0,0,0,0.3));
+            --radius:8px;
+            --hud-border: 2px solid rgba(255,255,255,0.08);
+            --gap:16px;
         }
 
         *{box-sizing:border-box}
@@ -28,72 +28,90 @@
         *{user-select:none}
         input,textarea,[contenteditable],.allow-select{user-select:text}
 
-        /* App layout: desktop HUD left + center stage + right scoreboard; mobile: stacked */
-        .app-container{width:100%;max-width:1200px;height:calc(100vh - 8px);margin:8px auto;display:grid;grid-template-columns:260px 1fr 260px;gap:16px;padding:12px}
+        /* CS2 HUD Layout: left menu, center game, right scoreboard */
+        .app-container{width:100%;max-width:1400px;height:100vh;margin:0 auto;display:grid;grid-template-columns:300px 1fr 300px;gap:20px;padding:20px}
 
-        /* Left HUD / menu */
-    .app-sidebar{background:linear-gradient(180deg,#0b0f12,#101418);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 28px rgba(2,6,11,0.6);border:var(--hud-border);position:relative;overflow:hidden}
-    .app-sidebar .sidebar-bg{position:absolute;inset:0;background-position:center;background-size:cover;opacity:0.08;filter:grayscale(20%) brightness(.6);pointer-events:none}
-        .profile-row{display:flex;align-items:center;gap:10px}
-        .avatar{width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.02);font-weight:700}
+        /* Left HUD / menu - CS2 style */
+        .app-sidebar{background:linear-gradient(180deg,#0f1418,#1a1f23);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 12px 32px rgba(0,0,0,0.8);border:var(--hud-border);position:relative;overflow:hidden}
+        .app-sidebar .sidebar-bg{position:absolute;inset:0;background-position:center;background-size:cover;opacity:0.05;filter:grayscale(30%) brightness(.7);pointer-events:none}
+        .profile-row{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+        .avatar{width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.05);font-weight:700;border:2px solid var(--accent)}
         .profile-info{display:flex;flex-direction:column}
-        .profile-name{font-weight:700;font-size:14px;color:var(--text);font-family:Orbitron,Inter}
-        .profile-sub{font-size:12px;color:var(--muted)}
+        .profile-name{font-weight:700;font-size:16px;color:var(--text);font-family:Orbitron}
+        .profile-sub{font-size:13px;color:var(--muted)}
 
-    .menu-buttons{display:flex;flex-direction:column;gap:8px;margin-top:6px;position:relative;z-index:2}
-    .menu-btn{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;background:transparent;border:var(--hud-border);color:var(--text);cursor:pointer;font-weight:700;transition:all .12s ease}
-        .menu-btn svg{width:18px;height:18px}
-    .menu-btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#071018;border:0}
-    .menu-btn:hover{transform:translateX(6px);transition:transform .12s ease}
-    /* active state similar to screenshots */
-    .menu-btn.active{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#071018;border:0;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
-    .menu-btn .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:6px}
+        .menu-buttons{display:flex;flex-direction:column;gap:10px;margin-top:10px;position:relative;z-index:2}
+        .menu-btn{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:transparent;border:var(--hud-border);color:var(--text);cursor:pointer;font-weight:700;transition:all .15s ease;font-family:Orbitron;text-transform:uppercase;letter-spacing:1px}
+        .menu-btn svg{width:20px;height:20px}
+        .menu-btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#0a0e12;border:0;box-shadow:0 8px 20px rgba(255,140,0,0.4)}
+        .menu-btn:hover{transform:translateX(8px);background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#0a0e12;border:0}
+        .menu-btn.active{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#0a0e12;border:0;box-shadow:0 8px 20px rgba(255,140,0,0.4)}
 
-        /* Center stage */
-        .app-main{background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px;align-items:stretch;border:var(--hud-border);box-shadow:inset 0 1px 0 rgba(255,255,255,0.02)}
+        /* Center stage - CS2 game area */
+        .app-main{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.1));border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:16px;align-items:stretch;border:var(--hud-border);box-shadow:inset 0 2px 0 rgba(255,255,255,0.05)}
 
-        .top-hud{display:flex;align-items:center;justify-content:space-between;gap:12px}
-        .title{font-family:Orbitron,Inter;font-weight:700;color:var(--accent);letter-spacing:1px}
-        .subtitle{color:var(--muted);font-size:13px}
+        .top-hud{display:flex;align-items:center;justify-content:space-between;gap:16px}
+        .title{font-family:Orbitron;font-weight:700;color:var(--accent);letter-spacing:2px;text-transform:uppercase;font-size:24px}
+        .subtitle{color:var(--muted);font-size:14px}
 
-        .game-area{display:flex;align-items:center;justify-content:center;padding:10px;display:none}
+        .game-area{display:flex;align-items:center;justify-content:center;padding:20px;display:none}
 
-        /* Game card / board container styled like CS2 stage */
-        #board-wrap{background:linear-gradient(180deg,#071018,#0b1116);border-radius:8px;padding:18px;border:1px solid rgba(255,255,255,0.03);width:100%;max-width:720px;display:flex;flex-direction:column;align-items:center;gap:12px}
-        #board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:420px;max-width:90%;background:transparent;padding:10px;border-radius:6px}
-        .ttt-cell{aspect-ratio:1/1;background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(0,0,0,0.15));border-radius:6px;border:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--text);cursor:pointer}
-        .ttt-cell.disabled{opacity:0.5;cursor:default}
+        /* Game board - CS2 styled */
+        #board-wrap{background:linear-gradient(180deg,#0f1418,#1a1f23);border-radius:12px;padding:24px;border:var(--hud-border);width:100%;max-width:800px;display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 12px 32px rgba(0,0,0,0.6)}
+        #board{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:480px;max-width:90%;background:transparent;padding:16px;border-radius:8px}
+        .ttt-cell{aspect-ratio:1/1;background:linear-gradient(135deg,rgba(255,255,255,0.03),rgba(0,0,0,0.2));border-radius:8px;border:2px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--text);cursor:pointer;font-family:Orbitron;transition:all .1s ease}
+        .ttt-cell:hover{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0a0e12;border-color:var(--accent)}
+        .ttt-cell.disabled{opacity:0.6;cursor:default}
 
-        .controls-row{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:6px}
-        .control-ghost{padding:8px 12px;border-radius:6px;background:rgba(255,255,255,0.02);border:var(--hud-border);color:var(--muted);font-weight:700}
-        .control-primary{padding:10px 14px;border-radius:8px;background:var(--accent);color:#071018;font-weight:800;border:0}
+        .controls-row{display:flex;gap:12px;align-items:center;justify-content:center;margin-top:12px}
+        .control-ghost{padding:12px 18px;border-radius:8px;background:rgba(255,255,255,0.05);border:var(--hud-border);color:var(--muted);font-weight:700;font-family:Orbitron;text-transform:uppercase}
+        .control-primary{padding:14px 20px;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#0a0e12;font-weight:800;border:0;font-family:Orbitron;text-transform:uppercase;letter-spacing:1px}
 
-        /* Right scoreboard / info */
-        .app-side-right{background:linear-gradient(180deg,#081018,#0e1418);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;border:var(--hud-border)}
-        .score{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;background:rgba(255,255,255,0.02)}
-        .score .num{font-family:Orbitron;font-weight:700;color:var(--accent);font-size:20px}
-        .meta{color:var(--muted);font-size:13px}
+        /* Right scoreboard - CS2 style */
+        .app-side-right{background:linear-gradient(180deg,#0f1418,#1a1f23);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:16px;border:var(--hud-border);box-shadow:0 12px 32px rgba(0,0,0,0.8)}
+        .score{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05)}
+        .score .num{font-family:Orbitron;font-weight:700;color:var(--accent);font-size:24px}
+        .meta{color:var(--muted);font-size:14px}
 
-        /* Small floating exit fullscreen button for desktop game HUD */
-        .exit-full{position:fixed;right:22px;top:22px;background:rgba(0,0,0,0.6);border-radius:10px;padding:8px 10px;color:var(--text);border:1px solid rgba(255,255,255,0.04);cursor:pointer;z-index:1200}
-
-        /* Mobile adjustments */
-        @media (max-width:900px){
-            .app-container{grid-template-columns:1fr;padding:8px;height:100vh;gap:8px}
+        /* Mobile adjustments - stack layout */
+        @media (max-width:1024px){
+            .app-container{grid-template-columns:1fr;padding:12px;height:100vh;gap:12px}
             .app-sidebar{display:none}
             .app-side-right{display:none}
             #board{width:100%;grid-template-columns:repeat(3,1fr);gap:8px}
-            .title{font-size:16px}
-            .exit-full{right:12px;top:12px}
-            .controls-row{position:fixed;left:0;right:0;bottom:0;padding:12px;background:linear-gradient(180deg,rgba(7,16,24,0.9),rgba(7,10,14,0.95));justify-content:space-around;z-index:1001}
+            .title{font-size:18px}
+            .ttt-cell{font-size:24px}
+            .controls-row{position:fixed;left:0;right:0;bottom:80px;padding:16px;background:linear-gradient(180deg,rgba(10,14,18,0.95),rgba(10,14,18,0.98));justify-content:space-around;z-index:1001;border-top:2px solid var(--accent)}
         }
 
-    /* Preserve bottom-nav semantics used by JS (visually hidden on desktop) */
-    .bottom-nav{display:flex;gap:8px;align-items:center;justify-content:space-around;padding:8px;background:linear-gradient(180deg,rgba(7,12,18,0.92),rgba(7,10,14,0.96));border-top:var(--hud-border);position:fixed;left:0;right:0;bottom:0;z-index:1100}
-    .bottom-nav button{background:transparent;border:0;color:var(--text);display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700}
-    .bottom-nav .bottom-play{position:relative;margin-top:-22px;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:64px;height:64px;border-radius:999px;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,0.6);color:#071018}
-    .bottom-nav .bottom-play svg{width:22px;height:22px}
-    @media (min-width:901px){.bottom-nav{display:none}}
+        /* Bottom nav for mobile - CS2 style */
+        .bottom-nav{display:flex;gap:12px;align-items:center;justify-content:space-around;padding:16px;background:linear-gradient(180deg,rgba(10,14,18,0.95),rgba(10,14,18,0.98));border-top:var(--hud-border);position:fixed;left:0;right:0;bottom:0;z-index:1100;border-top:2px solid var(--accent)}
+        .bottom-nav button{background:transparent;border:0;color:var(--text);display:flex;flex-direction:column;align-items:center;gap:8px;font-weight:700;font-family:Orbitron;text-transform:uppercase;letter-spacing:1px}
+        .bottom-nav .bottom-play{position:relative;margin-top:-28px;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:72px;height:72px;border-radius:50%;align-items:center;justify-content:center;box-shadow:0 12px 32px rgba(255,140,0,0.5);color:#0a0e12;border:3px solid rgba(255,255,255,0.1)}
+        .bottom-nav .bottom-play svg{width:28px;height:28px}
+        @media (min-width:1025px){.bottom-nav{display:none}}
+
+        /* Modals - CS2 styled */
+        .modal-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.9);z-index:2000}
+        .modal-content{width:92%;max-width:480px;background:var(--card);border-radius:12px;padding:24px;border:var(--hud-border);box-shadow:0 16px 48px rgba(0,0,0,0.8)}
+        .modal-title{font-family:Orbitron;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:2px;margin-bottom:16px}
+        .modal-text{color:var(--muted);margin-bottom:16px}
+        .modal-actions{display:flex;gap:12px;justify-content:flex-end}
+
+        /* Search indicator - CS2 style */
+        .search-indicator{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);display:none;z-index:1002;min-width:200px}
+        .search-bar{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent-2));border:2px solid rgba(255,255,255,0.1);font-weight:700;color:#0a0e12;cursor:pointer;font-family:Orbitron;text-transform:uppercase}
+        .search-expanded{max-height:0;overflow:hidden;transition:max-height .3s ease,opacity .3s ease;opacity:0;padding:16px;border-radius:10px;background:var(--card);border:var(--hud-border);margin-top:12px}
+
+        /* End modal - CS2 victory screen */
+        .end-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.9);z-index:1300}
+        .end-card{background:var(--card);border-radius:12px;padding:32px;border:var(--hud-border);box-shadow:0 16px 48px rgba(0,0,0,0.8);text-align:center;max-width:500px;width:90%}
+        .winner-name{font-family:Orbitron;font-weight:700;color:var(--accent);font-size:28px;text-transform:uppercase;letter-spacing:2px;margin:16px 0}
+        .winner-sub{color:var(--muted);font-size:16px;margin-bottom:24px}
+        .end-actions{margin-top:24px}
+
+        /* Hidden utility */
+        .hidden{display:none}
 
         /* Small helpers */
         .hidden{display:none}
@@ -191,17 +209,17 @@
     </div>
 
     <!-- Auth modal (blocks UI until authorized) -->
-    <div id="auth-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);z-index:200">
-        <div style="width:92%;max-width:420px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)">
-            <h3 style="margin:0 0 8px 0">Авторизация</h3>
-            <p style="margin:0 0 12px 0;color:var(--muted)">Чтобы играть в мини‑игры и использовать профиль Telegram, авторизуйтесь через бота. Это быстро и безопасно.</p>
-            <div id="auth-state" style="margin-bottom:12px;color:var(--muted)">Нажмите «Получить код» и отправьте его боту командой <code>/start auth:&lt;код&gt;</code>.</div>
-            <div style="display:flex;gap:8px;align-items:center">
+    <div id="auth-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3 class="modal-title">Авторизация</h3>
+            <p class="modal-text">Чтобы играть в мини‑игры и использовать профиль Telegram, авторизуйтесь через бота. Это быстро и безопасно.</p>
+            <div id="auth-state" class="modal-text">Нажмите «Получить код» и отправьте его боту командой <code>/start auth:&lt;код&gt;</code>.</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:16px">
                 <button id="btn-get-code" class="menu-btn">Получить код</button>
-                <input id="auth-code" readonly style="flex:1;padding:8px;border-radius:10px;border:1px solid var(--glass);background:transparent;color:var(--text);min-width:0">
+                <input id="auth-code" readonly style="flex:1;padding:10px;border-radius:8px;border:2px solid rgba(255,255,255,0.08);background:transparent;color:var(--text);min-width:0;font-family:Orbitron;text-transform:uppercase">
                 <button id="btn-copy-code" class="menu-btn">Копировать</button>
             </div>
-            <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+            <div class="modal-actions" style="margin-top:16px">
                 <button id="btn-auth-close" class="menu-btn" style="display:none">Закрыть</button>
             </div>
         </div>
@@ -229,40 +247,44 @@
     </div>
 
     <!-- Blocking match confirmation modal (appears when match found) -->
-    <div id="confirm-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.85);z-index:1201;pointer-events:auto">
-        <div style="position:absolute;inset:0;background:transparent;z-index:1201"></div>
-        <div id="confirm-box" style="width:92%;max-width:520px;background:var(--card);border-radius:12px;padding:18px;border:1px solid var(--glass);box-shadow:0 12px 40px rgba(0,0,0,0.6);z-index:1202;pointer-events:auto">
-            <h3 id="confirm-title" style="margin:0 0 8px 0">Матч найден</h3>
-            <p id="confirm-desc" style="margin:0 0 12px 0;color:var(--muted)">Подтвердите участие. Выйдя — вы получите временный бан.</p>
-            <div id="confirm-players" style="display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px">
-                <div id="confirm-player-a" style="display:flex;align-items:center;gap:8px;flex:1;justify-content:center">
-                    <div class="confirm-avatar" id="confirm-avatar-a" style="width:52px;height:52px;border-radius:10px;background:var(--glass);display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:700;color:var(--text)">—</div>
-                    <div style="text-align:left;min-width:0"><div id="confirm-name-a" style="font-weight:700">—</div><div id="confirm-meta-a" style="color:var(--muted);font-size:12px">Вы</div></div>
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div style="position:absolute;inset:0;background:transparent;z-index:1201"></div>
+            <div id="confirm-box" style="width:92%;max-width:520px;background:var(--card);border-radius:12px;padding:18px;border:1px solid var(--glass);box-shadow:0 12px 40px rgba(0,0,0,0.6);z-index:1202;pointer-events:auto">
+                <h3 id="confirm-title" style="margin:0 0 8px 0">Матч найден</h3>
+                <p id="confirm-desc" style="margin:0 0 12px 0;color:var(--muted)">Подтвердите участие. Выйдя — вы получите временный бан.</p>
+                <div id="confirm-players" style="display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px">
+                    <div id="confirm-player-a" style="display:flex;align-items:center;gap:8px;flex:1;justify-content:center">
+                        <div class="confirm-avatar" id="confirm-avatar-a" style="width:52px;height:52px;border-radius:10px;background:var(--glass);display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:700;color:var(--text)">—</div>
+                        <div style="text-align:left;min-width:0"><div id="confirm-name-a" style="font-weight:700">—</div><div id="confirm-meta-a" style="color:var(--muted);font-size:12px">Вы</div></div>
+                    </div>
+                    <div style="flex:0 0 8px;text-align:center;color:var(--muted);font-weight:700">VS</div>
+                    <div id="confirm-player-b" style="display:flex;align-items:center;gap:8px;flex:1;justify-content:center">
+                        <div class="confirm-avatar" id="confirm-avatar-b" style="width:52px;height:52px;border-radius:10px;background:var(--glass);display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:700;color:var(--text)">—</div>
+                        <div style="text-align:left;min-width:0"><div id="confirm-name-b" style="font-weight:700">—</div><div id="confirm-meta-b" style="color:var(--muted);font-size:12px">Ожидание</div></div>
+                    </div>
                 </div>
-                <div style="flex:0 0 8px;text-align:center;color:var(--muted);font-weight:700">VS</div>
-                <div id="confirm-player-b" style="display:flex;align-items:center;gap:8px;flex:1;justify-content:center">
-                    <div class="confirm-avatar" id="confirm-avatar-b" style="width:52px;height:52px;border-radius:10px;background:var(--glass);display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:700;color:var(--text)">—</div>
-                    <div style="text-align:left;min-width:0"><div id="confirm-name-b" style="font-weight:700">—</div><div id="confirm-meta-b" style="color:var(--muted);font-size:12px">Ожидание</div></div>
+                <div id="confirm-actions-row" style="display:flex;gap:8px;justify-content:space-between;align-items:center">
+                    <div id="confirm-timer" style="font-weight:700;color:var(--accent)">15</div>
+                    <div id="confirm-buttons" style="display:flex;gap:8px;justify-content:flex-end">
+                        <button id="btn-accept" class="menu-btn primary">Подтвердить</button>
+                    </div>
                 </div>
+                <div id="confirm-waiting" style="display:none;margin-top:12px;color:var(--muted);font-weight:700">Ждём подтверждения других игроков...</div>
             </div>
-            <div id="confirm-actions-row" style="display:flex;gap:8px;justify-content:space-between;align-items:center">
-                <div id="confirm-timer" style="font-weight:700;color:var(--accent)">15</div>
-                <div id="confirm-buttons" style="display:flex;gap:8px;justify-content:flex-end">
-                    <button id="btn-accept" class="menu-btn primary">Подтвердить</button>
-                </div>
-            </div>
-            <div id="confirm-waiting" style="display:none;margin-top:12px;color:var(--muted);font-weight:700">Ждём подтверждения других игроков...</div>
         </div>
     </div>
 
     <!-- Reload confirmation modal (appears when user attempts to refresh during a game) -->
-    <div id="reload-confirm-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);z-index:1250">
-        <div style="width:92%;max-width:420px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)">
-            <h3 style="margin:0 0 8px 0">Перезагрузить страницу?</h3>
-            <p style="margin:0 0 12px 0;color:var(--muted)">Если вы перезагрузите страницу, игра будет завершена. Вы уверены?</p>
-            <div style="display:flex;gap:8px;justify-content:flex-end">
-                <button id="reload-cancel" class="menu-btn">Отмена</button>
-                <button id="reload-confirm" class="menu-btn primary">Перезагрузить и закончить игру</button>
+    <div id="reload-confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div style="width:92%;max-width:420px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)">
+                <h3 style="margin:0 0 8px 0">Перезагрузить страницу?</h3>
+                <p style="margin:0 0 12px 0;color:var(--muted)">Если вы перезагрузите страницу, игра будет завершена. Вы уверены?</p>
+                <div style="display:flex;gap:8px;justify-content:flex-end">
+                    <button id="reload-cancel" class="menu-btn">Отмена</button>
+                    <button id="reload-confirm" class="menu-btn primary">Перезагрузить и закончить игру</button>
+                </div>
             </div>
         </div>
     </div>
