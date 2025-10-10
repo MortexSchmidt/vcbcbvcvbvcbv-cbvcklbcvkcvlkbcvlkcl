@@ -6,19 +6,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0b0f14;
-            --card: #0f1720;
-            --muted: #98a0b3;
-            --text: #e6eef8;
-            --accent: #6c8cff;
-            --success: #22c55e;
-            --danger: #ff6b6b;
-            --glass: rgba(255,255,255,0.03);
-            --shadow-1: 0 8px 28px rgba(2,6,23,0.6);
-            --radius: 12px;
-            --radius-sm: 8px;
-            --gap: 14px;
-            --transition: 180ms cubic-bezier(.2,.9,.2,1);
+            --bg: #000000;
+            --card: #0f0f0f;
+            --muted: #666666;
+            --text: #ffffff;
+            --accent: #ff6b35;
+            --success: #44ff44;
+            --danger: #ff4444;
+            --glass: rgba(255,255,255,0.08);
+            --shadow-1: 0 8px 32px rgba(0,0,0,0.9);
+            --radius: 8px;
+            --radius-sm: 6px;
+            --gap: 16px;
+            --transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
         }
         * { box-sizing: border-box; }
 
@@ -31,8 +31,8 @@
     .game-card, .menu-btn, .game-card button, .menu-btn, input, .bottom-nav button { word-break: break-word; white-space: normal }
 
     /* responsive tic-tac-toe board */
-    #board { grid-template-columns: repeat(3, minmax(0, 1fr)); gap:8px; width:100%; max-width:520px }
-    .ttt-cell { aspect-ratio: 1 / 1; width:100%; min-width:0; padding:0; }
+    #board { grid-template-columns: repeat(3, minmax(0, 1fr)); gap:4px; width:100%; max-width:360px; background: var(--card); padding:12px; border-radius:8px; border:1px solid var(--glass); }
+    .ttt-cell { aspect-ratio: 1 / 1; width:100%; min-width:0; padding:0; background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.04); border-radius:4px; transition:all 0.2s ease; }
         /* Disable default blue tap highlight and browser focus outlines on mobile */
         html, body, button, a, input, textarea, select {
             -webkit-tap-highlight-color: transparent;
@@ -91,8 +91,8 @@
         /* Sidebar */
         .app-sidebar {
             padding: 18px;
-            background: transparent;
-            border-right: 1px solid rgba(255,255,255,0.03);
+            background: var(--card);
+            border-right: 1px solid var(--glass);
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -107,10 +107,12 @@
         .profile-sub { font-size:0.9rem; color:var(--muted) }
 
         .menu-buttons { display:flex; flex-direction:column; gap:10px; margin-top:6px }
-        .menu-btn { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.03); background:transparent; color:var(--text); cursor:pointer; transition:all var(--transition); font-weight:600; text-align:left; min-height:48px }
+        .menu-btn { display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:6px; border:1px solid var(--glass); background:transparent; color:var(--text); cursor:pointer; transition:all var(--transition); font-weight:600; text-align:left; min-height:60px }
+        .menu-btn svg { width:24px; height:24px; stroke:currentColor; transition:all var(--transition); }
+        .menu-btn span { font-size:12px; text-align:center; }
         .menu-btn.primary { background:var(--accent); color:#07102a; border:0 }
         .menu-btn.disabled { background:var(--muted); color:var(--card); cursor:not-allowed }
-        .menu-btn:hover:not(.disabled){ transform:translateY(-1px); box-shadow:0 6px 18px rgba(2,6,23,0.55) }
+        .menu-btn:hover:not(.disabled){ background:var(--accent); color:#07102a; transform:translateY(-1px); box-shadow:0 6px 18px rgba(0,0,0,0.8) }
 
         .app-main { padding:22px; display:flex; flex-direction:column; gap:18px; background:transparent; height:100%; overflow:auto }
 
@@ -124,8 +126,8 @@
 
     /* Lobby list styles */
     .lobbies-list { display:flex; flex-direction:column; gap:10px }
-    .lobby-card { display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent); border:1px solid rgba(255,255,255,0.03); transition:transform .12s ease, box-shadow .12s ease }
-    .lobby-card:hover { transform:translateY(-4px); box-shadow:0 10px 30px rgba(2,6,23,0.5) }
+    .lobby-card { display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; background:linear-gradient(135deg, rgba(15,15,15,0.9), rgba(10,10,10,0.8)); border:1px solid rgba(255,107,53,0.3); transition:all 0.2s ease; box-shadow:0 4px 12px rgba(0,0,0,0.6) }
+    .lobby-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(255,107,53,0.3); border-color:rgba(255,107,53,0.5) }
     .lobby-avatar { width:44px; height:44px; border-radius:10px; background:var(--glass); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--text) }
     /* prevent avatar images from overflowing their container and keep consistent sizing */
     .lobby-avatar { overflow: hidden; flex: 0 0 44px; }
@@ -153,7 +155,7 @@
             .game-card { width:100%; box-shadow: 0 6px 18px rgba(2,6,23,0.45); }
 
             /* bottom nav */
-            .bottom-nav { position:fixed; left:0; right:0; bottom:0; height:74px; display:flex; gap:4px; align-items:center; justify-content:space-around; padding:8px calc(12px + env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(15,20,32,0.85), rgba(8,10,14,0.95)); border-top:1px solid rgba(255,255,255,0.04); backdrop-filter: blur(8px); z-index:50 }
+            .bottom-nav { position:fixed; left:0; right:0; bottom:0; height:74px; display:flex; gap:4px; align-items:center; justify-content:space-around; padding:8px calc(12px + env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(26,26,26,0.95), rgba(10,10,10,0.98)); border-top:1px solid var(--glass); backdrop-filter: blur(8px); z-index:50 }
             .bottom-nav button { background:transparent; border:none; color:var(--text); display:flex; flex-direction:column; align-items:center; gap:6px; font-weight:600; font-size:12px; padding:6px 8px; cursor:pointer }
             .bottom-nav svg { width:22px; height:22px; opacity:0.95 }
 
@@ -166,7 +168,7 @@
 
             /* Lobbies list layout improvements */
             .lobbies-list { padding: 6px 0; display:flex; flex-direction:column; gap:10px; }
-            .lobby-card { width:100%; display:flex; flex-direction:row; align-items:center; gap:12px; padding:12px; border-radius:12px; box-shadow: 0 6px 18px rgba(2,6,23,0.25); background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent); }
+            .lobby-card { width:100%; display:flex; flex-direction:row; align-items:center; gap:12px; padding:12px; border-radius:12px; background:linear-gradient(135deg, rgba(15,15,15,0.9), rgba(10,10,10,0.8)); border:1px solid rgba(255,107,53,0.3); transition:all 0.2s ease; box-shadow:0 4px 12px rgba(0,0,0,0.6) }
             .lobby-avatar { width:44px; height:44px; flex:0 0 44px; border-radius:10px; }
             .lobby-info { flex:1 1 auto; min-width:0; }
             .lobby-actions { display:flex; gap:8px; flex:0 0 auto; }
@@ -274,7 +276,7 @@
         }
     /* End-game modal styles */
     .end-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2,6,23,0.8); z-index: 1300 }
-    .end-card { width: 92%; max-width: 520px; background: linear-gradient(180deg, rgba(20,30,60,0.9), rgba(10,14,26,0.95)); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.04); box-shadow: 0 18px 60px rgba(2,6,23,0.8); transform: translateY(12px) scale(.98); opacity: 0; animation: popIn 420ms cubic-bezier(.2,.9,.2,1) forwards; display:flex; flex-direction:column; align-items:center; gap:12px }
+    .end-card { width: 92%; max-width: 520px; background: linear-gradient(180deg, rgba(26,26,26,0.9), rgba(10,10,10,0.95)); border-radius: 16px; padding: 20px; border: 1px solid var(--glass); box-shadow: 0 18px 60px rgba(0,0,0,0.8); transform: translateY(12px) scale(.98); opacity: 0; animation: popIn 420ms cubic-bezier(.2,.9,.2,1) forwards; display:flex; flex-direction:column; align-items:center; gap:12px }
     @keyframes popIn { to { transform: translateY(0) scale(1); opacity: 1 } }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .winner-emoji { font-size:48px }
@@ -347,35 +349,55 @@
             </div>
 
             <div class="menu-buttons">
-                <button class="menu-btn primary" data-action="go-home">Играть</button>
-                <button class="menu-btn" data-action="go-lobby">Лобби</button>
-                <button class="menu-btn" data-action="go-settings">Настройки</button>
+                <button class="menu-btn primary" data-action="go-home">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9,22 9,12 15,12 15,22"></polyline>
+                    </svg>
+                    <span>Главная</span>
+                </button>
+                <button class="menu-btn" data-action="go-lobby">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>Лобби</span>
+                </button>
+                <button class="menu-btn" data-action="go-settings">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Настройки</span>
+                </button>
             </div>
         </aside>
 
         <main class="app-main">
             <!-- Views: home, lobby, game, settings -->
             <section id="view-home" class="view" data-view="home">
-                <h2 style="margin:0 0 6px 0">Мини‑игры</h2>
-                <p style="margin:0 0 12px 0;color:var(--muted)">Выберите игру и запустите. На телефоне — свайпните карточки.</p>
+                <h2 style="margin:0 0 6px 0; color: var(--accent); font-weight: 700;">Мини‑игры</h2>
+                <p style="margin:0 0 12px 0;color:var(--muted);font-size:14px">Выберите игру и запустите. На телефоне — свайпните карточки.</p>
 
                 <div class="game-selection" role="list">
-                    <article class="game-card" data-game="tictactoe" role="listitem">
-                        <h3>Крестики‑Нолики</h3>
-                        <p style="margin:0;color:var(--muted);font-size:13px">Быстрая игра 1 на 1 в реальном времени.</p>
+                    <article class="game-card" data-game="tictactoe" role="listitem" style="background: linear-gradient(135deg, rgba(15,15,15,0.9), rgba(10,10,10,0.8)); border: 1px solid rgba(255,107,53,0.3); box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
+                        <h3 style="color: var(--accent); font-weight: 700;">Крестики‑Нолики</h3>
+                        <p style="margin:0;color:var(--muted);font-size:13px; opacity: 0.8;">Быстрая игра 1 на 1 в реальном времени.</p>
                         <div style="height:6px"></div>
                         <!-- Кнопка 'Играть' будет добавлена динамически при выборе игры -->
                     </article>
 
-                    <article class="game-card" data-game="memory" aria-disabled="true">
-                        <h3>Мемо (скоро)</h3>
+                    <article class="game-card" data-game="memory" aria-disabled="true" style="background: linear-gradient(135deg, rgba(15,15,15,0.6), rgba(10,10,10,0.5)); border: 1px solid rgba(255,255,255,0.1); opacity: 0.6;">
+                        <h3 style="color: var(--muted);">Мемо (скоро)</h3>
                         <p style="margin:0;color:var(--muted);font-size:13px">Карточная память — в разработке.</p>
                         <div style="height:6px"></div>
                         <!-- кнопки 'Играть' для этой карточки удалены: игра не готова -->
                     </article>
 
-                    <article class="game-card" data-game="quiz" aria-disabled="true">
-                        <h3>Quiz (скоро)</h3>
+                    <article class="game-card" data-game="quiz" aria-disabled="true" style="background: linear-gradient(135deg, rgba(15,15,15,0.6), rgba(10,10,10,0.5)); border: 1px solid rgba(255,255,255,0.1); opacity: 0.6;">
+                        <h3 style="color: var(--muted);">Quiz (скоро)</h3>
                         <p style="margin:0;color:var(--muted);font-size:13px">Викторина против друзей.</p>
                         <div style="height:6px"></div>
                         <!-- кнопки 'Играть' для этой карточки удалены: игра не готова -->
@@ -385,9 +407,9 @@
 
             <section id="view-lobby" class="view" data-view="lobby" style="display:none">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-                    <h2 style="margin:0">Лобби</h2>
+                    <h2 style="margin:0; color: var(--accent); font-weight: 700;">Лобби</h2>
                         <div style="display:flex;gap:8px;align-items:center;justify-content:center">
-                            <button id="btn-create-lobby" class="menu-btn primary">Создать</button>
+                            <button id="btn-create-lobby" class="menu-btn primary" style="background: var(--accent); color: #07102a; border: 1px solid rgba(255,107,53,0.5); box-shadow: 0 4px 12px rgba(255,107,53,0.3);">Создать</button>
                         </div>
                 </div>
 
@@ -396,8 +418,8 @@
 
             <section id="view-game" class="view" data-view="game" style="display:none">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-                    <h2 style="margin:0" id="game-title">Крестики‑Нолики</h2>
-                    <div id="game-status" style="color:var(--muted);font-size:13px">Ожидание игрока...</div>
+                    <h2 style="margin:0; color: var(--accent); font-weight: 700;" id="game-title">Крестики‑Нолики</h2>
+                    <div id="game-status" style="color:var(--muted);font-size:13px; opacity: 0.8;">Ожидание игрока...</div>
                 </div>
 
                 <div id="players-row" style="display:flex;gap:12px;align-items:center;margin-top:8px"></div>
@@ -407,20 +429,20 @@
                 </div>
 
                 <div style="margin-top:12px;display:flex;gap:8px">
-                    <button id="btn-leave" class="menu-btn">Выйти из игры</button>
-                    <button id="btn-forfeit" class="menu-btn">Сдаться</button>
+                    <button id="btn-leave" class="menu-btn" style="background: linear-gradient(135deg, rgba(15,15,15,0.8), rgba(10,10,10,0.6)); border: 1px solid rgba(255,255,255,0.1); color: var(--text);">Выйти из игры</button>
+                    <button id="btn-forfeit" class="menu-btn" style="background: linear-gradient(135deg, rgba(15,15,15,0.8), rgba(10,10,10,0.6)); border: 1px solid rgba(255,255,255,0.1); color: var(--text);">Сдаться</button>
                 </div>
             </section>
 
             <section id="view-settings" class="view" data-view="settings" style="display:none">
-                <h2 style="margin:0 0 10px 0">Настройки</h2>
-                <p style="color:var(--muted)">Здесь будут настройки звука и уведомлений.</p>
+                <h2 style="margin:0 0 10px 0; color: var(--accent); font-weight: 700;">Настройки</h2>
+                <p style="color:var(--muted); opacity: 0.8;">Здесь будут настройки звука и уведомлений.</p>
             </section>
         </main>
     </div>
 
     <!-- Auth modal (blocks UI until authorized) -->
-    <div id="auth-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6);z-index:200">
+    <div id="auth-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);z-index:200">
         <div style="width:92%;max-width:420px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)">
             <h3 style="margin:0 0 8px 0">Авторизация</h3>
             <p style="margin:0 0 12px 0;color:var(--muted)">Чтобы играть в мини‑игры и использовать профиль Telegram, авторизуйтесь через бота. Это быстро и безопасно.</p>
@@ -460,7 +482,7 @@
     <!-- Blocking match confirmation modal (appears when match found) -->
     <div id="confirm-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.85);z-index:1201;pointer-events:auto">
         <div style="position:absolute;inset:0;background:transparent;z-index:1201"></div>
-        <div id="confirm-box" style="width:92%;max-width:520px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6);z-index:1202;pointer-events:auto">
+        <div id="confirm-box" style="width:92%;max-width:520px;background:var(--card);border-radius:12px;padding:18px;border:1px solid var(--glass);box-shadow:0 12px 40px rgba(0,0,0,0.6);z-index:1202;pointer-events:auto">
             <h3 id="confirm-title" style="margin:0 0 8px 0">Матч найден</h3>
             <p id="confirm-desc" style="margin:0 0 12px 0;color:var(--muted)">Подтвердите участие. Выйдя — вы получите временный бан.</p>
             <div id="confirm-players" style="display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -485,7 +507,7 @@
     </div>
 
     <!-- Reload confirmation modal (appears when user attempts to refresh during a game) -->
-    <div id="reload-confirm-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.7);z-index:1250">
+    <div id="reload-confirm-modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.8);z-index:1250">
         <div style="width:92%;max-width:420px;background:var(--card);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)">
             <h3 style="margin:0 0 8px 0">Перезагрузить страницу?</h3>
             <p style="margin:0 0 12px 0;color:var(--muted)">Если вы перезагрузите страницу, игра будет завершена. Вы уверены?</p>
@@ -656,6 +678,10 @@
                     width: 90vw;
                     height: 90vw;
                     max-height: 90vh;
+                    background: var(--card);
+                    padding: 12px;
+                    border-radius: 8px;
+                    border: 1px solid var(--glass);
                 `;
             }
 
@@ -669,9 +695,10 @@
                     padding: 0;
                     font-size: 8vw;
                     max-font-size: 60px;
-                    border-radius: 20px;
-                    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
-                    border: 2px solid rgba(255,255,255,0.04);
+                    border-radius: 4px;
+                    background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+                    border: 1px solid rgba(255,255,255,0.04);
+                    transition: all 0.2s ease;
                 `;
             });
 
@@ -1868,13 +1895,13 @@
                 cell.className = 'ttt-cell';
                 cell.dataset.pos = i;
                 // use CSS aspect-ratio for square cells, set visual styles
-                cell.style.borderRadius = '12px';
+                cell.style.borderRadius = '4px';
                 cell.style.display = 'flex';
                 cell.style.alignItems = 'center';
                 cell.style.justifyContent = 'center';
                 // slightly smaller icons for mobile and desktop
                 cell.style.fontSize = window.innerWidth < 420 ? '18px' : '22px';
-                cell.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.02), transparent)';
+                cell.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))';
                 cell.style.border = '1px solid rgba(255,255,255,0.04)';
                 // render icons for X/O
                 cell.innerHTML = '';
@@ -1903,6 +1930,9 @@
                             if (!activeLobby || !activeLobby.id) return;
                             socket.emit('make_move', { lobby_id: activeLobby.id, position: i });
                         });
+                        cell.style.cursor = 'pointer';
+                        cell.addEventListener('mouseenter', () => { cell.style.background = 'var(--accent)'; cell.style.color = '#07102a'; });
+                        cell.addEventListener('mouseleave', () => { cell.style.background = 'transparent'; cell.style.color = 'var(--text)'; });
                     }
                 }
                 boardEl.appendChild(cell);
@@ -1928,8 +1958,12 @@
                                 margin-top: 16px;
                                 display: grid;
                                 grid-template-columns: repeat(3, 1fr);
-                                gap: 8px;
+                                gap: 4px;
                                 max-width: 360px;
+                                background: var(--card);
+                                padding: 12px;
+                                border-radius: 8px;
+                                border: 1px solid var(--glass);
                             `;
                         }
 
@@ -1941,8 +1975,8 @@
                                 min-width: 0;
                                 padding: 0;
                                 font-size: 18px;
-                                border-radius: 12px;
-                                background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+                                border-radius: 4px;
+                                background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
                                 border: 1px solid rgba(255,255,255,0.04);
                             `;
                         });
