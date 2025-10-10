@@ -732,15 +732,14 @@
 
         // navigation lock helpers (used during quick-match searching/confirmation)
         function disableNavigation(){
-            document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.disabled=true; b.classList.add('disabled'); }catch(e){} });
-                // Не блокируем bottom-nav на мобильных, только визуально подсвечиваем
-                document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.classList.add('disabled'); }catch(e){} });
+            // Визуально помечаем кнопки как disabled, но НЕ ставим им атрибут disabled —
+            // это позволит им оставаться кликабельными на мобильных (tap), но выглядеть заблокированными.
+            document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.classList.add('disabled'); b.dataset._disabled = '1'; }catch(e){} });
         }
 
         function enableNavigation(){
             document.querySelectorAll('[data-action]').forEach(b=>{ try{ b.disabled = false; b.classList.remove('disabled'); delete b.dataset._disabled; }catch(e){} });
-                document.querySelectorAll('[data-action]').forEach(b=>{ try{ b.disabled = false; b.classList.remove('disabled'); delete b.dataset._disabled; }catch(e){} });
-                document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.classList.remove('disabled'); }catch(e){} });
+            document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.classList.remove('disabled'); delete b.dataset._disabled; }catch(e){} });
 
         }
 
@@ -1163,7 +1162,10 @@
                         root.style.bottom = (window.innerHeight - bnRect.top + 8) + 'px';
                         root.style.top = 'auto'; root.style.transform = 'none';
                         // style as blue pill
-                        try{ const searchBar = root.querySelector('.search-bar'); if (searchBar) searchBar.style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; }catch(e){ console.warn('Error styling search bar:', e); }
+                        try{ const searchBar = root.querySelector('.search-bar'); if (searchBar) { searchBar.style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; searchBar.style.pointerEvents = 'auto'; } }catch(e){ console.warn('Error styling search bar:', e); }
+                        // prevent the container from intercepting taps (so bottom-nav remains clickable)
+                        try{ root.style.pointerEvents = 'none'; }catch(e){}
+                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.pointerEvents = 'auto'; } }catch(e){}
                         try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.transformOrigin = 'bottom'; } }catch(e){ console.warn('Error setting transform origin:', e); }
                         console.log('Mobile positioning applied');
                     } else {
