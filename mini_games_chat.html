@@ -319,94 +319,7 @@
         /* keep play buttons clickable but below modals (modals have z-index >= 1200) */
         .card-play-btn { pointer-events: auto !important; position: relative !important; z-index: 90 !important; }
 
-        /* Fullscreen game mode styles */
-        .fullscreen-game {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            background: var(--bg) !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            z-index: 1000 !important;
-            padding: 20px !important;
-        }
 
-        .fullscreen-game #board {
-            margin: 40px auto !important;
-            max-width: min(600px, 80vw) !important;
-            width: 80vw !important;
-            height: 80vw !important;
-            max-height: 600px !important;
-        }
-
-        .fullscreen-game .ttt-cell {
-            font-size: 8vw !important;
-            border-radius: 20px !important;
-            border: 2px solid rgba(255,255,255,0.04) !important;
-        }
-
-        .fullscreen-game #game-title {
-            font-size: 3vw !important;
-            margin: 20px 0 !important;
-            text-align: center !important;
-        }
-
-        .fullscreen-game #game-status {
-            font-size: 2vw !important;
-            margin-bottom: 20px !important;
-            text-align: center !important;
-        }
-
-        .fullscreen-game #players-row {
-            display: flex !important;
-            gap: 3vw !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 20px 0 !important;
-        }
-
-        .fullscreen-game #btn-leave,
-        .fullscreen-game #btn-forfeit {
-            position: fixed !important;
-            bottom: 40px !important;
-            padding: 15px 30px !important;
-            font-size: 18px !important;
-            border-radius: 15px !important;
-        }
-
-        .fullscreen-game #btn-leave {
-            left: 40px !important;
-        }
-
-        .fullscreen-game #btn-forfeit {
-            right: 40px !important;
-        }
-
-        /* Адаптивность для разных размеров экрана */
-        @media (max-width: 768px) {
-            .fullscreen-game #board {
-                width: 90vw !important;
-                height: 90vw !important;
-                max-width: 400px !important;
-                max-height: 400px !important;
-            }
-
-            .fullscreen-game .ttt-cell {
-                font-size: 12vw !important;
-            }
-
-            .fullscreen-game #game-title {
-                font-size: 6vw !important;
-            }
-
-            .fullscreen-game #game-status {
-                font-size: 4vw !important;
-            }
-        }
     </style>
 </head>
 <body>
@@ -659,170 +572,74 @@
         const isDesktop = window.innerWidth > 1024 || /Windows|Mac|Linux/.test(navigator.userAgent);
         const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // Глобальная переменная для отслеживания полноэкранного режима игры
-        let isFullscreenGame = false;
+        console.log('Device detected:', isDesktop ? 'Desktop' : (isMobile ? 'Mobile' : 'Tablet'));
 
-        // Настройка Telegram Web App для разных устройств
+        // Настройка интерфейса для разных устройств
         if (isDesktop) {
-            // Для ПК - запрашиваем полноэкранный режим
-            try{
-                tg.requestFullscreen?.();
-                console.log('Desktop detected, requesting fullscreen mode');
-            }catch(e){ console.warn('Fullscreen request failed:', e); }
+            // Для ПК - растягиваем интерфейс на весь экран монитора
+            console.log('Desktop detected, expanding interface to full screen');
 
-            // Расширяем приложение на весь экран
+            // Растягиваем приложение на весь экран (без requestFullscreen)
             document.body.style.width = '100vw';
             document.body.style.height = '100vh';
             document.body.style.margin = '0';
             document.body.style.padding = '0';
             document.body.style.overflow = 'hidden';
+
+            // Скрываем боковую панель для ПК
+            const sidebar = document.querySelector('.app-sidebar');
+            if (sidebar) {
+                sidebar.style.display = 'none';
+            }
+
+            // Скрываем нижнюю навигацию для ПК
+            const bottomNav = document.querySelector('.bottom-nav');
+            if (bottomNav) {
+                bottomNav.style.display = 'none';
+            }
+
+            // Расширяем основную область на весь экран
+            const appContainer = document.querySelector('.app-container');
+            if (appContainer) {
+                appContainer.style.gridTemplateColumns = '1fr'; // убираем боковую панель
+                appContainer.style.maxWidth = '100%';
+                appContainer.style.height = '100vh';
+                appContainer.style.borderRadius = '0';
+            }
+
+            // Расширяем игровую область
+            const appMain = document.querySelector('.app-main');
+            if (appMain) {
+                appMain.style.padding = '40px';
+                appMain.style.justifyContent = 'center';
+                appMain.style.alignItems = 'center';
+            }
         } else {
-            // Для мобильных устройств используем стандартный режим
-            console.log('Mobile device detected');
+            // Для мобильных устройств используем стандартный интерфейс
+            console.log('Mobile device detected, using standard interface');
         }
 
-        // Функция для определения типа устройства
-        function getDeviceType() {
-            if (window.innerWidth <= 768) return 'mobile';
-            if (window.innerWidth <= 1024) return 'tablet';
-            return 'desktop';
-        }
+        // Адаптируем игру для больших экранов при инициализации
+        adaptGameForLargeScreen();
 
-        // Обработчик изменения размера окна
-        window.addEventListener('resize', () => {
-            const deviceType = getDeviceType();
-            console.log('Window resized, device type:', deviceType);
+        // Функция адаптации игры для больших экранов
+        function adaptGameForLargeScreen() {
+            if (!isDesktop) return;
 
-            if (deviceType === 'desktop' && !isFullscreenGame) {
-                // Автоматически переходим в полноэкранный режим игры на больших экранах
-                enterFullscreenGame();
-            }
-        });
+            console.log('Adapting game for large screen');
 
-        // Функция входа в полноэкранный режим игры
-        function enterFullscreenGame() {
-            if (isFullscreenGame) return;
-
-            isFullscreenGame = true;
-            console.log('Entering fullscreen game mode');
-
-            // Скрываем все интерфейсные элементы кроме игры
-            try{ document.querySelector('.app-sidebar').style.display = 'none'; }catch(e){}
-            try{ document.querySelector('.app-main').style.display = 'none'; }catch(e){}
-            try{ document.querySelector('.bottom-nav').style.display = 'none'; }catch(e){}
-
-            // Показываем полноэкранную игру
-            const gameView = document.getElementById('view-game');
-            if (gameView) {
-                gameView.style.display = 'block';
-                gameView.classList.add('fullscreen-game');
-            }
-
-            // Показываем кнопку выхода
-            showExitFullscreenButton();
-
-            // Адаптируем игру под полный экран
-            adaptGameForFullscreen();
-        }
-
-        // Функция выхода из полноэкранного режима
-        function exitFullscreenGame() {
-            if (!isFullscreenGame) return;
-
-            isFullscreenGame = false;
-            console.log('Exiting fullscreen game mode');
-
-            // Показываем интерфейс
-            try{ document.querySelector('.app-sidebar').style.display = ''; }catch(e){}
-            try{ document.querySelector('.app-main').style.display = ''; }catch(e){}
-            try{ document.querySelector('.bottom-nav').style.display = ''; }catch(e){}
-
-            // Скрываем полноэкранную игру
-            const gameView = document.getElementById('view-game');
-            if (gameView) {
-                gameView.style.display = 'none';
-                gameView.classList.remove('fullscreen-game');
-            }
-
-            // Скрываем кнопку выхода
-            hideExitFullscreenButton();
-
-            // Возвращаем стандартный размер игры
-            restoreGameSize();
-
-            // Возвращаемся на главную страницу
-            showView('home');
-        }
-
-        // Функция показа кнопки выхода из полноэкранного режима
-        function showExitFullscreenButton() {
-            // Удаляем существующую кнопку если есть
-            const existing = document.getElementById('exit-fullscreen-btn');
-            if (existing) existing.remove();
-
-            // Создаем кнопку выхода
-            const exitBtn = document.createElement('button');
-            exitBtn.id = 'exit-fullscreen-btn';
-            exitBtn.innerHTML = '✕';
-            exitBtn.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                width: 50px;
-                height: 50px;
-                border-radius: 50%;
-                background: rgba(255, 107, 107, 0.9);
-                color: white;
-                border: none;
-                font-size: 24px;
-                font-weight: bold;
-                cursor: pointer;
-                z-index: 9999;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                transition: all 0.2s ease;
-            `;
-
-            exitBtn.addEventListener('click', exitFullscreenGame);
-            exitBtn.addEventListener('mouseenter', () => {
-                exitBtn.style.background = 'rgba(255, 107, 107, 1)';
-                exitBtn.style.transform = 'scale(1.1)';
-            });
-            exitBtn.addEventListener('mouseleave', () => {
-                exitBtn.style.background = 'rgba(255, 107, 107, 0.9)';
-                exitBtn.style.transform = 'scale(1)';
-            });
-
-            document.body.appendChild(exitBtn);
-        }
-
-        // Функция скрытия кнопки выхода
-        function hideExitFullscreenButton() {
-            const exitBtn = document.getElementById('exit-fullscreen-btn');
-            if (exitBtn) {
-                exitBtn.remove();
-            }
-        }
-
-        // Функция адаптации игры под полный экран
-        function adaptGameForFullscreen() {
+            // Адаптируем игровое поле для больших экранов
             const board = document.getElementById('board');
-            const gameTitle = document.getElementById('game-title');
-            const gameStatus = document.getElementById('game-status');
-            const playersRow = document.getElementById('players-row');
-
             if (board) {
                 board.style.cssText = `
+                    margin-top: 40px;
                     display: grid;
                     grid-template-columns: repeat(3, 1fr);
                     gap: 20px;
-                    max-width: 600px;
-                    width: 80vw;
-                    height: 80vw;
+                    max-width: min(600px, 70vh);
+                    width: 70vh;
+                    height: 70vh;
                     max-height: 600px;
-                    margin: 40px auto;
                 `;
             }
 
@@ -834,7 +651,7 @@
                     width: 100%;
                     min-width: 0;
                     padding: 0;
-                    font-size: 8vw;
+                    font-size: 7vh;
                     max-font-size: 80px;
                     border-radius: 20px;
                     background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
@@ -843,91 +660,50 @@
             });
 
             // Адаптируем заголовок игры
+            const gameTitle = document.getElementById('game-title');
             if (gameTitle) {
                 gameTitle.style.cssText = `
-                    font-size: 3vw;
+                    font-size: 4vh;
                     margin: 20px 0;
                     text-align: center;
                 `;
             }
 
             // Адаптируем статус игры
+            const gameStatus = document.getElementById('game-status');
             if (gameStatus) {
                 gameStatus.style.cssText = `
-                    font-size: 2vw;
+                    font-size: 2.5vh;
                     margin-bottom: 20px;
                     text-align: center;
                 `;
             }
 
             // Адаптируем строку игроков
+            const playersRow = document.getElementById('players-row');
             if (playersRow) {
                 playersRow.style.cssText = `
                     display: flex;
-                    gap: 3vw;
+                    gap: 4vh;
                     align-items: center;
                     justify-content: center;
                     margin: 20px 0;
                 `;
             }
-        }
 
-        // Функция восстановления стандартного размера игры
-        function restoreGameSize() {
-            const board = document.getElementById('board');
-            const gameTitle = document.getElementById('game-title');
-            const gameStatus = document.getElementById('game-status');
-            const playersRow = document.getElementById('players-row');
-
-            if (board) {
-                board.style.cssText = `
-                    margin-top: 16px;
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 8px;
-                    max-width: 360px;
-                `;
-            }
-
-            // Восстанавливаем стандартные размеры клеток
-            const cells = document.querySelectorAll('.ttt-cell');
-            cells.forEach(cell => {
-                cell.style.cssText = `
-                    aspect-ratio: 1 / 1;
-                    width: 100%;
-                    min-width: 0;
-                    padding: 0;
+            // Адаптируем кнопки управления игрой
+            const gameButtons = document.querySelectorAll('#btn-leave, #btn-forfeit');
+            gameButtons.forEach(btn => {
+                btn.style.cssText = `
+                    padding: 20px 40px;
                     font-size: 18px;
-                    border-radius: 12px;
-                    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
-                    border: 1px solid rgba(255,255,255,0.04);
+                    border-radius: 15px;
+                    margin-top: 30px;
                 `;
             });
-
-            // Восстанавливаем стандартные размеры текста
-            if (gameTitle) {
-                gameTitle.style.cssText = `
-                    font-size: inherit;
-                    margin: 0;
-                `;
-            }
-
-            if (gameStatus) {
-                gameStatus.style.cssText = `
-                    font-size: 13px;
-                    margin-top: 8px;
-                `;
-            }
-
-            if (playersRow) {
-                playersRow.style.cssText = `
-                    display: flex;
-                    gap: 12px;
-                    align-items: center;
-                    margin-top: 8px;
-                `;
-            }
         }
+
+
 
     // Попытка подключения к Socket.IO серверу
     const socket = io('https://vcbcbvcvbvcbv-cbvcklbcvkcvlkbcvlkcl-production.up.railway.app', {
@@ -1454,12 +1230,12 @@
                     activeLobby = lobby;
                 }catch(e){ try{ appendDebugLine('lobby_started: set activeLobby failed: '+(e&&e.message)); }catch(_){} }
                 try{
-                    // Для ПК автоматически переходим в полноэкранный режим игры
+                    // Для ПК: адаптируем интерфейс для большого экрана без полноэкранного режима
                     if (isDesktop || window.innerWidth > 1024) {
                         showPreload({ random: false });
-                        setTimeout(()=>{ try{ showLobby(activeLobby); showView('game'); enterFullscreenGame(); }catch(e){} }, 10100);
+                        setTimeout(()=>{ try{ showLobby(activeLobby); showView('game'); adaptGameForLargeScreen(); }catch(e){} }, 10100);
                     } else {
-                        // Для мобильных устройств используем стандартный режим
+                        // Для мобильных устройств используем стандартный режим без полноэкранного режима
                         showPreload({ random: false });
                         setTimeout(()=>{ try{ showLobby(activeLobby); showView('game'); }catch(e){} }, 10100);
                     }
@@ -2127,9 +1903,33 @@
                     try{ socket.emit('make_move',{ lobby_id: activeLobby.id, position: -1, forfeit: true }); }catch(e){ appendDebugLine('leave: emit forfeit failed: '+(e&&e.message)); }
                     activeLobby = null;
 
-                    // Выходим из полноэкранного режима если были в нем
-                    if (isFullscreenGame) {
-                        exitFullscreenGame();
+                    // Адаптируем игру обратно для обычного размера если нужно
+                    if (isDesktop) {
+                        // Восстанавливаем стандартные размеры игры
+                        const board = document.getElementById('board');
+                        if (board) {
+                            board.style.cssText = `
+                                margin-top: 16px;
+                                display: grid;
+                                grid-template-columns: repeat(3, 1fr);
+                                gap: 8px;
+                                max-width: 360px;
+                            `;
+                        }
+
+                        const cells = document.querySelectorAll('.ttt-cell');
+                        cells.forEach(cell => {
+                            cell.style.cssText = `
+                                aspect-ratio: 1 / 1;
+                                width: 100%;
+                                min-width: 0;
+                                padding: 0;
+                                font-size: 18px;
+                                border-radius: 12px;
+                                background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+                                border: 1px solid rgba(255,255,255,0.04);
+                            `;
+                        });
                     }
 
                     showView('home');
@@ -2137,11 +1937,6 @@
                     return;
                 }
                 activeLobby=null;
-
-                // Выходим из полноэкранного режима если были в нем
-                if (isFullscreenGame) {
-                    exitFullscreenGame();
-                }
 
                 showView('home');
                 try{ socket.emit('get_lobbies'); }catch(e){}
@@ -2153,11 +1948,6 @@
                     try{ socket.emit('make_move',{ lobby_id: activeLobby.id, position: -1, forfeit:true }); appendDebugLine('forfeit: emitted for lobby ' + activeLobby.id); }catch(e){ appendDebugLine('forfeit emit failed: '+(e&&e.message)); }
                     // navigate back to home after sending forfeit
                     activeLobby = null;
-
-                    // Выходим из полноэкранного режима если были в нем
-                    if (isFullscreenGame) {
-                        exitFullscreenGame();
-                    }
 
                     showView('home');
                     try{ socket.emit('get_lobbies'); }catch(e){}
@@ -2273,11 +2063,6 @@
                     appendDebugLine('end-modal: return home clicked');
                     modal.style.display='none';
                     activeLobby = null;
-
-                    // Выходим из полноэкранного режима если были в нем
-                    if (isFullscreenGame) {
-                        exitFullscreenGame();
-                    }
 
                     showView('home');
                     try{ socket.emit('get_lobbies'); }catch(e){}
@@ -2596,18 +2381,16 @@
                                 // start - проверяем устройство и переходим в соответствующий режим
                                 lastSearchStart = Date.now(); lastSearchGame = gameName;
 
-                                // Для ПК или больших экранов сразу переходим в полноэкранный режим игры
-                                if (isDesktop || window.innerWidth > 1024) {
-                                    // Прямо показываем игру в полноэкранном режиме
-                                    showView('game');
+                                // Используем стандартный режим для всех устройств
+                                try{
+                                    socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id, game: gameName });
+                                }catch(e){ console.warn('emit quick_match failed', e); }
+
+                                // Адаптируем игру для больших экранов если нужно
+                                if (isDesktop) {
                                     setTimeout(() => {
-                                        enterFullscreenGame();
-                                    }, 100);
-                                } else {
-                                    // Для мобильных устройств используем стандартный режим
-                                    try{
-                                        socket.emit('quick_match', { player_name: currentUser?.name, player_avatar: currentUser?.avatar, user_id: currentUser?.user_id, game: gameName });
-                                    }catch(e){ console.warn('emit quick_match failed', e); }
+                                        adaptGameForLargeScreen();
+                                    }, 500);
                                 }
 
                                 pbtn.dataset.searching = '1'; pbtn.textContent = 'Отменить'; pbtn.classList.remove('primary'); pbtn.classList.add('danger');
@@ -2617,11 +2400,6 @@
                                 try{ socket.emit('cancel_quick_match', {}); }catch(e){}
                                 pbtn.dataset.searching = '0'; pbtn.textContent = 'Играть'; pbtn.classList.remove('danger'); pbtn.classList.add('primary');
                                 hideSearchIndicator();
-
-                                // Выходим из полноэкранного режима если были в нем
-                                if (isFullscreenGame) {
-                                    exitFullscreenGame();
-                                }
                             }
                         }catch(er){ console.warn('card play handler err', er); }
                     });
