@@ -1859,6 +1859,10 @@
 
                 // animate modal in (CSS already defines popIn on .end-card)
                 modal.style.display = 'flex';
+
+                // play victory sound
+                try{ SoundEngine.gameWon(); }catch(e){ console.warn('Error playing victory sound:', e); }
+
                 // ensure TGS animation plays when modal becomes visible
                 try{
                     appendDebugLine && appendDebugLine('showEndScreen: attempting to play tgs animation (with retries)');
@@ -2006,6 +2010,24 @@
             function create(){ resume().then(()=>{ uiClick('primary'); }); }
             function lobbyCreated(){ resume().then(()=>{ uiClick('primary'); setTimeout(()=>{ uiClick('soft'); }, 120); }); }
 
+            // праздничный звук победы - аккорд из трех нот
+            function gameWon(){
+                resume().then(()=>{
+                    try{
+                        // три восходящие ноты для праздничного настроения
+                        playPing(523, 0.3, 0.15, 0);    // C5
+                        playPing(659, 0.3, 0.12, 0.1);  // E5
+                        playPing(784, 0.4, 0.18, 0.2);  // G5
+
+                        // дополнительный аккорд через паузу
+                        setTimeout(()=>{
+                            playPing(1047, 0.3, 0.12, 0);   // C6
+                            playPing(1319, 0.3, 0.10, 0.05); // E6
+                        }, 400);
+                    }catch(e){ console.warn('Error playing win sound:', e); }
+                }).catch(()=>{});
+            }
+
             // modern presets
             function setMuted(v){ muted = !!v; }
             function isMuted(){ return !!muted; }
@@ -2016,7 +2038,7 @@
 
             // no background music implementation — feature removed
             // keep the public API surface for sound effects and confirmations
-            return { init, resume, uiClick, select, modalOpen, create, lobbyCreated, matchFound, setMuted, isMuted };
+            return { init, resume, uiClick, select, modalOpen, create, lobbyCreated, matchFound, gameWon, setMuted, isMuted };
         })();
 
         // --- Game selection: mobile-friendly selection + floating Play button ---
