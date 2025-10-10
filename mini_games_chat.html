@@ -829,9 +829,9 @@
             document.querySelectorAll('.view').forEach(v=>{ v.style.display = v.dataset.view===name ? 'block' : 'none'; v.classList.remove('view-enter'); });
             const enter = document.querySelector(`[data-view="${name}"]`);
             if (enter) { enter.classList.add('view-enter'); }
-            try{ /* view changed: '" + name + "' */ }catch(e){}
+            try{ console.log('View changed to: ' + name); }catch(e){}
             // if search is active, reposition the floating/search indicator so it remains visible across view switches
-            try{ if (searching){ repositionSearchIndicator(); } }catch(e){}
+            try{ if (searching && typeof repositionSearchIndicator === 'function'){ repositionSearchIndicator(); } }catch(e){ console.warn('Error repositioning search indicator:', e); }
             // update bottom nav active state (optional)
         }
 
@@ -1136,11 +1136,16 @@
 
         function repositionSearchIndicator(){
             const root = document.getElementById('search-indicator');
-            if (!root) return;
+            if (!root) {
+                console.warn('Search indicator element not found');
+                return;
+            }
             root.style.display = 'block';
+            console.log('Repositioning search indicator');
             // position: if mobile -> attach to top of left menu; if desktop -> show in top-right area after settings
             try{
                 const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
+                console.log('Is mobile:', isMobileNow);
                 if (isMobileNow){
                     // anchor to bottom navigation area: place indicator just above bottom-nav and stretch to match its width
                     const bottomNav = document.querySelector('.bottom-nav');
@@ -1153,11 +1158,13 @@
                         root.style.bottom = (window.innerHeight - bnRect.top + 8) + 'px';
                         root.style.top = 'auto'; root.style.transform = 'none';
                         // style as blue pill
-                        try{ root.querySelector('.search-bar').style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; }catch(e){}
-                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.transformOrigin = 'bottom'; } }catch(e){}
+                        try{ const searchBar = root.querySelector('.search-bar'); if (searchBar) searchBar.style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; }catch(e){ console.warn('Error styling search bar:', e); }
+                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.transformOrigin = 'bottom'; } }catch(e){ console.warn('Error setting transform origin:', e); }
+                        console.log('Mobile positioning applied');
                     } else {
                         // fallback: center above the bottom area
                         root.style.position = 'fixed'; root.style.left='50%'; root.style.transform='translateX(-50%)'; root.style.bottom='120px';
+                        console.log('Mobile fallback positioning applied');
                     }
                 } else {
                     // desktop: prefer anchoring the indicator inside the left sidebar area (where user highlighted)
@@ -1171,11 +1178,33 @@
                         root.style.width = Math.max(220, sbRect.width - 24) + 'px';
                         root.style.transform = 'none';
                         // style as blue pill (mobile-like) but larger and with full data
-                        try{ const bar = root.querySelector('.search-bar'); if (bar) { bar.style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)'; bar.style.color = '#07102a'; bar.style.justifyContent='space-between'; } }catch(e){}
+                        try{
+                            const bar = root.querySelector('.search-bar');
+                            if (bar) {
+                                bar.style.background = 'linear-gradient(90deg,#6b8cff,#5a6bd8)';
+                                bar.style.color = '#07102a';
+                                bar.style.justifyContent='space-between';
+                            }
+                        }catch(e){ console.warn('Error styling search bar for desktop:', e); }
                         // mark desktop anchored so CSS can switch layout
                         root.dataset.desktop = '1';
                         // ensure expanded view is visible and rendered inline (full data under the pill)
-                        try{ const exp = root.querySelector('.search-expanded'); if (exp){ exp.classList.add('expanded'); exp.style.position = 'relative'; exp.style.bottom = 'auto'; exp.style.left='0'; exp.style.right='0'; exp.style.transform='none'; exp.style.opacity = '1'; exp.style.pointerEvents='auto'; exp.style.display = 'block'; exp.style.maxHeight = '140px'; exp.style.overflow = 'auto'; } }catch(e){}
+                        try{
+                            const exp = root.querySelector('.search-expanded');
+                            if (exp){
+                                exp.classList.add('expanded');
+                                exp.style.position = 'relative';
+                                exp.style.bottom = 'auto';
+                                exp.style.left='0';
+                                exp.style.right='0';
+                                exp.style.transform='none';
+                                exp.style.opacity = '1';
+                                exp.style.pointerEvents='auto';
+                                exp.style.display = 'block';
+                                exp.style.maxHeight = '140px';
+                                exp.style.overflow = 'auto';
+                            }
+                        }catch(e){ console.warn('Error configuring expanded view:', e); }
                         // position the indicator to exactly cover the menu-buttons area (so it doesn't touch the profile)
                         try{
                             const menuButtons = sidebar.querySelector('.menu-buttons');
@@ -1187,7 +1216,7 @@
                                     let topStart = mbRect.top;
                                     try{
                                         if (settingsBtn){ const sb = settingsBtn.getBoundingClientRect(); topStart = sb.bottom + gap; }
-                                    }catch(e){}
+                                    }catch(e){ console.warn('Error calculating top position:', e); }
                                 // compute available space down to bottom of sidebar so we don't overflow the layout
                                 const sbRect = sidebar.getBoundingClientRect();
                                 const availableSpace = Math.max(80, Math.floor(sbRect.bottom - topStart - 12));
@@ -1197,9 +1226,14 @@
                                 root.style.height = desiredHeight + 'px';
                                 // do NOT hide menu buttons; keep them visible as requested
                                 // set expanded area to use available space (avoid inner scroll where possible)
-                                const exp = root.querySelector('.search-expanded'); if (exp){ exp.style.maxHeight = (desiredHeight - 8) + 'px'; exp.style.overflow = 'auto'; }
+                                const exp = root.querySelector('.search-expanded');
+                                if (exp){
+                                    exp.style.maxHeight = (desiredHeight - 8) + 'px';
+                                    exp.style.overflow = 'auto';
+                                }
                             }
-                        }catch(e){}
+                        }catch(e){ console.warn('Error positioning in sidebar:', e); }
+                        console.log('Desktop sidebar positioning applied');
                     } else {
                         // fallback: original settingsBtn behaviour
                         const settingsBtn = document.querySelector('.bottom-settings');
@@ -1210,12 +1244,23 @@
                             root.style.top = (rect.top) + 'px';
                             root.style.width = '260px';
                             root.style.transform = 'none';
-                            try{ const bar = root.querySelector('.search-bar'); if (bar) { bar.style.background = 'rgba(6,18,46,0.88)'; bar.style.color = 'var(--text)'; } }catch(e){}
-                            _toggleSearchExpanded(root, true);
+                            try{
+                                const bar = root.querySelector('.search-bar');
+                                if (bar) {
+                                    bar.style.background = 'rgba(6,18,46,0.88)';
+                                    bar.style.color = 'var(--text)';
+                                }
+                            }catch(e){ console.warn('Error styling fallback search bar:', e); }
+                            if (typeof _toggleSearchExpanded === 'function') {
+                                _toggleSearchExpanded(root, true);
+                            }
+                            console.log('Desktop fallback positioning applied');
+                        } else {
+                            console.warn('No sidebar or settings button found for desktop positioning');
                         }
                     }
                 }
-            }catch(e){}
+            }catch(e){ console.error('Error in repositionSearchIndicator:', e); }
         }
 
         function hideSearchIndicator(){
