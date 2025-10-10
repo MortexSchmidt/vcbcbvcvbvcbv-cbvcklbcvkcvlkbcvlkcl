@@ -56,7 +56,7 @@
         .title{font-family:Orbitron,Inter;font-weight:700;color:var(--accent);letter-spacing:1px}
         .subtitle{color:var(--muted);font-size:13px}
 
-        .game-area{display:flex;align-items:center;justify-content:center;padding:10px}
+        .game-area{display:flex;align-items:center;justify-content:center;padding:10px;display:none}
 
         /* Game card / board container styled like CS2 stage */
         #board-wrap{background:linear-gradient(180deg,#071018,#0b1116);border-radius:8px;padding:18px;border:1px solid rgba(255,255,255,0.03);width:100%;max-width:720px;display:flex;flex-direction:column;align-items:center;gap:12px}
@@ -764,9 +764,24 @@
 
         // --- View routing ---
         function showView(name){
+            // special case for game view
+            if (name === 'game') {
+                document.querySelectorAll('.view').forEach(v=>{ v.style.display = 'none'; });
+                document.getElementById('board-wrap').style.display = 'flex';
+                // highlight active menu buttons (sidebar and bottom-nav)
+                try{
+                    document.querySelectorAll('.menu-btn').forEach(b=>{ b.classList.remove('active'); });
+                    // no active button for game
+                    document.querySelectorAll('.bottom-nav button').forEach(b=>{ b.classList.remove('active'); });
+                }catch(e){}
+                return;
+            }
+            // normal views: hide game area, show selected view
             document.querySelectorAll('.view').forEach(v=>{ v.style.display = v.dataset.view===name ? 'block' : 'none'; v.classList.remove('view-enter'); });
             const enter = document.querySelector(`[data-view="${name}"]`);
             if (enter) { enter.classList.add('view-enter'); }
+            // hide game area for non-game views
+            document.getElementById('board-wrap').style.display = 'none';
             // highlight active menu buttons (sidebar and bottom-nav)
             try{
                 document.querySelectorAll('.menu-btn').forEach(b=>{ b.classList.remove('active'); });
@@ -831,6 +846,8 @@
 
         // init active menu based on starting view
         (function(){
+            // hide game area by default
+            document.getElementById('board-wrap').style.display = 'none';
             const start = document.querySelectorAll('.view').length ? document.querySelectorAll('.view')[0].dataset.view : 'home';
             // try to detect visible view and apply active
             try{ const visible = Array.from(document.querySelectorAll('.view')).find(v=>v.style.display !== 'none'); if (visible) showView(visible.dataset.view); else showView('home'); }catch(e){ showView('home'); }
