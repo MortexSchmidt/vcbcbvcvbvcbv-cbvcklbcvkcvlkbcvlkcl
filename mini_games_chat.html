@@ -223,7 +223,7 @@
 
             /* Long-search animations: title slides up, alt title slides in from below, pill turns yellow */
             .search-bar { transition: background-color 600ms cubic-bezier(.2,.9,.2,1), color 600ms; }
-            .search-bar .title-wrap { position:relative; display:inline-block; width:auto; height:20px; overflow:hidden; vertical-align:middle; }
+            .search-bar .title-wrap { position:relative; display:inline-block; width:auto; height:20px; overflow:hidden; vertical-align:middle; padding-left:10px; }
             #search-title, #search-alt-title { display:block; position:relative; width:100%; left:0; right:0; }
             /* hidden by default: alt title sits below */
             #search-alt-title { transform: translateY(100%); opacity: 0; }
@@ -733,11 +733,15 @@
         // navigation lock helpers (used during quick-match searching/confirmation)
         function disableNavigation(){
             document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.disabled=true; b.classList.add('disabled'); }catch(e){} });
+                // Не блокируем bottom-nav на мобильных, только визуально подсвечиваем
+                document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.classList.add('disabled'); }catch(e){} });
         }
 
         function enableNavigation(){
             document.querySelectorAll('[data-action]').forEach(b=>{ try{ b.disabled = false; b.classList.remove('disabled'); delete b.dataset._disabled; }catch(e){} });
-            document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.disabled=false; b.classList.remove('disabled'); }catch(e){} });
+                document.querySelectorAll('[data-action]').forEach(b=>{ try{ b.disabled = false; b.classList.remove('disabled'); delete b.dataset._disabled; }catch(e){} });
+                document.querySelectorAll('.bottom-nav button').forEach(b=>{ try{ b.classList.remove('disabled'); }catch(e){} });
+
         }
 
         socket.on('connect', ()=>{
