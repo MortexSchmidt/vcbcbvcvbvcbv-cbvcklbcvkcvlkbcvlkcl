@@ -569,28 +569,29 @@
         try{ tg.ready?.() }catch(e){}
 
         // Определение устройства и настройка интерфейса
-        const isDesktop = window.innerWidth > 1024 || /Windows|Mac|Linux/.test(navigator.userAgent);
+        const isDesktop = tg.initDataUnsafe?.platform === 'desktop' || window.innerWidth > 1024 || /Windows|Mac|Linux/.test(navigator.userAgent);
         const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         console.log('Device detected:', isDesktop ? 'Desktop' : (isMobile ? 'Mobile' : 'Tablet'));
 
         // Настройка интерфейса для разных устройств
         if (isDesktop) {
-            // Для ПК - растягиваем интерфейс на весь экран монитора
-            console.log('Desktop detected, expanding interface to full screen');
+            // Для ПК - растягиваем интерфейс на весь экран монитора и показываем меню
+            console.log('Desktop detected, expanding interface to full screen and keeping sidebar');
 
-            // Растягиваем приложение на весь экран (без requestFullscreen)
+            // Растягиваем приложение на весь экран (с expand для Telegram)
+            try { tg.expand?.(); } catch(e) { console.warn('tg.expand failed', e); }
             document.body.style.width = '100vw';
             document.body.style.height = '100vh';
             document.body.style.margin = '0';
             document.body.style.padding = '0';
             document.body.style.overflow = 'hidden';
 
-            // Скрываем боковую панель для ПК
-            const sidebar = document.querySelector('.app-sidebar');
-            if (sidebar) {
-                sidebar.style.display = 'none';
-            }
+            // НЕ скрываем боковую панель для ПК - показываем меню
+            // const sidebar = document.querySelector('.app-sidebar');
+            // if (sidebar) {
+            //     sidebar.style.display = 'none';
+            // }
 
             // Скрываем нижнюю навигацию для ПК
             const bottomNav = document.querySelector('.bottom-nav');
@@ -601,7 +602,6 @@
             // Расширяем основную область на весь экран
             const appContainer = document.querySelector('.app-container');
             if (appContainer) {
-                appContainer.style.gridTemplateColumns = '1fr'; // убираем боковую панель
                 appContainer.style.maxWidth = '100%';
                 appContainer.style.height = '100vh';
                 appContainer.style.borderRadius = '0';
