@@ -641,22 +641,25 @@
 
             console.log('Adapting game for large screen');
 
-            // Адаптируем игровое поле для больших экранов
+            // Расширяем Telegram Web App viewport для полного экрана
+            try { tg.expand?.(); } catch(e) { console.warn('tg.expand failed', e); }
+
+            // Адаптируем игровое поле для больших экранов - делаем его почти на весь экран
             const board = document.getElementById('board');
             if (board) {
                 board.style.cssText = `
-                    margin-top: 40px;
+                    margin-top: 20px;
                     display: grid;
                     grid-template-columns: repeat(3, 1fr);
-                    gap: 20px;
-                    max-width: min(600px, 70vh);
-                    width: 70vh;
-                    height: 70vh;
-                    max-height: 600px;
+                    gap: 3vw;
+                    max-width: min(90vw, 90vh);
+                    width: 90vw;
+                    height: 90vw;
+                    max-height: 90vh;
                 `;
             }
 
-            // Адаптируем размеры клеток для большого экрана
+            // Адаптируем размеры клеток для большого экрана - используем vw для масштабирования
             const cells = document.querySelectorAll('.ttt-cell');
             cells.forEach(cell => {
                 cell.style.cssText = `
@@ -664,8 +667,8 @@
                     width: 100%;
                     min-width: 0;
                     padding: 0;
-                    font-size: 7vh;
-                    max-font-size: 80px;
+                    font-size: 8vw;
+                    max-font-size: 60px;
                     border-radius: 20px;
                     background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
                     border: 2px solid rgba(255,255,255,0.04);
@@ -676,8 +679,8 @@
             const gameTitle = document.getElementById('game-title');
             if (gameTitle) {
                 gameTitle.style.cssText = `
-                    font-size: 4vh;
-                    margin: 20px 0;
+                    font-size: 3vh;
+                    margin: 10px 0;
                     text-align: center;
                 `;
             }
@@ -686,8 +689,8 @@
             const gameStatus = document.getElementById('game-status');
             if (gameStatus) {
                 gameStatus.style.cssText = `
-                    font-size: 2.5vh;
-                    margin-bottom: 20px;
+                    font-size: 2vh;
+                    margin-bottom: 10px;
                     text-align: center;
                 `;
             }
@@ -697,10 +700,10 @@
             if (playersRow) {
                 playersRow.style.cssText = `
                     display: flex;
-                    gap: 4vh;
+                    gap: 3vh;
                     align-items: center;
                     justify-content: center;
-                    margin: 20px 0;
+                    margin: 10px 0;
                 `;
             }
 
@@ -708,10 +711,10 @@
             const gameButtons = document.querySelectorAll('#btn-leave, #btn-forfeit');
             gameButtons.forEach(btn => {
                 btn.style.cssText = `
-                    padding: 20px 40px;
-                    font-size: 18px;
-                    border-radius: 15px;
-                    margin-top: 30px;
+                    padding: 15px 30px;
+                    font-size: 16px;
+                    border-radius: 12px;
+                    margin-top: 20px;
                 `;
             });
         }
