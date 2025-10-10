@@ -701,6 +701,9 @@
     let playButton = null;
     let gameStarted = false;
 
+    // Глобальная переменная для отслеживания выбранной игры
+    window.selectedGameCard = null;
+
         // init user from tg
         if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
             currentUser = { user_id: tg.initDataUnsafe.user.id, name: tg.initDataUnsafe.user.first_name || tg.initDataUnsafe.user.username || 'Игрок', avatar: '' };
@@ -833,9 +836,41 @@
             document.querySelectorAll('.view').forEach(v=>{ v.style.display = v.dataset.view===name ? 'block' : 'none'; v.classList.remove('view-enter'); });
             const enter = document.querySelector(`[data-view="${name}"]`);
             if (enter) { enter.classList.add('view-enter'); }
-            try{ console.log('View changed to: ' + name); }catch(e){}
+            try{ console.log('View changed to: ' + name + ', selected game: ' + (window.selectedGameCard ? window.selectedGameCard.dataset.game : 'none')); }catch(e){}
+
             // if search is active, reposition the floating/search indicator so it remains visible across view switches
             try{ if (searching && typeof repositionSearchIndicator === 'function'){ repositionSearchIndicator(); } }catch(e){ console.warn('Error repositioning search indicator:', e); }
+
+            // Восстанавливаем выделение игры при возврате на страницу игр
+            if (name === 'home' && window.selectedGameCard && !searching) {
+                try{
+                    console.log('Restoring game selection for:', window.selectedGameCard.dataset.game);
+                    // Снимаем выделение со всех карточек
+                    document.querySelectorAll('.game-card').forEach(card => {
+                        card.classList.remove('selected');
+                        card.setAttribute('aria-selected', 'false');
+                    });
+                    // Восстанавливаем выделение на сохраненной карточке
+                    window.selectedGameCard.classList.add('selected');
+                    window.selectedGameCard.setAttribute('aria-selected', 'true');
+
+                    // Показываем кнопку "Играть" для выделенной карточки
+                    const playBtn = window.selectedGameCard.querySelector('.card-play-btn');
+                    if (playBtn) {
+                        playBtn.style.display = 'block';
+                        if (playBtn.dataset.searching === '1') {
+                            playBtn.textContent = 'Отменить';
+                            playBtn.classList.remove('primary');
+                            playBtn.classList.add('danger');
+                        } else {
+                            playBtn.textContent = 'Играть';
+                            playBtn.classList.remove('danger');
+                            playBtn.classList.add('primary');
+                        }
+                    }
+                }catch(e){ console.warn('Error restoring game selection:', e); }
+            }
+
             // update bottom nav active state (optional)
         }
 
@@ -1324,19 +1359,34 @@
             if (root){
                 try{ _toggleSearchExpanded(root, false); }catch(e){}
                 try{ root.style.display = 'none'; }catch(e){}
-                try{ 
+                try{
                     // clear desktop anchoring and restore defaults
                     // restore menu-buttons visibility if we hid it earlier
                     try{ const sidebar = document.querySelector('.app-sidebar'); if (sidebar){ const menuButtons = sidebar.querySelector('.menu-buttons'); if (menuButtons && menuButtons.dataset._wasHiddenBySearch){ menuButtons.style.display = menuButtons.dataset._prevDisplay || ''; menuButtons.style.visibility = menuButtons.dataset._prevVisibility || ''; delete menuButtons.dataset._wasHiddenBySearch; delete menuButtons.dataset._prevDisplay; delete menuButtons.dataset._prevVisibility; } } }catch(e){}
                     root.dataset.desktop = '';
-                    const exp = root.querySelector('.search-expanded'); 
+                    const exp = root.querySelector('.search-expanded');
                     if (exp){ exp.classList.remove('expanded'); exp.style.position = ''; exp.style.bottom = ''; exp.style.left = ''; exp.style.right = ''; exp.style.transform = ''; exp.style.opacity = ''; exp.style.pointerEvents = ''; exp.style.display = 'none'; exp.style.maxHeight = ''; exp.style.overflow = ''; }
                     // reset search-bar styles
                     try{ const bar = root.querySelector('.search-bar'); if (bar){ bar.style.background=''; bar.style.color=''; bar.style.justifyContent=''; } }catch(e){}
                 }catch(e){}
             }
             // reset any per-card buttons searching state
-            try{ document.querySelectorAll('.card-play-btn').forEach(b=>{ b.dataset.searching='0'; b.textContent='Играть'; b.classList.remove('danger'); b.classList.add('primary'); b.style.background=''; b.style.color=''; b.style.borderColor=''; }); }catch(e){}
+            try{
+                document.querySelectorAll('.card-play-btn').forEach(b=>{
+                    b.dataset.searching='0';
+                    b.textContent='Играть';
+                    b.classList.remove('danger');
+                    b.classList.add('primary');
+                    b.style.background='';
+
+                    // Скрываем кнопку только если карточка не выделена
+                    if (window.selectedGameCard && b.closest('.game-card') !== window.selectedGameCard) {
+                        b.style.display = 'none';
+                    } else if (window.selectedGameCard && b.closest('.game-card') === window.selectedGameCard) {
+                        b.style.display = 'block';
+                    }
+                });
+            }catch(e){ console.warn('Error resetting card buttons:', e); }
             try{ if (searchLongTimer) clearTimeout(searchLongTimer); }catch(e){}
             try{ const lt = document.getElementById('search-long-text'); if (lt) { lt.style.display = 'none'; lt.style.opacity='0'; } }catch(e){}
             try{ const root = document.getElementById('search-indicator'); const bar = root && root.querySelector('.search-bar'); if (bar) bar.classList.remove('long-search'); }catch(e){}
@@ -1349,6 +1399,8 @@
             // reset dynamic fields
             try{ const titleEl = root.querySelector('#search-title'); if (titleEl) { titleEl.textContent = 'Поиск'; titleEl.style.transform = ''; titleEl.style.opacity = ''; } }catch(e){}
             try{ const altEl = root.querySelector('#search-alt-title'); if (altEl) { altEl.style.display = ''; altEl.style.transform = ''; altEl.style.opacity = '0'; } }catch(e){}
+
+            console.log('Search indicator hidden, selected game:', window.selectedGameCard ? window.selectedGameCard.dataset.game : 'none');
         }
 
     socket.on('lobby_waiting', (data)=>{
@@ -1986,7 +2038,8 @@
             // hide global floating Play button completely (we'll use per-card play buttons)
             try{ if (playButton) playButton.style.display = 'none'; }catch(e){}
 
-            let selected = null;
+            // Глобальная переменная для отслеживания выбранной игры вместо локальной selected
+            // window.selectedGameCard = null; // уже объявлена выше
 
             function updateListeners(){
                 const cards = document.querySelectorAll('.game-selection .game-card');
@@ -2001,28 +2054,32 @@
                         // do not allow selecting disabled/coming-soon cards
                         if (card.getAttribute('aria-disabled') === 'true' || card.querySelector('.disabled')) return;
 
-                        if (selected === card) {
-                            card.classList.remove('selected');
-                            card.setAttribute('aria-selected','false');
-                            selected = null;
-                            // hide any per-card play button
-                            const pbtn = card.querySelector('.card-play-btn'); if (pbtn) pbtn.style.display='none';
-                        } else {
-                            if (selected) { selected.classList.remove('selected'); selected.setAttribute('aria-selected','false'); }
-                            selected = card;
-                            card.classList.add('selected');
-                            card.setAttribute('aria-selected','true');
-                            // force focus and repaint so visual border appears immediately
-                            try{ card.focus(); card.getBoundingClientRect(); }catch(e){}
-                            // show animated play button
-                            // create or show per-card play button inside card using unified factory
-                            let pbtn = createCardPlayButton(card);
-                            if (pbtn) pbtn.style.display = 'block';
-                            playButton.classList.remove('visible');
-                            playButton.setAttribute('aria-hidden','true');
-                            // ensure audio context is allowed by user gesture and play a select sound
-                            try{ SoundEngine.init(); SoundEngine.select(); }catch(e){}
+                        // Очищаем предыдущее выделение
+                        if (window.selectedGameCard) {
+                            window.selectedGameCard.classList.remove('selected');
+                            window.selectedGameCard.setAttribute('aria-selected','false');
+                            // hide any per-card play button for previously selected card
+                            const prevBtn = window.selectedGameCard.querySelector('.card-play-btn');
+                            if (prevBtn) prevBtn.style.display='none';
                         }
+
+                        // Устанавливаем новое выделение
+                        window.selectedGameCard = card;
+                        card.classList.add('selected');
+                        card.setAttribute('aria-selected','true');
+
+                        // force focus and repaint so visual border appears immediately
+                        try{ card.focus(); card.getBoundingClientRect(); }catch(e){}
+                        // show animated play button
+                        // create or show per-card play button inside card using unified factory
+                        let pbtn = createCardPlayButton(card);
+                        if (pbtn) pbtn.style.display = 'block';
+                        playButton.classList.remove('visible');
+                        playButton.setAttribute('aria-hidden','true');
+                        // ensure audio context is allowed by user gesture and play a select sound
+                        try{ SoundEngine.init(); SoundEngine.select(); }catch(e){}
+
+                        console.log('Game selected:', card.dataset.game);
                     });
                     card.addEventListener('keydown', (ev)=>{
                         if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); card.click(); }
@@ -2041,7 +2098,15 @@
             updateListeners();
 
             // helper: ensure each card has no visible inline play buttons by default (we'll create them dynamically)
-            document.querySelectorAll('.game-selection .game-card .card-play-btn').forEach(b=>b.style.display='none');
+            // Но показываем кнопку для выделенной карточки
+            document.querySelectorAll('.game-selection .game-card .card-play-btn').forEach(b=>{
+                const card = b.closest('.game-card');
+                if (window.selectedGameCard && card === window.selectedGameCard) {
+                    b.style.display = 'block';
+                } else {
+                    b.style.display = 'none';
+                }
+            });
 
             // helper to create or return per-card play button with unified handler
             function createCardPlayButton(card){
@@ -2105,6 +2170,21 @@
                     });
                     card.appendChild(pbtn);
                 }
+                // Если карточка выделена, показываем кнопку в правильном состоянии
+                if (window.selectedGameCard && card === window.selectedGameCard) {
+                    pbtn.style.display = 'block';
+                    // Восстанавливаем правильное состояние кнопки
+                    if (pbtn.dataset.searching === '1') {
+                        pbtn.textContent = 'Отменить';
+                        pbtn.classList.remove('primary');
+                        pbtn.classList.add('danger');
+                    } else {
+                        pbtn.textContent = 'Играть';
+                        pbtn.classList.remove('danger');
+                        pbtn.classList.add('primary');
+                    }
+                }
+
                 return pbtn;
             }
 
@@ -2120,8 +2200,8 @@
                             ev.stopPropagation(); ev.preventDefault();
                             try{ socket.emit('cancel_quick_match', {}); }catch(e){}
                             try{ hideSearchIndicator(); }catch(e){}
-                            // reset all per-card buttons UI
-                            try{ document.querySelectorAll('.card-play-btn').forEach(b=>{ b.dataset.searching='0'; b.textContent='Играть'; b.classList.remove('danger'); b.classList.add('primary'); b.style.background=''; b.style.color=''; b.style.borderColor=''; b.style.display = b.closest('.game-card') && b.closest('.game-card').classList.contains('selected') ? 'block' : 'none'; }); }catch(e){}
+                            // НЕ сбрасываем выделение игры при отмене поиска, только состояние кнопки
+                            console.log('Search cancelled, maintaining game selection');
                         }
                     }catch(e){}
                 }, { capture: true });
@@ -2203,11 +2283,22 @@
                     // otherwise ignore outside clicks while searching
                     return;
                 }
-                // if clicked outside both card and modal and not on playButton and not on navigation buttons — clear selection
-                if (!ev.target.closest('.game-card') && !ev.target.closest('.play-button') && !ev.target.closest('.game-modal') && !ev.target.closest('[data-action]')){
-                    if (selected) { selected.classList.remove('selected'); selected.setAttribute('aria-selected','false'); selected = null; }
+                // НЕ сбрасываем выделение при клике на кнопки навигации (переключение вкладок)
+                // Только сбрасываем выделение если кликнули за пределами области игр И не на кнопках навигации
+                if (!ev.target.closest('.game-card') && !ev.target.closest('.play-button') && !ev.target.closest('.game-modal') && !ev.target.closest('.game-selection') && !ev.target.closest('[data-action]')){
+                    if (window.selectedGameCard) {
+                        window.selectedGameCard.classList.remove('selected');
+                        window.selectedGameCard.setAttribute('aria-selected','false');
+                        window.selectedGameCard = null;
+                        console.log('Game selection cleared due to outside click');
+                    }
                     playButton.classList.remove('visible');
                     playButton.setAttribute('aria-hidden','true');
+
+                    // Скрываем все кнопки "Играть" при сбросе выделения
+                    document.querySelectorAll('.card-play-btn').forEach(btn => {
+                        btn.style.display = 'none';
+                    });
                 }
             });
 
