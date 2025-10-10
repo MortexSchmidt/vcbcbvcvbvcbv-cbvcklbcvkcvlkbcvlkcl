@@ -201,7 +201,7 @@
         }
         /* Ensure search indicator can render expanded content above the pill without shifting the pill itself */
         #search-indicator { overflow: visible; }
-        #search-indicator .search-bar { position: relative; z-index: 2; }
+    #search-indicator .search-bar { position: relative; z-index: 2; display:flex; align-items:center; justify-content:flex-start; }
         #search-indicator .search-expanded {
             position: absolute;
             left: 0;
@@ -431,7 +431,7 @@
 
     <!-- Inline quick-match status (compact, expandable) -->
     <div id="search-indicator" class="search-indicator" style="position:fixed;left:50%;bottom:140px;transform:translateX(-50%);display:none;z-index:1002;min-width:180px">
-        <div class="search-bar" role="button" aria-expanded="false" tabindex="0" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:linear-gradient(90deg, #6b8cff, #5a6bd8);border:1px solid rgba(255,255,255,0.03);font-weight:700;color:#07102a;text-align:center;cursor:pointer">
+    <div class="search-bar" role="button" aria-expanded="false" tabindex="0" style="display:flex;align-items:center;gap:8px;padding:8px 12px 8px 10px;border-radius:10px;background:linear-gradient(90deg, #6b8cff, #5a6bd8);border:1px solid rgba(255,255,255,0.03);font-weight:700;color:#07102a;cursor:pointer">
             <div class="title-wrap"><div id="search-title" style="font-weight:800;color:#07102a">Поиск</div><div id="search-alt-title" style="font-weight:800;color:#07102a">Долгий поиск</div></div>
             <div id="search-timer-compact" style="margin-left:auto;font-weight:700;color:#07102a">00:00</div>
             <div id="search-arrow" style="margin-left:6px;transition:transform .18s ease;color:#07102a">▾</div>
