@@ -1136,7 +1136,8 @@
 
         function repositionSearchIndicator(){
             const root = document.getElementById('search-indicator');
-            if (!root || root.style.display === 'none') return;
+            if (!root) return;
+            root.style.display = 'block';
             // position: if mobile -> attach to top of left menu; if desktop -> show in top-right area after settings
             try{
                 const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
@@ -2103,8 +2104,8 @@
                     // otherwise ignore outside clicks while searching
                     return;
                 }
-                // if clicked outside both card and modal and not on playButton — clear selection
-                if (!ev.target.closest('.game-card') && !ev.target.closest('.play-button') && !ev.target.closest('.game-modal')){
+                // if clicked outside both card and modal and not on playButton and not on navigation buttons — clear selection
+                if (!ev.target.closest('.game-card') && !ev.target.closest('.play-button') && !ev.target.closest('.game-modal') && !ev.target.closest('[data-action]')){
                     if (selected) { selected.classList.remove('selected'); selected.setAttribute('aria-selected','false'); selected = null; }
                     playButton.classList.remove('visible');
                     playButton.setAttribute('aria-hidden','true');
