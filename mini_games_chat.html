@@ -5,328 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #000000;
-            --card: #0f0f0f;
-            --muted: #666666;
-            --text: #ffffff;
-            --accent: #ff6b35;
-            --success: #44ff44;
-            --danger: #ff4444;
-            --glass: rgba(255,255,255,0.08);
-            --shadow-1: 0 8px 32px rgba(0,0,0,0.9);
-            --radius: 8px;
-            --radius-sm: 6px;
-            --gap: 16px;
-            --transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        * { box-sizing: border-box; }
-
-        * { box-sizing: border-box; }
-        html, body { height: 100%; }
-    /* allow children to shrink properly inside flex/grid */
-    .app-container, .app-main, .game-selection, .game-card, .view { min-width: 0 }
-
-    /* ensure long text wraps instead of overflowing */
-    .game-card, .menu-btn, .game-card button, .menu-btn, input, .bottom-nav button { word-break: break-word; white-space: normal }
-
-    /* responsive tic-tac-toe board */
-    #board { grid-template-columns: repeat(3, minmax(0, 1fr)); gap:4px; width:100%; max-width:360px; background: var(--card); padding:12px; border-radius:8px; border:1px solid var(--glass); }
-    .ttt-cell { aspect-ratio: 1 / 1; width:100%; min-width:0; padding:0; background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.04); border-radius:4px; transition:all 0.2s ease; }
-        /* Disable default blue tap highlight and browser focus outlines on mobile */
-        html, body, button, a, input, textarea, select {
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
-            touch-action: manipulation;
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600;700&display=swap');
+        :root{
+            --bg:#071018;           /* deep navy */
+            --panel:#0f1418;        /* dark panel */
+            --card: var(--panel);
+            --muted:#9aa3a8;
+            --text:#e6f0f2;
+            --accent:#ffbe2e;       /* CS-like yellow */
+            --accent-2:#ff7b2e;     /* orange */
+            --danger:#ff4b4b;
+            --glass: rgba(255,255,255,0.04);
+            --edge: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(0,0,0,0.25));
+            --radius:10px;
+            --hud-border: 1px solid rgba(255,255,255,0.04);
+            --gap:12px;
         }
 
-        /* Remove outlines and default focus rings for interactive controls */
-        button, .menu-btn, .game-card button, .ttt-cell, .game-choose, .game-lobby {
-            outline: none !important;
-            -webkit-appearance: none;
-            appearance: none;
+        *{box-sizing:border-box}
+        html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Orbitron,Arial;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+        /* global disable selection except inputs */
+        *{user-select:none}
+        input,textarea,[contenteditable],.allow-select{user-select:text}
+
+        /* App layout: desktop HUD left + center stage + right scoreboard; mobile: stacked */
+        .app-container{width:100%;max-width:1200px;height:calc(100vh - 8px);margin:8px auto;display:grid;grid-template-columns:260px 1fr 260px;gap:16px;padding:12px}
+
+        /* Left HUD / menu */
+        .app-sidebar{background:linear-gradient(180deg,#0b0f12,#101418);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 28px rgba(2,6,11,0.6);border:var(--hud-border)}
+        .profile-row{display:flex;align-items:center;gap:10px}
+        .avatar{width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.02);font-weight:700}
+        .profile-info{display:flex;flex-direction:column}
+        .profile-name{font-weight:700;font-size:14px;color:var(--text);font-family:Orbitron,Inter}
+        .profile-sub{font-size:12px;color:var(--muted)}
+
+        .menu-buttons{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+        .menu-btn{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;background:transparent;border:var(--hud-border);color:var(--text);cursor:pointer;font-weight:700}
+        .menu-btn svg{width:18px;height:18px}
+        .menu-btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#071018;border:0}
+        .menu-btn:hover{transform:translateX(6px);transition:transform .12s ease}
+
+        /* Center stage */
+        .app-main{background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px;align-items:stretch;border:var(--hud-border);box-shadow:inset 0 1px 0 rgba(255,255,255,0.02)}
+
+        .top-hud{display:flex;align-items:center;justify-content:space-between;gap:12px}
+        .title{font-family:Orbitron,Inter;font-weight:700;color:var(--accent);letter-spacing:1px}
+        .subtitle{color:var(--muted);font-size:13px}
+
+        .game-area{display:flex;align-items:center;justify-content:center;padding:10px}
+
+        /* Game card / board container styled like CS2 stage */
+        #board-wrap{background:linear-gradient(180deg,#071018,#0b1116);border-radius:8px;padding:18px;border:1px solid rgba(255,255,255,0.03);width:100%;max-width:720px;display:flex;flex-direction:column;align-items:center;gap:12px}
+        #board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:420px;max-width:90%;background:transparent;padding:10px;border-radius:6px}
+        .ttt-cell{aspect-ratio:1/1;background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(0,0,0,0.15));border-radius:6px;border:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--text);cursor:pointer}
+        .ttt-cell.disabled{opacity:0.5;cursor:default}
+
+        .controls-row{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:6px}
+        .control-ghost{padding:8px 12px;border-radius:6px;background:rgba(255,255,255,0.02);border:var(--hud-border);color:var(--muted);font-weight:700}
+        .control-primary{padding:10px 14px;border-radius:8px;background:var(--accent);color:#071018;font-weight:800;border:0}
+
+        /* Right scoreboard / info */
+        .app-side-right{background:linear-gradient(180deg,#081018,#0e1418);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;border:var(--hud-border)}
+        .score{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;background:rgba(255,255,255,0.02)}
+        .score .num{font-family:Orbitron;font-weight:700;color:var(--accent);font-size:20px}
+        .meta{color:var(--muted);font-size:13px}
+
+        /* Small floating exit fullscreen button for desktop game HUD */
+        .exit-full{position:fixed;right:22px;top:22px;background:rgba(0,0,0,0.6);border-radius:10px;padding:8px 10px;color:var(--text);border:1px solid rgba(255,255,255,0.04);cursor:pointer;z-index:1200}
+
+        /* Mobile adjustments */
+        @media (max-width:900px){
+            .app-container{grid-template-columns:1fr;padding:8px;height:100vh;gap:8px}
+            .app-sidebar{display:none}
+            .app-side-right{display:none}
+            #board{width:100%;grid-template-columns:repeat(3,1fr);gap:8px}
+            .title{font-size:16px}
+            .exit-full{right:12px;top:12px}
+            .controls-row{position:fixed;left:0;right:0;bottom:0;padding:12px;background:linear-gradient(180deg,rgba(7,16,24,0.9),rgba(7,10,14,0.95));justify-content:space-around;z-index:1001}
         }
 
-        :focus { outline: none !important; box-shadow: none !important; }
-        body {
-            margin: 0;
-            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
-            background: var(--bg);
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: env(safe-area-inset-top) 12px env(safe-area-inset-bottom);
-            -webkit-font-smoothing: antialiased;
-        }
+        /* Preserve bottom-nav semantics used by JS (visually hidden on desktop) */
+        .bottom-nav{display:flex}
+        @media (min-width:901px){.bottom-nav{display:none}}
 
-        /* Disable text selection globally; allow only specific interactive elements */
-        * {
-            -webkit-user-select: none !important;
-            -moz-user-select: none !important;
-            -ms-user-select: none !important;
-            user-select: none !important;
-        }
-        /* Allow selection in inputs, textareas, contenteditable and elements explicitly marked .allow-select or the auth modal */
-        input, textarea, [contenteditable="true"], .allow-select, #auth-modal, #auth-modal * {
-            -webkit-user-select: text !important;
-            -moz-user-select: text !important;
-            -ms-user-select: text !important;
-            user-select: text !important;
-        }
-
-        .app-container {
-            width: 100%;
-            max-width: 980px;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: var(--shadow-1);
-            background: var(--card);
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 22px;
-            height: calc(100vh - 28px);
-        }
-
-        /* Sidebar */
-        .app-sidebar {
-            padding: 18px;
-            background: var(--card);
-            border-right: 1px solid var(--glass);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            height: 100%;
-        }
-
-        .profile-row { display:flex; align-items:center; gap:12px; }
-        .avatar { width:56px; height:56px; border-radius:12px; overflow:hidden; background:var(--glass); display:flex; align-items:center; justify-content:center; }
-        .avatar img{ width:100%; height:100%; object-fit:cover }
-        .profile-info { display:flex; flex-direction:column }
-        .profile-name { font-weight:600 }
-        .profile-sub { font-size:0.9rem; color:var(--muted) }
-
-        .menu-buttons { display:flex; flex-direction:column; gap:10px; margin-top:6px }
-        .menu-btn { display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 8px; border-radius:6px; border:1px solid var(--glass); background:transparent; color:var(--text); cursor:pointer; transition:all var(--transition); font-weight:600; text-align:left; min-height:60px }
-        .menu-btn svg { width:24px; height:24px; stroke:currentColor; transition:all var(--transition); }
-        .menu-btn span { font-size:12px; text-align:center; }
-        .menu-btn.primary { background:var(--accent); color:#07102a; border:0 }
-        .menu-btn.disabled { background:var(--muted); color:var(--card); cursor:not-allowed }
-        .menu-btn:hover:not(.disabled){ background:var(--accent); color:#07102a; transform:translateY(-1px); box-shadow:0 6px 18px rgba(0,0,0,0.8) }
-
-        .app-main { padding:22px; display:flex; flex-direction:column; gap:18px; background:transparent; height:100%; overflow:auto }
-
-        /* Game selection — on desktop column, on mobile horizontal cards */
-    .game-selection { display:flex; flex-direction:column; gap:12px }
-        .game-card { background:var(--card); border:1px solid var(--glass); border-radius:var(--radius); padding:16px; display:flex; flex-direction:column; gap:8px; }
-        .game-card h3 { font-weight:600; color:var(--text); margin:0 }
-        .game-card button { padding:12px 16px; border-radius:var(--radius-sm); border:1px solid var(--glass); background:var(--accent); color:#07102a; font-weight:700; cursor:pointer; transition:all var(--transition); }
-        .game-card button.disabled { background:var(--muted); color:var(--card); cursor:not-allowed }
-        .game-card button:hover:not(.disabled){ transform:translateY(-2px); box-shadow:0 8px 20px rgba(2,6,23,0.55) }
-
-    /* Lobby list styles */
-    .lobbies-list { display:flex; flex-direction:column; gap:10px }
-    .lobby-card { display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; background:linear-gradient(135deg, rgba(15,15,15,0.9), rgba(10,10,10,0.8)); border:1px solid rgba(255,107,53,0.3); transition:all 0.2s ease; box-shadow:0 4px 12px rgba(0,0,0,0.6) }
-    .lobby-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(255,107,53,0.3); border-color:rgba(255,107,53,0.5) }
-    .lobby-avatar { width:44px; height:44px; border-radius:10px; background:var(--glass); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--text) }
-    /* prevent avatar images from overflowing their container and keep consistent sizing */
-    .lobby-avatar { overflow: hidden; flex: 0 0 44px; }
-    .lobby-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 8px; }
-    .lobby-info { flex:1; min-width:0 }
-    .lobby-name { font-weight:700; font-size:15px; color:var(--text); margin-bottom:4px }
-    .lobby-meta { color:var(--muted); font-size:13px }
-    .lobby-actions { display:flex; gap:8px }
-    .lobby-actions { align-items: center; }
-    .badge { padding:6px 8px; border-radius:999px; font-size:12px; font-weight:700; color:#07102a; background:var(--accent); }
-    .badge.wait { background:#ffd166; color:#07102a }
-    .badge.playing { background:var(--success); color:#07102a }
-
-        /* Bottom navigation for mobile */
-        .bottom-nav { display:flex }
-
-        /* Responsive adjustments for small screens (phones) */
-        @media (max-width: 1024px) {
-            .app-container { grid-template-columns: 1fr; max-width:100%; border-radius:0; height:100vh }
-            .app-sidebar { display:none }
-            .app-main { padding:18px 14px 92px 14px }
-
-            /* show cards as one column on phones (vertical layout) */
-            .game-selection { display:grid; grid-template-columns: 1fr; gap:12px; padding-bottom:12px }
-            .game-card { width:100%; box-shadow: 0 6px 18px rgba(2,6,23,0.45); }
-
-            /* bottom nav */
-            .bottom-nav { position:fixed; left:0; right:0; bottom:0; height:74px; display:flex; gap:4px; align-items:center; justify-content:space-around; padding:8px calc(12px + env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(26,26,26,0.95), rgba(10,10,10,0.98)); border-top:1px solid var(--glass); backdrop-filter: blur(8px); z-index:50 }
-            .bottom-nav button { background:transparent; border:none; color:var(--text); display:flex; flex-direction:column; align-items:center; gap:6px; font-weight:600; font-size:12px; padding:6px 8px; cursor:pointer }
-            .bottom-nav svg { width:22px; height:22px; opacity:0.95 }
-
-            /* Lobby header: stack input + button on very small screens */
-            #view-lobby > div { justify-content: flex-start !important; align-items: flex-start; flex-direction: column; gap:8px; }
-            /* place input and button on the same row, left aligned */
-            #view-lobby > div > div { display:flex; flex-direction:row; gap:8px; align-items:center; }
-            #lobby-name { flex: 1 1 auto; min-width:0; width: auto; margin:0; }
-            #btn-create-lobby { flex: 0 0 auto; }
-
-            /* Lobbies list layout improvements */
-            .lobbies-list { padding: 6px 0; display:flex; flex-direction:column; gap:10px; }
-            .lobby-card { width:100%; display:flex; flex-direction:row; align-items:center; gap:12px; padding:12px; border-radius:12px; background:linear-gradient(135deg, rgba(15,15,15,0.9), rgba(10,10,10,0.8)); border:1px solid rgba(255,107,53,0.3); transition:all 0.2s ease; box-shadow:0 4px 12px rgba(0,0,0,0.6) }
-            .lobby-avatar { width:44px; height:44px; flex:0 0 44px; border-radius:10px; }
-            .lobby-info { flex:1 1 auto; min-width:0; }
-            .lobby-actions { display:flex; gap:8px; flex:0 0 auto; }
-            .lobby-name { font-size:15px; }
-        }
-        /* desktop keeps default column layout for game selection (restore original) */
-
-        /* Hide bottom navigation on desktop */
-        @media (min-width: 1025px) {
-            .bottom-nav { display: none; }
-        }
-
-        /* Game card selection styles + floating Play button */
-        .game-card { transition: box-shadow var(--transition), outline var(--transition); }
-        .game-card:focus { outline: 2px dashed rgba(108,140,255,0.18); }
-    /* make selection visually robust even when global focus outlines are suppressed */
-    .game-card.selected { border: 2px solid var(--accent); box-shadow: 0 14px 40px rgba(108,140,255,0.28); background: linear-gradient(180deg, rgba(20,30,60,0.6), rgba(12,20,34,0.6)); transform: translateY(-4px); animation: glow 900ms ease-in-out infinite alternate; }
-        @keyframes glow { from { box-shadow: 0 8px 24px rgba(108,140,255,0.12); } to { box-shadow: 0 18px 44px rgba(108,140,255,0.28); } }
-
-        .play-button {
-            position: fixed;
-            left: 50%;
-            bottom: 86px; /* sits above bottom-nav */
-            transform: translateX(-50%) translateY(0) scale(.98);
-            background: var(--accent);
-            color: #07102a;
-            padding: 12px 28px;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 700;
-            box-shadow: var(--shadow-1);
-            opacity: 0;
-            transition: opacity 260ms cubic-bezier(.2,.9,.2,1), transform 260ms cubic-bezier(.2,.9,.2,1);
-            z-index: 1001;
-            border: none;
-            pointer-events: none;
-        }
-        /* Ensure search indicator can render expanded content above the pill without shifting the pill itself */
-        #search-indicator { overflow: visible; }
-    #search-indicator .search-bar { position: relative; z-index: 2; display:flex; align-items:center; justify-content:flex-start; }
-        #search-indicator .search-expanded {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: calc(100% + 10px); /* place above the pill */
-            background: transparent;
-            transform: translateY(8px);
-            opacity: 0;
-            pointer-events: none;
-            transition: transform 240ms cubic-bezier(.2,.9,.2,1), opacity 200ms ease;
-            z-index: 1;
-            display: block; /* kept in flow but hidden via opacity/transform */
-        }
-        #search-indicator .search-expanded.expanded {
-            transform: translateY(0);
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-            /* Long-search animations: title slides up, alt title slides in from below, pill turns yellow */
-            .search-bar { transition: background-color 600ms cubic-bezier(.2,.9,.2,1), color 600ms; }
-            .search-bar .title-wrap { position:relative; display:inline-block; width:auto; height:20px; overflow:hidden; vertical-align:middle; padding-left:10px; }
-            #search-title, #search-alt-title { display:block; position:relative; width:100%; left:0; right:0; }
-            /* hidden by default: alt title sits below */
-            #search-alt-title { transform: translateY(100%); opacity: 0; }
-
-            @keyframes slideUpFade {
-                from { transform: translateY(0%); opacity: 1 }
-                to   { transform: translateY(-100%); opacity: 0 }
-            }
-            @keyframes slideInFromBelow {
-                from { transform: translateY(100%); opacity: 0 }
-                to   { transform: translateY(0%); opacity: 1 }
-            }
-
-            .search-bar.long-search #search-alt-title { opacity: 1; transform: translateY(0%); }
-            .search-bar.long-search { background: linear-gradient(90deg,#ffd166,#ffd166); color: #07102a !important; }
-
-            /* Play button / card button highlight for long search */
-            .menu-btn.long-search { transition: background-color 600ms; background: #ffd166 !important; color: #07102a !important; border-color: rgba(0,0,0,0.06) !important; }
-
-        #search-long-text { transition: transform 420ms cubic-bezier(.2,.9,.2,1), opacity 420ms; transform: translateY(6px); opacity: 0; }
-        /* Desktop anchored variant: compact card inside sidebar area. Keep limited height so it doesn't cover content. */
-        #search-indicator[data-desktop="1"] {
-            border-radius: 12px; box-shadow: 0 12px 40px rgba(2,6,23,0.6); background: linear-gradient(90deg,#0f1720, #0b1220); padding: 6px; z-index: 60; overflow: visible;
-        }
-        #search-indicator[data-desktop="1"] .search-bar { border-radius: 10px; padding: 8px 12px; font-weight:700; display:flex; align-items:center }
-        #search-indicator[data-desktop="1"] .search-expanded { position: relative; bottom: auto; transform: none; opacity: 1; pointer-events: auto; margin-top:8px; max-height: 140px; overflow: auto; }
-        #search-indicator[data-desktop="1"] #search-player-row { justify-content: flex-start; }
-        /* Desktop: restore visible styles — colored pill on top and card-like details below */
-        #search-indicator[data-desktop="1"] {
-            border-radius: 12px;
-            box-shadow: 0 12px 40px rgba(2,6,23,0.6);
-            background: linear-gradient(180deg, rgba(11,15,22,0.6), rgba(10,14,20,0.85));
-            padding: 6px;
-            z-index: 60;
-        }
-        #search-indicator[data-desktop="1"] .search-bar { 
-            border-radius: 10px; padding: 8px 12px; font-weight:700; display:flex; align-items:center;
-            background: linear-gradient(90deg,#6b8cff,#5a6bd8); color: #07102a; box-shadow: none; 
-        }
-        #search-indicator[data-desktop="1"] .search-expanded { 
-            position: relative; bottom: auto; transform: none; opacity: 1; pointer-events: auto; margin-top:8px;
-            background: var(--card); border: 1px solid var(--glass); border-radius:10px; padding:8px; max-height:140px; overflow:auto; 
-        }
-    /* End-game modal styles */
-    .end-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(2,6,23,0.8); z-index: 1300 }
-    .end-card { width: 92%; max-width: 520px; background: linear-gradient(180deg, rgba(26,26,26,0.9), rgba(10,10,10,0.95)); border-radius: 16px; padding: 20px; border: 1px solid var(--glass); box-shadow: 0 18px 60px rgba(0,0,0,0.8); transform: translateY(12px) scale(.98); opacity: 0; animation: popIn 420ms cubic-bezier(.2,.9,.2,1) forwards; display:flex; flex-direction:column; align-items:center; gap:12px }
-    @keyframes popIn { to { transform: translateY(0) scale(1); opacity: 1 } }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .winner-emoji { font-size:48px }
-    .winner-avatar { width:84px; height:84px; border-radius:20px; overflow:hidden; background:var(--glass); display:flex; align-items:center; justify-content:center; }
-    /* mini board in end modal */
-    .end-mini { display:grid; grid-template-columns: repeat(3, 18px); grid-template-rows: repeat(3, 18px); gap:6px; margin-top:6px }
-    .end-mini .mini-cell { width:18px; height:18px; border-radius:6px; background:transparent; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.04) }
-    .end-mini .mini-cell .icon-x svg line { stroke-width:2 }
-    .end-mini .mini-cell .icon-o svg circle { stroke-width:2 }
-    .winner-name { font-size:20px; font-weight:800; color:var(--text) }
-    .winner-sub { color:var(--muted); font-size:14px }
-    .end-actions { display:flex; gap:10px; margin-top:6px }
-    /* board icons */
-    .icon-x svg, .icon-o svg { width:100%; height:100%; display:block }
-    /* reduced stroke widths so icons fit better in small cells */
-    .icon-x svg line { stroke: #ffffff; stroke-width:3; stroke-linecap:round }
-    .icon-o svg circle { stroke: #ffffff; stroke-width:3; fill: none }
-        .play-button.visible { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); pointer-events: auto; }
-
-          /* Confirm modal responsive fixes: allow players area to wrap on small widths
-              and prevent name overflow with ellipsis. */
-          #confirm-box #confirm-players { flex-wrap: wrap; }
-          #confirm-box #confirm-player-a, #confirm-box #confirm-player-b { min-width: 0; flex: 1 1 180px; justify-content: flex-start; }
-          #confirm-box .confirm-avatar { flex: 0 0 52px; width:52px; height:52px; }
-          #confirm-box #confirm-player-a > div, #confirm-box #confirm-player-b > div { min-width: 0; overflow: hidden; }
-          #confirm-box #confirm-name-a, #confirm-box #confirm-name-b { display: block; max-width: calc(100% - 64px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-          #confirm-box #confirm-meta-a, #confirm-box #confirm-meta-b { display:block; }
-
-        @media (max-width: 720px) {
-            /* Mobile layout: one card per row, show per-card Play buttons */
-            .game-selection { flex-direction: column; }
-            .game-card { width: 100%; min-width: 0; }
-            .game-card .game-choose, .game-card .game-lobby, .game-card button { display: block !important; }
-                    /* do not auto-show per-card play buttons on mobile; they appear after selection */
-                    /* hide card-play-btn by default (increase specificity so generic .game-card button rule doesn't override)
-                        show only when the card is selected or the button is in searching state */
-                    .game-card button.card-play-btn { width: 100%; box-sizing: border-box; display: none !important; }
-                    .game-card.selected button.card-play-btn { display: block !important; }
-                    .game-card button.card-play-btn[data-searching="1"] { display: block !important; }
-            /* place search indicator above bottom-nav and stretch across the menu area */
-            #search-indicator { left: 0 !important; right: 0 !important; bottom: 84px !important; transform: none !important; min-width: unset !important; width: calc(100% - 28px) !important; margin: 0 14px; }
-            /* align title left and timer right inside the pill; avatar/name row left-aligned */
-            #search-indicator .search-bar { justify-content: space-between; width: 100%; border-radius: 12px; }
-            .game-card { cursor: pointer; }
-        }
-        /* Ensure per-card play buttons are always clickable and above overlays */
-        /* keep play buttons clickable but below modals (modals have z-index >= 1200) */
-        .card-play-btn { pointer-events: auto !important; position: relative !important; z-index: 90 !important; }
-
-
+        /* Small helpers */
+        .hidden{display:none}
     </style>
 </head>
 <body>
@@ -337,10 +100,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.10.1/lottie.min.js"></script>
 
     <div class="app-container">
+        <!-- Left HUD / menu (kept IDs for JS profile update) -->
         <aside class="app-sidebar">
             <div class="profile-row">
                 <div class="avatar">
-                    <img src="" alt="avatar" onerror="this.src='https://ui-avatars.com/api/?name=Guest&background=5865f2&color=ffffff&size=128';">
+                    <img src="" alt="avatar" onerror="this.src='https://ui-avatars.com/api/?name=Guest&background=5865f2&color=ffffff&size=128';" style="width:100%;height:100%;object-fit:cover;border-radius:6px">
                 </div>
                 <div class="profile-info">
                     <div class="profile-name">Гость</div>
@@ -349,96 +113,73 @@
             </div>
 
             <div class="menu-buttons">
-                <button class="menu-btn primary" data-action="go-home">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                        <polyline points="9,22 9,12 15,12 15,22"></polyline>
-                    </svg>
-                    <span>Главная</span>
-                </button>
-                <button class="menu-btn" data-action="go-lobby">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="9" cy="7" r="4"></circle>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    </svg>
-                    <span>Лобби</span>
-                </button>
-                <button class="menu-btn" data-action="go-settings">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                    </svg>
-                    <span>Настройки</span>
-                </button>
+                <button class="menu-btn primary" data-action="go-home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Главная</button>
+                <button class="menu-btn" data-action="go-lobby"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5z"/></svg>Лобби</button>
+                <button class="menu-btn" data-action="go-settings"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.5A3.5 3.5 0 1 1 12 8.5 3.5 3.5 0 0 1 12 15.5z"/></svg>Настройки</button>
             </div>
+
+            <div style="margin-top:auto;color:var(--muted);font-size:12px">Дизайн: Counter‑Strike 2 HUD — ПК / Телефон</div>
         </aside>
 
+        <!-- Center stage: title + game area (preserve views and IDs) -->
         <main class="app-main">
-            <!-- Views: home, lobby, game, settings -->
-            <section id="view-home" class="view" data-view="home">
-                <h2 style="margin:0 0 6px 0; color: var(--accent); font-weight: 700;">Мини‑игры</h2>
-                <p style="margin:0 0 12px 0;color:var(--muted);font-size:14px">Выберите игру и запустите. На телефоне — свайпните карточки.</p>
+            <div class="top-hud">
+                <div>
+                    <div class="title" id="game-title">Крестики‑Нолики</div>
+                    <div class="subtitle">Быстрая дуэль 1 на 1</div>
+                </div>
+                <div style="text-align:right">
+                    <div id="game-status" class="meta">Ожидание игрока...</div>
+                </div>
+            </div>
 
-                <div class="game-selection" role="list">
-                    <article class="game-card" data-game="tictactoe" role="listitem" style="background: linear-gradient(135deg, rgba(15,15,15,0.9), rgba(10,10,10,0.8)); border: 1px solid rgba(255,107,53,0.3); box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
-                        <h3 style="color: var(--accent); font-weight: 700;">Крестики‑Нолики</h3>
-                        <p style="margin:0;color:var(--muted);font-size:13px; opacity: 0.8;">Быстрая игра 1 на 1 в реальном времени.</p>
-                        <div style="height:6px"></div>
-                        <!-- Кнопка 'Играть' будет добавлена динамически при выборе игры -->
-                    </article>
+            <div id="board-wrap" class="game-area">
+                <div id="players-row" style="display:flex;gap:12px;align-items:center;width:100%;justify-content:space-between"></div>
 
-                    <article class="game-card" data-game="memory" aria-disabled="true" style="background: linear-gradient(135deg, rgba(15,15,15,0.6), rgba(10,10,10,0.5)); border: 1px solid rgba(255,255,255,0.1); opacity: 0.6;">
-                        <h3 style="color: var(--muted);">Мемо (скоро)</h3>
-                        <p style="margin:0;color:var(--muted);font-size:13px">Карточная память — в разработке.</p>
-                        <div style="height:6px"></div>
-                        <!-- кнопки 'Играть' для этой карточки удалены: игра не готова -->
-                    </article>
+                <div id="board" aria-label="Игровое поле" role="grid"></div>
 
-                    <article class="game-card" data-game="quiz" aria-disabled="true" style="background: linear-gradient(135deg, rgba(15,15,15,0.6), rgba(10,10,10,0.5)); border: 1px solid rgba(255,255,255,0.1); opacity: 0.6;">
-                        <h3 style="color: var(--muted);">Quiz (скоро)</h3>
-                        <p style="margin:0;color:var(--muted);font-size:13px">Викторина против друзей.</p>
-                        <div style="height:6px"></div>
-                        <!-- кнопки 'Играть' для этой карточки удалены: игра не готова -->
-                    </article>
+                <div class="controls-row">
+                    <button id="btn-leave" class="control-ghost">Выйти</button>
+                    <button id="btn-forfeit" class="control-primary">Сдаться</button>
+                </div>
+            </div>
+
+            <!-- Views kept for routing (home/lobby/settings) but simplified visual presentation -->
+            <section id="view-home" class="view" data-view="home" style="display:none">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="font-weight:800;color:var(--accent);">Игры</div>
+                    <div class="game-selection" role="list">
+                        <article class="game-card" data-game="tictactoe" role="listitem">
+                            <h3 style="margin:0;color:var(--text);font-weight:800">Крестики‑Нолики</h3>
+                            <div style="color:var(--muted);font-size:13px">Дуэль 1 на 1</div>
+                        </article>
+                    </div>
                 </div>
             </section>
 
             <section id="view-lobby" class="view" data-view="lobby" style="display:none">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-                    <h2 style="margin:0; color: var(--accent); font-weight: 700;">Лобби</h2>
-                        <div style="display:flex;gap:8px;align-items:center;justify-content:center">
-                            <button id="btn-create-lobby" class="menu-btn primary" style="background: var(--accent); color: #07102a; border: 1px solid rgba(255,107,53,0.5); box-shadow: 0 4px 12px rgba(255,107,53,0.3);">Создать</button>
-                        </div>
+                    <div style="font-weight:800;color:var(--accent);">Лобби</div>
+                    <div>
+                        <button id="btn-create-lobby" class="menu-btn primary">Создать</button>
+                    </div>
                 </div>
-
-                    <div id="lobbies-list" class="lobbies-list" style="margin-top:12px"></div>
-            </section>
-
-            <section id="view-game" class="view" data-view="game" style="display:none">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-                    <h2 style="margin:0; color: var(--accent); font-weight: 700;" id="game-title">Крестики‑Нолики</h2>
-                    <div id="game-status" style="color:var(--muted);font-size:13px; opacity: 0.8;">Ожидание игрока...</div>
-                </div>
-
-                <div id="players-row" style="display:flex;gap:12px;align-items:center;margin-top:8px"></div>
-
-                <div id="board" style="margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:360px">
-                    <!-- cells injected here -->
-                </div>
-
-                <div style="margin-top:12px;display:flex;gap:8px">
-                    <button id="btn-leave" class="menu-btn" style="background: linear-gradient(135deg, rgba(15,15,15,0.8), rgba(10,10,10,0.6)); border: 1px solid rgba(255,255,255,0.1); color: var(--text);">Выйти из игры</button>
-                    <button id="btn-forfeit" class="menu-btn" style="background: linear-gradient(135deg, rgba(15,15,15,0.8), rgba(10,10,10,0.6)); border: 1px solid rgba(255,255,255,0.1); color: var(--text);">Сдаться</button>
-                </div>
+                <div id="lobbies-list" style="margin-top:12px"></div>
             </section>
 
             <section id="view-settings" class="view" data-view="settings" style="display:none">
-                <h2 style="margin:0 0 10px 0; color: var(--accent); font-weight: 700;">Настройки</h2>
-                <p style="color:var(--muted); opacity: 0.8;">Здесь будут настройки звука и уведомлений.</p>
+                <h3 style="margin:0;color:var(--accent);">Настройки</h3>
+                <p style="color:var(--muted)">Звуки и уведомления</p>
             </section>
         </main>
+
+        <!-- Right scoreboard / info (desktop HUD) -->
+        <aside class="app-side-right app-side-right">
+            <div style="font-weight:800;color:var(--muted);">Scoreboard</div>
+            <div class="score"><div>Игрок A</div><div class="num" id="score-a">0</div></div>
+            <div class="score"><div>Игрок B</div><div class="num" id="score-b">0</div></div>
+            <div style="margin-top:auto;color:var(--muted);font-size:12px">Server: <span id="server-host">—</span></div>
+        </aside>
     </div>
 
     <!-- Auth modal (blocks UI until authorized) -->
