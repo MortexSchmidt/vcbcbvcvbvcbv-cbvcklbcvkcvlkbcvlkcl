@@ -140,7 +140,7 @@
     .badge.playing { background:var(--success); color:#07102a }
 
         /* Bottom navigation for mobile */
-        .bottom-nav { display:none }
+        .bottom-nav { display:flex }
 
         /* Responsive adjustments for small screens (phones) */
         @media (max-width: 1024px) {
@@ -173,6 +173,11 @@
             .lobby-name { font-size:15px; }
         }
         /* desktop keeps default column layout for game selection (restore original) */
+
+        /* Hide bottom navigation on desktop */
+        @media (min-width: 1025px) {
+            .bottom-nav { display: none; }
+        }
 
         /* Game card selection styles + floating Play button */
         .game-card { transition: box-shadow var(--transition), outline var(--transition); }
