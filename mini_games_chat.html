@@ -20,6 +20,7 @@
             --gap: 14px;
             --transition: 180ms cubic-bezier(.2,.9,.2,1);
         }
+        * { box-sizing: border-box; }
 
         * { box-sizing: border-box; }
         html, body { height: 100%; }
@@ -1261,6 +1262,36 @@
                     }
                 }
             }catch(e){ console.error('Error in repositionSearchIndicator:', e); }
+        }
+
+        // Ensure showSearchIndicator exists and restores previous behavior
+        function showSearchIndicator(opts = {}){
+            try{
+                // mark searching
+                if (!searching){ searching = true; searchStart = Date.now(); }
+                lastSearchOpts = { ...opts };
+                const root = document.getElementById('search-indicator');
+                if (!root) return;
+                root.style.display = 'block';
+                // reposition visually without resetting timers
+                try{ if (typeof repositionSearchIndicator === 'function') repositionSearchIndicator(); }catch(e){}
+
+                // update texts and avatar
+                try{ const gameName = opts.game || lastSearchGame || '—'; const g = root.querySelector('#search-game-text'); if (g) g.textContent = 'Игра: ' + (gameName || '—'); }catch(e){}
+                try{ const av = root.querySelector('#search-player-avatar'); if (av){ av.innerHTML=''; if (opts.player && opts.player.avatar){ const img=document.createElement('img'); img.src = opts.player.avatar; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; av.appendChild(img); } else { av.textContent = (opts.player && opts.player.name ? (opts.player.name||'').slice(0,1).toUpperCase() : '—'); } } const pn = root.querySelector('#search-player-name'); if (pn) pn.textContent = (opts.player && opts.player.name ? opts.player.name : '—'); }catch(e){}
+                try{ const fc = Math.max(1, Number(opts.foundCount) || 0); const ff = root.querySelector('#search-found-text'); if (ff) ff.textContent = 'Игроков найдено: ' + fc; }catch(e){}
+
+                // make sure timers run
+                try{ if (searchTimer) clearInterval(searchTimer); }catch(e){}
+                (function update(){ const elapsed = Math.floor((Date.now() - (searchStart||Date.now()))/1000); const mm = String(Math.floor(elapsed/60)).padStart(2,'0'); const ss = String(elapsed % 60).padStart(2,'0'); try{ const tt = root.querySelector('#search-timer-text'); if (tt) tt.textContent = `Поиск: ${mm}:${ss}`; const compact = root.querySelector('#search-timer-compact'); if (compact) compact.textContent = `${mm}:${ss}`; }catch(e){} })();
+                searchTimer = setInterval(()=>{ try{ const elapsed = Math.floor((Date.now() - (searchStart||Date.now()))/1000); const mm = String(Math.floor(elapsed/60)).padStart(2,'0'); const ss = String(elapsed % 60).padStart(2,'0'); const tt = root.querySelector('#search-timer-text'); if (tt) tt.textContent = `Поиск: ${mm}:${ss}`; const compact = root.querySelector('#search-timer-compact'); if (compact) compact.textContent = `${mm}:${ss}`; }catch(e){} }, 500);
+
+                // show floating cancel appearance
+                try{ if (playButton){ playButton.textContent='Отменить'; playButton.classList.add('visible'); playButton.setAttribute('aria-hidden','false'); } }catch(e){}
+
+                // ensure nav locked while searching
+                try{ disableNavigation(); }catch(e){}
+            }catch(e){ console.warn('showSearchIndicator error', e); }
         }
 
         function hideSearchIndicator(){
