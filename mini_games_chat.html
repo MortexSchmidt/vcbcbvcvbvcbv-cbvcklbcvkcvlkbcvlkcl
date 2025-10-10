@@ -1397,15 +1397,9 @@
         }
 
     socket.on('lobby_waiting', (data)=>{
-        try{
-            console.log('Game search in progress:', data);
-            try{ /* lobby_waiting */ }catch(e){}
-            const found = (data && Array.isArray(data.players) ? data.players.length : (typeof data?.foundCount !== 'undefined' ? Number(data.foundCount) : 1));
-            const opts = { game: data?.game || data?.name || null, player: { name: currentUser?.name, avatar: currentUser?.avatar }, foundCount: found };
-            showSearchIndicator(opts);
-        }catch(e){
-            console.error('Error handling lobby_waiting:', e);
-        }
+        // Отключено автопоявление поиска при загрузке — всегда стартует главная
+        hideSearchIndicator();
+        showView('home');
     });
 
     socket.on('lobby_cancelled', (data)=>{
@@ -1462,137 +1456,7 @@
 
         
 
-        // match found confirmation flow
-        let confirmCountdown = null;
-    socket.on('match_found', (payload)=>{
-                try{
-                    console.debug('socket:match_found', payload);
-                    // avoid processing stale or duplicate match events
-                    const mid = payload && payload.match_id;
-                    const recentSearch = (Date.now() - (lastSearchStart || 0)) < 60000;
-                    if (mid && processedMatchIds.has(mid)) { return; }
-                    if (!recentSearch) { return; }
-                    if (mid) processedMatchIds.add(mid);
-                    // show blocking confirm modal (keep it on top)
-                    document.getElementById('confirm-modal').style.display = 'flex';
-                try{ SoundEngine.matchFound(); }catch(e){}
-                    // while waiting for confirmation, ensure navigation is disabled
-                    disableNavigation();
-                    // disable play button interactions underneath modal
-                    try{ if (playButton) playButton.style.pointerEvents = 'none'; }catch(e){}
-                    let timeLeft = 30;
-                    document.getElementById('confirm-timer').textContent = String(timeLeft);
-                    // start countdown
-                    if (confirmCountdown) clearInterval(confirmCountdown);
-                    confirmCountdown = setInterval(()=>{
-                        timeLeft -= 1;
-                        document.getElementById('confirm-timer').textContent = String(timeLeft);
-                        if (timeLeft <= 0){
-                            clearInterval(confirmCountdown); confirmCountdown = null;
-                            // Time expired on client — close modal and re-enable navigation.
-                            // Server-side timeout will decide requeue/cancel and notify clients.
-                            document.getElementById('confirm-modal').style.display = 'none';
-                            try{ if (playButton) playButton.style.pointerEvents = ''; }catch(e){}
-                            enableNavigation();
-                        }
-                    }, 1000);
 
-                    // populate players info in modal
-                    try{
-                        // payload may contain: lobby.players: [{name,avatar,user_id,sid}], or payload.players, or player_a/player_b, or opponent
-                        let a = null, b = null;
-                        const playersArr = Array.isArray(payload?.lobby?.players) ? payload.lobby.players : (Array.isArray(payload?.players) ? payload.players : null);
-                        if (Array.isArray(playersArr) && playersArr.length >= 1){
-                            // find current user among players (by user_id or sid)
-                            const meIdx = playersArr.findIndex(p=>p.user_id === currentUser?.user_id || p.sid === socket.id);
-                            if (meIdx === -1){
-                                // if we don't see ourselves, prefer to show currentUser on left
-                                a = { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '', user_id: currentUser?.user_id };
-                                b = playersArr[0];
-                            } else {
-                                a = playersArr[meIdx];
-                                b = playersArr[(meIdx === 0 ? 1 : 0)] || null;
-                            }
-                        } else if (payload.player_a || payload.player_b) {
-                            a = payload.player_a || { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '', user_id: currentUser?.user_id };
-                            b = payload.player_b || payload.opponent || null;
-                        } else if (payload.opponent) {
-                            a = { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '', user_id: currentUser?.user_id };
-                            b = payload.opponent;
-                        } else {
-                            a = { name: currentUser?.name || 'Вы', avatar: currentUser?.avatar || '', user_id: currentUser?.user_id };
-                            b = null;
-                        }
-
-                        // fill left
-                        try{ const ava = document.getElementById('confirm-avatar-a'); ava.innerHTML = ''; if (a && a.avatar){ const img=document.createElement('img'); img.src=a.avatar; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; ava.appendChild(img); } else { ava.textContent = (a && a.name? (a.name||'').slice(0,1).toUpperCase() : '—'); } }catch(e){}
-                        try{ document.getElementById('confirm-name-a').textContent = a && a.name ? a.name : 'Вы'; }catch(e){}
-
-                        // fill right
-                        try{ const bv = document.getElementById('confirm-avatar-b'); bv.innerHTML = ''; if (b && b.avatar){ const img2=document.createElement('img'); img2.src=b.avatar; img2.style.width='100%'; img2.style.height='100%'; img2.style.objectFit='cover'; bv.appendChild(img2); } else { bv.textContent = (b && b.name? (b.name||'').slice(0,1).toUpperCase() : '—'); } }catch(e){}
-                        try{ document.getElementById('confirm-name-b').textContent = b && b.name ? b.name : 'Ожидание'; }catch(e){}
-                    }catch(e){ console.warn('confirm players populate err', e); }
-
-                    // Ensure buttons/waiting state reflects server 'confirmed' list (so if user already confirmed on another device we show waiting)
-                    try{
-                        const buttonsEl = document.getElementById('confirm-buttons');
-                        const waitingEl = document.getElementById('confirm-waiting');
-                        // default: show buttons, hide waiting
-                        if (buttonsEl) buttonsEl.style.display = 'flex';
-                        if (waitingEl) waitingEl.style.display = 'none';
-                        try{
-                            const confirmedArr = Array.isArray(payload?.confirmed) ? payload.confirmed : [];
-                            let alreadyConfirmed = false;
-                            // payload.confirmed may contain user_key strings like 'uid:<id>' or socket ids
-                            if (Array.isArray(confirmedArr) && confirmedArr.length){
-                                const myUidKey = currentUser?.user_id ? `uid:${currentUser.user_id}` : null;
-                                for (let ci=0; ci<confirmedArr.length; ci++){
-                                    const v = String(confirmedArr[ci]);
-                                    if ((myUidKey && v === myUidKey) || v === socket.id || v === String(currentUser?.user_id)){
-                                        alreadyConfirmed = true; break;
-                                    }
-                                }
-                            }
-                            if (alreadyConfirmed){ if (buttonsEl) buttonsEl.style.display='none'; if (waitingEl) waitingEl.style.display='block'; }
-                        }catch(e){}
-                    }catch(e){}
-
-                    // accept/decline handlers
-                    document.getElementById('btn-accept').onclick = ()=>{
-                        // Send accept but KEEP the modal visible; hide buttons and show waiting text
-                        socket.emit('match_accept', { match_id: payload.match_id, user_id: currentUser?.user_id });
-                        // Hide action buttons and show waiting message
-                        try{ document.getElementById('confirm-buttons').style.display = 'none'; }catch(e){}
-                        try{ document.getElementById('confirm-waiting').style.display = 'block'; }catch(e){}
-                        // keep timer visible but make it non-interactive (it's behind the modal now)
-                    };
-                    // No decline button: user may simply wait out the timeout to decline implicitly.
-                }catch(e){ console.error(e); }
-        });
-
-    socket.on('match_cancelled', (data)=>{ try{ console.debug('socket:match_cancelled', data);
-        // clear related caches and UI
-        try{ if (data && data.lobby_id) delete lastMatchStarts[data.lobby_id]; }catch(e){}
-        lastSearchStart = 0; lastSearchGame = null;
-        processedMatchIds.clear();
-        hideSearchIndicator(); document.getElementById('confirm-modal').style.display = 'none'; if (confirmCountdown){ clearInterval(confirmCountdown); confirmCountdown=null; } enableNavigation(); }catch(e){} });
-        socket.on('lobby_created', (data)=>{
-            // server returns lobby_id and lobby
-            const lobby = data.lobby || data;
-            // show lobby view and join room locally by id
-            // We already are creator; server registered player
-            try{ if (lobby && lobby.id) delete lastMatchStarts[lobby.id]; }catch(e){}
-            lastSearchStart = 0; lastSearchGame = null; processedMatchIds.clear();
-            activeLobby = lobby;
-            // show preload BEFORE showing game
-            try{ showPreload({ random: false }); }catch(e){}
-            // after preload hides, show lobby and game view
-            setTimeout(()=>{ try{ showLobby(activeLobby); showView('game'); }catch(e){} }, 10100);
-            try{ SoundEngine.lobbyCreated(); }catch(e){}
-            // clear any quick-match UI and allow navigation
-            hideSearchIndicator();
-            enableNavigation();
-        });
 
         socket.on('update_lobby', (lobby)=>{
             // update activeLobby if matches
