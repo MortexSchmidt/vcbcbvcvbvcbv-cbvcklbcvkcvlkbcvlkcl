@@ -831,10 +831,7 @@
             if (enter) { enter.classList.add('view-enter'); }
             try{ /* view changed: '" + name + "' */ }catch(e){}
             // if search is active, reposition the floating/search indicator so it remains visible across view switches
-            try{ if (searching){ const root = document.getElementById('search-indicator'); if (root && root.style.display !== 'none'){ /* re-run position logic with preserved data: */
-                        try{ showSearchIndicator(lastSearchOpts || {}); }catch(e){} }
-                }
-            }catch(e){}
+            try{ if (searching){ repositionSearchIndicator(); } }catch(e){}
             // update bottom nav active state (optional)
         }
 
@@ -1137,16 +1134,9 @@
             }catch(e){ }
         }
 
-        function showSearchIndicator(opts = {}){
-                // opts: { game, player: { name, avatar }, foundCount }
-            if (!searching){ searching = true; searchStart = Date.now(); }
-            // store options for view switches
-            lastSearchOpts = { ...opts };
+        function repositionSearchIndicator(){
             const root = document.getElementById('search-indicator');
-            if (!root) return;
-            root.style.display = 'block';
-            // ensure collapsed by default
-            try{ _toggleSearchExpanded(root, false); }catch(e){}
+            if (!root || root.style.display === 'none') return;
             // position: if mobile -> attach to top of left menu; if desktop -> show in top-right area after settings
             try{
                 const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
@@ -1224,82 +1214,6 @@
                         }
                     }
                 }
-            }catch(e){}
-            // update game text
-            try{
-                let gameName = opts.game || null;
-                if (!gameName){ const sel = document.querySelector('.game-selection .game-card.selected'); if (sel) gameName = sel.querySelector('h3')?.textContent || sel.dataset.game; }
-                const g = root.querySelector('#search-game-text'); if (g) g.textContent = 'Игра: ' + (gameName || '—');
-            }catch(e){}
-            // update player avatar + name
-            try{
-                const av = root.querySelector('#search-player-avatar');
-                if (av){ av.innerHTML = ''; if (opts.player && opts.player.avatar){ const img = document.createElement('img'); img.src = opts.player.avatar; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; av.appendChild(img); } else { av.textContent = (opts.player && opts.player.name ? (opts.player.name||'').slice(0,1).toUpperCase() : '—'); } }
-                const pn = root.querySelector('#search-player-name'); if (pn) pn.textContent = (opts.player && opts.player.name ? opts.player.name : '—');
-            }catch(e){}
-            // update found count
-            try{ const fc = Math.max(1, Number(opts.foundCount) || 0); const ff = root.querySelector('#search-found-text'); if (ff) ff.textContent = 'Игроков найдено: ' + fc; }catch(e){}
-            // reset long-search label and start 15s timer to show it with animation
-            try{ const lt = root.querySelector('#search-long-text'); if (lt) { lt.style.display = 'none'; lt.style.opacity = '0'; lt.style.transform = 'translateY(6px)'; } }catch(e){}
-            try{ if (searchLongTimer) clearTimeout(searchLongTimer); }catch(e){}
-            searchLongTimer = setTimeout(()=>{ try{
-                    const bar = root.querySelector('.search-bar');
-                    if (bar){
-                        // save any inline background so we can restore it later
-                        try{ bar.dataset._prevBg = bar.style.background || ''; bar.dataset._prevColor = bar.style.color || ''; }catch(e){}
-                        // set yellow background inline to override any CSS
-                        try{ bar.style.background = 'linear-gradient(90deg,#ffd166,#ffd166)'; bar.style.color = '#07102a'; }catch(e){}
-                        bar.classList.add('long-search');
-                    }
-                    // highlight only active per-card play buttons (those with data-searching='1')
-                    try{
-                        const activeBtns = Array.from(document.querySelectorAll('.card-play-btn')).filter(b=>b && b.dataset && b.dataset.searching === '1');
-                        if (activeBtns && activeBtns.length){ activeBtns.forEach(b=>{ b.classList.add('long-search'); b.style.background = '#ffd166'; b.style.color = '#07102a'; b.style.borderColor = 'rgba(0,0,0,0.06)'; }); }
-                    }catch(e){}
-                    // reveal expanded 'Долгий поиск' text and also animate alt title inside pill
-                    const lt = root.querySelector('#search-long-text'); if (lt){ lt.style.display='block'; lt.style.opacity='1'; lt.style.transform='translateY(0)'; }
-                    try{ const titleEl = root.querySelector('#search-title'); if (titleEl) titleEl.textContent = 'Долгий поиск'; }catch(e){}
-                    try{ const altEl = root.querySelector('#search-alt-title'); if (altEl) altEl.style.display = 'none'; }catch(e){}
-                    // on mobile, expand the search indicator to show the long search text
-                    if (root.dataset.desktop !== '1') { _toggleSearchExpanded(root, true); }
-                }catch(e){} }, 15000);
-            playButton.textContent = 'Отменить';
-            playButton.classList.add('visible');
-            playButton.setAttribute('aria-hidden','false');
-            disableNavigation();
-            // start timer update
-            if (searchTimer) clearInterval(searchTimer);
-            (function update(){
-                const elapsed = Math.floor((Date.now() - searchStart)/1000);
-                const mm = String(Math.floor(elapsed/60)).padStart(2,'0');
-                const ss = String(elapsed % 60).padStart(2,'0');
-                try{ const tt = root.querySelector('#search-timer-text'); if (tt) tt.textContent = `Поиск: ${mm}:${ss}`; }catch(e){}
-            })();
-            searchTimer = setInterval(()=>{
-                const elapsed = Math.floor((Date.now() - searchStart)/1000);
-                const mm = String(Math.floor(elapsed/60)).padStart(2,'0');
-                const ss = String(elapsed % 60).padStart(2,'0');
-                try{ const tt = root.querySelector('#search-timer-text'); if (tt) tt.textContent = `Поиск: ${mm}:${ss}`; const compact = root.querySelector('#search-timer-compact'); if (compact) compact.textContent = `${mm}:${ss}`; }catch(e){}
-            }, 500);
-            // attach one-time handlers for toggle if not already attached
-            try{
-                    if (!root.dataset.toggleAttached){
-                        const bar = root.querySelector('.search-bar');
-                        const collapseBtn = root.querySelector('#search-collapse-btn');
-                        if (bar){
-                            // Always attach handler, but only toggle in mobile view (so mobile click works).
-                            bar.addEventListener('click', ()=>{
-                                const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches;
-                                if (!isMobileNow) return; // desktop: do not toggle (static)
-                                const expanded = bar.getAttribute('aria-expanded') === 'true'; _toggleSearchExpanded(root, !expanded);
-                            });
-                            // touchstart for mobile reliability
-                            bar.addEventListener('touchstart', (ev)=>{ const isMobileNow = window.matchMedia && window.matchMedia('(max-width:720px)').matches; if (!isMobileNow) return; ev.stopPropagation(); const expanded = bar.getAttribute('aria-expanded') === 'true'; _toggleSearchExpanded(root, !expanded); }, { passive: true });
-                            bar.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); bar.click(); } });
-                        }
-                        if (collapseBtn) collapseBtn.addEventListener('click', ()=>{ _toggleSearchExpanded(root, false); });
-                        root.dataset.toggleAttached = '1';
-                    }
             }catch(e){}
         }
 
