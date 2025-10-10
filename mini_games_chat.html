@@ -581,11 +581,15 @@
 
             // Растягиваем приложение на весь экран (с expand для Telegram)
             try { tg.expand?.(); } catch(e) { console.warn('tg.expand failed', e); }
+            document.documentElement.style.overflow = 'hidden';
             document.body.style.width = '100vw';
             document.body.style.height = '100vh';
             document.body.style.margin = '0';
             document.body.style.padding = '0';
             document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.top = '0';
+            document.body.style.left = '0';
 
             // НЕ скрываем боковую панель для ПК - показываем меню
             // const sidebar = document.querySelector('.app-sidebar');
@@ -603,7 +607,11 @@
             const appContainer = document.querySelector('.app-container');
             if (appContainer) {
                 appContainer.style.maxWidth = '100%';
+                appContainer.style.width = '100vw';
                 appContainer.style.height = '100vh';
+                appContainer.style.position = 'fixed';
+                appContainer.style.top = '0';
+                appContainer.style.left = '0';
                 appContainer.style.borderRadius = '0';
             }
 
