@@ -841,18 +841,10 @@
             // if search is active, reposition the floating/search indicator so it remains visible across view switches
             try{ if (searching && typeof repositionSearchIndicator === 'function'){ repositionSearchIndicator(); } }catch(e){ console.warn('Error repositioning search indicator:', e); }
 
-            // Восстанавливаем выделение игры при возврате на страницу игр
+            // Восстанавливаем выделение игры при возврате на страницу игр (если оно было сохранено)
             if (name === 'home' && window.selectedGameCard && !searching) {
                 try{
                     console.log('Restoring game selection for:', window.selectedGameCard.dataset.game);
-                    // Снимаем выделение со всех карточек
-                    document.querySelectorAll('.game-card').forEach(card => {
-                        card.classList.remove('selected');
-                        card.setAttribute('aria-selected', 'false');
-                    });
-                    // Восстанавливаем выделение на сохраненной карточке
-                    window.selectedGameCard.classList.add('selected');
-                    window.selectedGameCard.setAttribute('aria-selected', 'true');
 
                     // Показываем кнопку "Играть" для выделенной карточки
                     const playBtn = window.selectedGameCard.querySelector('.card-play-btn');
@@ -868,6 +860,15 @@
                             playBtn.classList.add('primary');
                         }
                     }
+
+                    // Скрываем кнопки для других карточек
+                    document.querySelectorAll('.game-card').forEach(card => {
+                        if (card !== window.selectedGameCard) {
+                            const otherBtn = card.querySelector('.card-play-btn');
+                            if (otherBtn) otherBtn.style.display = 'none';
+                        }
+                    });
+
                 }catch(e){ console.warn('Error restoring game selection:', e); }
             }
 
@@ -2054,6 +2055,24 @@
                         // do not allow selecting disabled/coming-soon cards
                         if (card.getAttribute('aria-disabled') === 'true' || card.querySelector('.disabled')) return;
 
+                        // Если кликнули на уже выделенную карточку - снимаем выделение
+                        if (window.selectedGameCard === card) {
+                            card.classList.remove('selected');
+                            card.setAttribute('aria-selected','false');
+                            window.selectedGameCard = null;
+
+                            // скрываем кнопку "Играть"
+                            const pbtn = card.querySelector('.card-play-btn');
+                            if (pbtn) pbtn.style.display='none';
+
+                            playButton.classList.remove('visible');
+                            playButton.setAttribute('aria-hidden','true');
+
+                            try{ SoundEngine.init(); SoundEngine.select(); }catch(e){}
+                            console.log('Game deselected:', card.dataset.game);
+                            return;
+                        }
+
                         // Очищаем предыдущее выделение
                         if (window.selectedGameCard) {
                             window.selectedGameCard.classList.remove('selected');
@@ -2098,7 +2117,7 @@
             updateListeners();
 
             // helper: ensure each card has no visible inline play buttons by default (we'll create them dynamically)
-            // Но показываем кнопку для выделенной карточки
+            // Показываем кнопку только для выделенной карточки
             document.querySelectorAll('.game-selection .game-card .card-play-btn').forEach(b=>{
                 const card = b.closest('.game-card');
                 if (window.selectedGameCard && card === window.selectedGameCard) {
@@ -2183,6 +2202,9 @@
                         pbtn.classList.remove('danger');
                         pbtn.classList.add('primary');
                     }
+                } else {
+                    // Для невыделенных карточек кнопка скрыта
+                    pbtn.style.display = 'none';
                 }
 
                 return pbtn;
@@ -2272,7 +2294,12 @@
 
             // diagnostic hooks removed in production — logging kept minimal
 
-            // hide selection when tapping outside — but DO NOT clear selection while searching for opponent
+            // НЕ сбрасываем выделение при кликах в пустые области страницы
+            // Выделение можно сбросить только:
+            // 1. Кликнув повторно на выделенную карточку
+            // 2. Выбрав другую карточку игры
+            // 3. Не сбрасываем при кликах на кнопки навигации или в пустые области
+
             document.addEventListener('click', (ev)=>{
                 // if searching, ignore outside clicks (keep selection and cancel only via playButton)
                 if (searching) {
@@ -2283,23 +2310,12 @@
                     // otherwise ignore outside clicks while searching
                     return;
                 }
-                // НЕ сбрасываем выделение при клике на кнопки навигации (переключение вкладок)
-                // Только сбрасываем выделение если кликнули за пределами области игр И не на кнопках навигации
-                if (!ev.target.closest('.game-card') && !ev.target.closest('.play-button') && !ev.target.closest('.game-modal') && !ev.target.closest('.game-selection') && !ev.target.closest('[data-action]')){
-                    if (window.selectedGameCard) {
-                        window.selectedGameCard.classList.remove('selected');
-                        window.selectedGameCard.setAttribute('aria-selected','false');
-                        window.selectedGameCard = null;
-                        console.log('Game selection cleared due to outside click');
-                    }
-                    playButton.classList.remove('visible');
-                    playButton.setAttribute('aria-hidden','true');
 
-                    // Скрываем все кнопки "Играть" при сбросе выделения
-                    document.querySelectorAll('.card-play-btn').forEach(btn => {
-                        btn.style.display = 'none';
-                    });
-                }
+                // НЕ сбрасываем выделение при кликах в пустые области или на кнопки навигации
+                // Выделение сохраняется до тех пор, пока пользователь не выберет другую игру
+                // или не кликнет повторно на выделенную карточку
+
+                console.log('Click outside game cards, maintaining selection:', window.selectedGameCard ? window.selectedGameCard.dataset.game : 'none');
             });
 
             // clicking floating Play toggles quick-match / cancel while respecting searching state
